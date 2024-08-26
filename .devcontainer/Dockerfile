@@ -52,6 +52,9 @@ RUN apt-get update -qq              \
         ninja-build                 \
         cmake                       \
         libslirp-dev                \
+        libusb-1.0-0-dev            \
+        libftdi1-dev                \
+        pkg-config                  \
     && apt-get autoclean            \
     && apt-get clean                \
     && apt-get autoremove -y        \
@@ -92,14 +95,24 @@ RUN chmod a+x QuartusLiteSetup-23.1std.0.991-linux.run                          
 # RISC-V Toolchain Installation
 WORKDIR /tmp
 
+# OpenOCD Installation
+RUN git clone --branch v0.11.0 https://github.com/ntfreak/openocd.git /tmp/openocd \
+    && cd /tmp/openocd \
+    && ./bootstrap \
+    && ./configure --prefix=/usr/local \
+    && make -j$(nproc) V=1 \
+    && make install \
+    && rm -rf /tmp/openocd
+
 RUN git clone https://github.com/riscv/riscv-gnu-toolchain \
     && cd riscv-gnu-toolchain \
     && ./configure --prefix=/opt/riscv --with-arch=rv32imc_zicntr_zfinx --with-abi=ilp32 \
     && make \
     && rm -rf /tmp/riscv-gnu-toolchain
 
+
 # Set up bash prompt
 RUN echo 'export PS1="\\n\\e[92m\\e[1m\\u@\\h\\e[0m \\e[94m\\w\\n \\e[92m\\e[1m$\\e[0m\\e[0m\\e[39m\\e[49m "' >> ~/.bashrc
 
-# Ensure RISC-V toolchain path is added to PATH
+# Ensure RISC-V toolchain and OpenOCD paths are added to PATH
 ENV PATH=/opt/riscv/bin:$PATH
