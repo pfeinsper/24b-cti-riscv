@@ -1,8 +1,6 @@
 {
     "name": "24-b-cti-risc-v",
-    "build": {
-        "dockerfile": "Dockerfile"
-    },
+    "image": "rodrigoanciaes/cti-24b:v1",
     "postCreateCommand": "pip install -r requirements.txt",
     "containerEnv": {
         "PYTHONPATH": "/root/workspace/"
