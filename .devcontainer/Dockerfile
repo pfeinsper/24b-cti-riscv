@@ -106,7 +106,7 @@ RUN git clone --branch v0.11.0 https://github.com/ntfreak/openocd.git /tmp/openo
 
 RUN git clone https://github.com/riscv/riscv-gnu-toolchain \
     && cd riscv-gnu-toolchain \
-    && ./configure --prefix=/opt/riscv --with-arch=rv32imc_zicntr_zfinx --with-abi=ilp32 \
+    && ./configure --prefix=/opt/riscv --with-arch=rv32imc_zicntr_zfinx_zifencei --with-abi=ilp32 \
     && make \
     && rm -rf /tmp/riscv-gnu-toolchain
 
