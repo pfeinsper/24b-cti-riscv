@@ -242,7 +242,7 @@ architecture syn of top is
        INT_BOOTLOADER_EN            : boolean := false;  -- boot configuration: true = boot explicit bootloader; false = boot from int/ext (I)MEM
 
        -- On-Chip Debugger (OCD) --
-       ON_CHIP_DEBUGGER_EN          : boolean := false;  -- implement on-chip debugger
+       ON_CHIP_DEBUGGER_EN          : boolean := true;  -- implement on-chip debugger
        DM_LEGACY_MODE               : boolean := false;                              -- debug module spec version: false = v1.0, true = v0.13
 
        -- RISC-V CPU Extensions --
