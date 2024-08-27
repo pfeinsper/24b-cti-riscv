@@ -1,0 +1,17 @@
+Analysis & Synthesis Status : Successful - Tue Aug 27 11:52:46 2024
+Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
+Revision Name : de0cv-neorv32-sdram-qsys
+Top-level Entity Name : top
+Family : Cyclone V
+Logic utilization (in ALMs) : N/A
+Total registers : 3205
+Total pins : 62
+Total virtual pins : 0
+Total block memory bits : 1,607,808
+Total DSP Blocks : 1
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 1
+Total DLLs : 0
