@@ -99,7 +99,14 @@ entity top is
       TWI_SDA    : in  std_logic;
       TWI_SDA_O    : out std_logic;
       TWI_SCL    : in  std_logic;
-      TWI_SCL_O    : out std_logic
+      TWI_SCL_O    : out std_logic;
+
+      -- PWM   
+      PWM          : out std_ulogic_vector(11 downto 0);
+
+      -- GPIO
+      GPIO_pin         : inout std_logic_vector(15 downto 0)
+
    );
 end entity top;
 
@@ -579,7 +586,10 @@ begin
          IO_MTIME_EN                  => true,              -- implement machine system timer (MTIME)?
          IO_UART0_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART0)?
 
-         IO_TWI_EN                    => true              -- implement two-wire interface (TWI)?
+         IO_TWI_EN                    => true,              -- implement two-wire interface (TWI)?
+
+         --PWM
+         IO_PWM_NUM_CH                => 1                 -- number of PWM channels to implement (0..12); 0 = disabled
       )
       port map (
          -- Global control --
@@ -617,7 +627,10 @@ begin
          twi_sda_i     => TWI_SDA,                          -- serial data line sense input
          twi_sda_o     => TWI_SDA_O,                        -- serial data line output (pull low only)
          twi_scl_i     => TWI_SCL,                          -- serial clock line sense input
-         twi_scl_o     => TWI_SCL_O                         -- serial clock line output (pull low only)
+         twi_scl_o     => TWI_SCL_O,                         -- serial clock line output (pull low only)
+
+         -- PWM (available if IO_PWM_NUM_CH > 0) --
+         pwm_o         => PWM                              -- pwm channels
       );
 
    wb_sel_int       <= To_StdLogicVector( wb_sel );
@@ -727,6 +740,8 @@ begin
    --------------------------------------------------------
 
    LED <= To_StdLogicVector( gpio(9 downto 0) ); -- The 
+
+   GPIO_pin <= To_StdLogicVector( gpio(31 downto 16) );
 
 end architecture syn;
 

@@ -298,6 +298,54 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to TWI_SCL_O
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to TWI_SCL_O
 
 #============================================================
+# PWM
+#============================================================
+set_location_assignment PIN_H18 -to PWM[0]
+set_location_assignment PIN_J18 -to PWM[1]
+set_location_assignment PIN_J19 -to PWM[2]
+set_location_assignment PIN_G11 -to PWM[3]
+set_location_assignment PIN_H10 -to PWM[4]
+set_location_assignment PIN_J11 -to PWM[5]
+set_location_assignment PIN_H14 -to PWM[6]
+set_location_assignment PIN_A15 -to PWM[7]
+set_location_assignment PIN_J13 -to PWM[8]
+set_location_assignment PIN_L8 -to PWM[9]
+
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[2]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[3]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[4]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[5]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[6]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[7]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[8]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[9]
+
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[1]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[2]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[3]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[4]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[5]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[6]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[7]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[8]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[9]
+
+
+
+#============================================================
+# GPIO
+#============================================================
+
+
+
+#============================================================
+
+
+
+
 
 
 
