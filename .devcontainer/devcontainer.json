@@ -1,0 +1,21 @@
+{
+    "name": "24-b-cti-risc-v",
+    "image": "rodrigoanciaes/cti-24b:v1",
+    "postCreateCommand": "pip install -r requirements.txt",
+    "containerEnv": {
+        "PYTHONPATH": "/root/workspace/"
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/root/workspace,type=bind,consistency=cached",
+    "workspaceFolder": "/root/workspace",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "actboy168.tasks",
+                "ms-python.python",
+                "ms-python.black-formatter",
+                "mshr-h.VerilogHDL",
+                "/tmp/vhdl-lsp-0.1.0-dev.vsix"
+            ]
+        }
+    }
+}
