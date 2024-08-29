@@ -105,7 +105,8 @@ entity top is
       PWM          : out std_ulogic_vector(3 downto 0);
 
       -- GPIO
-      GPIO_pin     : inout std_logic_vector(15 downto 0)
+      GPIO_i	    : in std_logic_vector(12 downto 0);
+		GPIO_o		 :	out std_logic_vector(2 downto 0)
 
    );
 end entity top;
@@ -467,7 +468,9 @@ architecture syn of top is
    signal sdram_ba         : std_logic_vector(1 downto 0);
    signal sdram_dqm        : std_logic_vector(1 downto 0);
 
-   signal gpio             : std_ulogic_vector(63 downto 0);
+   -- signal gpio             : std_ulogic_vector(63 downto 0);
+	signal gpio_o_signal : std_ulogic_vector(15 downto 0);
+	signal gpio_i_signal : std_ulogic_vector(15 downto 0);
 
    -- Wishbone bus interface (available if MEM_EXT_EN = true) --
    signal wb_adr           : std_ulogic_vector(31 downto 0);  -- address
@@ -582,7 +585,7 @@ begin
          MEM_EXT_ASYNC_RX             => false,             -- use register buffer for RX data when false
 
          -- Processor peripherals --
-         IO_GPIO_NUM                  => 8,                 -- number of GPIO input/output pairs (0..64)
+         IO_GPIO_NUM                  => 16,                 -- number of GPIO input/output pairs (0..64)
          IO_MTIME_EN                  => true,              -- implement machine system timer (MTIME)?
          IO_UART0_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART0)?
 
@@ -616,8 +619,8 @@ begin
          wb_err_i      => '0',                              -- transfer error
 
          -- GPIO (available if IO_GPIO_EN = true) --
-         gpio_o        => gpio,                             -- parallel output
-         gpio_i        => open,                             -- parallel input
+         gpio_o(15 downto 0) => gpio_o_signal,                     -- parallel output
+         gpio_i(15 downto 0) => gpio_i_signal,							-- parallel input
 
          -- primary UART0 (available if IO_UART0_EN = true) --
          uart0_txd_o   => UART0_TXD,                        -- UART0 send data
@@ -739,9 +742,18 @@ begin
    -- Output
    --------------------------------------------------------
 
-   LED <= To_StdLogicVector( gpio(9 downto 0) ); -- The 
+   -- LED <= To_StdLogicVector( gpio(9 downto 0) ); -- The 
 
-   GPIO_pin <= To_StdLogicVector( gpio(31 downto 16) );
+   -- GPIO_pin <= To_StdLogicVector( gpio(31 downto 16) );
+	
+	-- Atribuição de GPIO_i para gpio_i_signal (extendendo GPIO_i para 16 bits)
+	--gpio_i_signal <= (others => '0');  -- Inicializando com zeros
+	gpio_i_signal <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
+	--gpio_i_signal(12 downto 0) <= GPIO_i;
+
+	-- Atribuição de gpio_o_signal para GPIO_o (extraindo 3 bits)
+	GPIO_o <= To_StdLogicVector( gpio_o_signal(2 downto 0) );
+
 
 end architecture syn;
 

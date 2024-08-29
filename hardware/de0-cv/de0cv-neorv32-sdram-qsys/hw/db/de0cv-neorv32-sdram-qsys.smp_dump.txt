@@ -77,6 +77,26 @@ arbiter.state.IDLE 0 0 0
 arbiter.state.BUSY_A 0 1 1 
 arbiter.state.BUSY_B 1 0 1 
 
+State Machine - |top|neorv32_top:neorv32_top_inst|neorv32_cpu:\core_complex:neorv32_cpu_inst|neorv32_cpu_alu:neorv32_cpu_alu_inst|neorv32_cpu_cp_fpu:\neorv32_cpu_cp_fpu_inst_true:neorv32_cpu_cp_fpu_inst|neorv32_cpu_cp_fpu_normalizer:neorv32_cpu_cp_fpu_normalizer_inst|ctrl.state
+Name ctrl.state.S_FINALIZE ctrl.state.S_CHECK ctrl.state.S_ROUND ctrl.state.S_NORMALIZE_BUSY ctrl.state.S_PREPARE_SHIFT ctrl.state.S_PREPARE_NORM ctrl.state.S_CHECK_I2F ctrl.state.S_PREPARE_I2F ctrl.state.S_IDLE 
+ctrl.state.S_IDLE 0 0 0 0 0 0 0 0 0 
+ctrl.state.S_PREPARE_I2F 0 0 0 0 0 0 0 1 1 
+ctrl.state.S_CHECK_I2F 0 0 0 0 0 0 1 0 1 
+ctrl.state.S_PREPARE_NORM 0 0 0 0 0 1 0 0 1 
+ctrl.state.S_PREPARE_SHIFT 0 0 0 0 1 0 0 0 1 
+ctrl.state.S_NORMALIZE_BUSY 0 0 0 1 0 0 0 0 1 
+ctrl.state.S_ROUND 0 0 1 0 0 0 0 0 1 
+ctrl.state.S_CHECK 0 1 0 0 0 0 0 0 1 
+ctrl.state.S_FINALIZE 1 0 0 0 0 0 0 0 1 
+
+State Machine - |top|neorv32_top:neorv32_top_inst|neorv32_cpu:\core_complex:neorv32_cpu_inst|neorv32_cpu_alu:neorv32_cpu_alu_inst|neorv32_cpu_cp_fpu:\neorv32_cpu_cp_fpu_inst_true:neorv32_cpu_cp_fpu_inst|neorv32_cpu_cp_fpu_f2i:neorv32_cpu_cp_fpu_f2i_inst|ctrl.state
+Name ctrl.state.S_FINALIZE ctrl.state.S_ROUND ctrl.state.S_NORMALIZE_BUSY ctrl.state.S_PREPARE_F2I ctrl.state.S_IDLE 
+ctrl.state.S_IDLE 0 0 0 0 0 
+ctrl.state.S_PREPARE_F2I 0 0 0 1 1 
+ctrl.state.S_NORMALIZE_BUSY 0 0 1 0 1 
+ctrl.state.S_ROUND 0 1 0 0 1 
+ctrl.state.S_FINALIZE 1 0 0 0 1 
+
 State Machine - |top|neorv32_top:neorv32_top_inst|neorv32_cpu:\core_complex:neorv32_cpu_inst|neorv32_cpu_alu:neorv32_cpu_alu_inst|neorv32_cpu_cp_muldiv:\neorv32_cpu_cp_muldiv_inst_true:neorv32_cpu_cp_muldiv_inst|ctrl.state
 Name ctrl.state.S_DONE ctrl.state.S_BUSY ctrl.state.S_IDLE 
 ctrl.state.S_IDLE 0 0 0 
