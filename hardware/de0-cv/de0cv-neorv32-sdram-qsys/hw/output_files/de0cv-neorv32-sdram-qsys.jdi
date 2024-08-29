@@ -1,0 +1,16 @@
+<sld_project_info>
+  <project>
+    <hash md5_digest_80b="d1c23108b7bd2b948a84"/>
+  </project>
+  <file_info>
+    <file device="5CEBA4F23C7" path="de0cv-neorv32-sdram-qsys.sof" usercode="0xFFFFFFFF"/>
+  </file_info>
+  <sld_infos>
+    <sld_info hpath="qsys_core:inst_qsys" name="inst_qsys">
+      <assignment_values>
+        <assignment_value text="QSYS_NAME qsys_core HAS_SOPCINFO 1 GENERATION_ID 1636836614"/>
+      </assignment_values>
+      <parameters/>
+    </sld_info>
+  </sld_infos>
+</sld_project_info>

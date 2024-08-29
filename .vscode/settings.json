@@ -1,0 +1,5 @@
+{
+    "files.associations": {
+        "neorv32.h": "c"
+    }
+}
