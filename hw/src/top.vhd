@@ -96,16 +96,16 @@ entity top is
       UART0_TXD    : out std_logic;
       UART0_RXD    : in  std_logic;
 
-      TWI_SDA    : in  std_logic;
+      TWI_SDA      : in  std_logic;
       TWI_SDA_O    : out std_logic;
-      TWI_SCL    : in  std_logic;
+      TWI_SCL      : in  std_logic;
       TWI_SCL_O    : out std_logic;
 
       -- PWM   
-      PWM          : out std_ulogic_vector(11 downto 0);
+      PWM          : out std_ulogic_vector(3 downto 0);
 
       -- GPIO
-      GPIO_pin         : inout std_logic_vector(15 downto 0)
+      GPIO_pin     : inout std_logic_vector(15 downto 0)
 
    );
 end entity top;
@@ -589,7 +589,7 @@ begin
          IO_TWI_EN                    => true,              -- implement two-wire interface (TWI)?
 
          --PWM
-         IO_PWM_NUM_CH                => 1                 -- number of PWM channels to implement (0..12); 0 = disabled
+         IO_PWM_NUM_CH                => 4                 -- number of PWM channels to implement (0..12); 0 = disabled
       )
       port map (
          -- Global control --
@@ -630,7 +630,7 @@ begin
          twi_scl_o     => TWI_SCL_O,                         -- serial clock line output (pull low only)
 
          -- PWM (available if IO_PWM_NUM_CH > 0) --
-         pwm_o         => PWM                              -- pwm channels
+         pwm_o(3 downto 0)         => PWM                              -- pwm channels
       );
 
    wb_sel_int       <= To_StdLogicVector( wb_sel );
