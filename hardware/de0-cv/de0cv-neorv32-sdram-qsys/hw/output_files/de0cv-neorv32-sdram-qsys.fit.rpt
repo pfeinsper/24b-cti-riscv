@@ -1,5 +1,5 @@
 Fitter report for de0cv-neorv32-sdram-qsys
-Thu Aug 29 15:46:03 2024
+Fri Aug 30 14:04:46 2024
 Quartus Prime Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
 
 
@@ -70,7 +70,7 @@ https://fpgasoftware.intel.com/eula.
 +-------------------------------------------------------------------------------+
 ; Fitter Summary                                                                ;
 +---------------------------------+---------------------------------------------+
-; Fitter Status                   ; Successful - Thu Aug 29 15:46:03 2024       ;
+; Fitter Status                   ; Successful - Fri Aug 30 14:04:46 2024       ;
 ; Quartus Prime Version           ; 20.1.0 Build 711 06/05/2020 SJ Lite Edition ;
 ; Revision Name                   ; de0cv-neorv32-sdram-qsys                    ;
 ; Top-level Entity Name           ; top                                         ;
@@ -166,9 +166,9 @@ https://fpgasoftware.intel.com/eula.
 ;                            ;             ;
 ; Usage by Processor         ; % Time Used ;
 ;     Processor 1            ; 100.0%      ;
-;     Processor 2            ;  10.9%      ;
-;     Processor 3            ;  10.6%      ;
-;     Processor 4            ;  10.4%      ;
+;     Processor 2            ;  10.8%      ;
+;     Processor 3            ;  10.5%      ;
+;     Processor 4            ;  10.3%      ;
 +----------------------------+-------------+
 
 
@@ -2733,7 +2733,7 @@ Info (170199): The Fitter performed an Auto Fit compilation.  Optimizations were
     Info (170201): Optimizations that may affect the design's routability were skipped
     Info (170200): Optimizations that may affect the design's timing were skipped
 Info (170194): Fitter routing operations ending: elapsed time is 00:00:13
-Info (11888): Total time spent on timing analysis during the Fitter is 7.52 seconds.
+Info (11888): Total time spent on timing analysis during the Fitter is 7.31 seconds.
 Info (334003): Started post-fitting delay annotation
 Info (334004): Delay annotation completed successfully
 Info (334003): Started post-fitting delay annotation
@@ -2742,10 +2742,10 @@ Info (11801): Fitter post-fit operations ending: elapsed time is 00:00:12
 Warning (171167): Found invalid Fitter assignments. See the Ignored Assignments panel in the Fitter Compilation Report for more information.
 Info (144001): Generated suppressed messages file /home/victor/insper/capstone/24b-cti-riscv/hardware/de0-cv/de0cv-neorv32-sdram-qsys/hw/output_files/de0cv-neorv32-sdram-qsys.fit.smsg
 Info: Quartus Prime Fitter was successful. 0 errors, 5 warnings
-    Info: Peak virtual memory: 2074 megabytes
-    Info: Processing ended: Thu Aug 29 15:46:04 2024
+    Info: Peak virtual memory: 2065 megabytes
+    Info: Processing ended: Fri Aug 30 14:04:48 2024
     Info: Elapsed time: 00:01:07
-    Info: Total CPU time (on all processors): 00:02:34
+    Info: Total CPU time (on all processors): 00:02:30
 
 
 +----------------------------+
