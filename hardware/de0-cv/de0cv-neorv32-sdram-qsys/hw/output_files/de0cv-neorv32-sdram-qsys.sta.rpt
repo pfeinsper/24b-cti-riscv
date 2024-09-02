@@ -1,5 +1,5 @@
 Timing Analyzer report for de0cv-neorv32-sdram-qsys
-Thu Aug 29 15:46:22 2024
+Fri Aug 30 14:05:06 2024
 Quartus Prime Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
 
 
@@ -103,14 +103,14 @@ https://fpgasoftware.intel.com/eula.
 ; Number detected on machine ; 8           ;
 ; Maximum allowed            ; 4           ;
 ;                            ;             ;
-; Average used               ; 2.29        ;
+; Average used               ; 2.28        ;
 ; Maximum used               ; 4           ;
 ;                            ;             ;
 ; Usage by Processor         ; % Time Used ;
 ;     Processor 1            ; 100.0%      ;
-;     Processor 2            ;  43.1%      ;
-;     Processor 3            ;  42.8%      ;
-;     Processor 4            ;  42.7%      ;
+;     Processor 2            ;  43.0%      ;
+;     Processor 3            ;  42.7%      ;
+;     Processor 4            ;  42.6%      ;
 +----------------------------+-------------+
 
 
@@ -119,7 +119,7 @@ https://fpgasoftware.intel.com/eula.
 +------------------------------+--------+--------------------------+
 ; SDC File Path                ; Status ; Read at                  ;
 +------------------------------+--------+--------------------------+
-; de0cv-neorv32-sdram-qsys.sdc ; OK     ; Thu Aug 29 15:46:10 2024 ;
+; de0cv-neorv32-sdram-qsys.sdc ; OK     ; Fri Aug 30 14:04:54 2024 ;
 +------------------------------+--------+--------------------------+
 
 
@@ -1087,7 +1087,7 @@ No non-DPA dedicated SERDES Receiver circuitry present in device or used in desi
 Info: *******************************************************************
 Info: Running Quartus Prime Timing Analyzer
     Info: Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
-    Info: Processing started: Thu Aug 29 15:46:09 2024
+    Info: Processing started: Fri Aug 30 14:04:53 2024
 Info: Command: quartus_sta de0cv-neorv32-sdram-qsys -c de0cv-neorv32-sdram-qsys
 Info: qsta_default_script.tcl version: #1
 Warning (18236): Number of processors has not been specified which may cause overloading on shared machines.  Set the global assignment NUM_PARALLEL_PROCESSORS in your QSF to an appropriate value for best performance.
@@ -1252,8 +1252,8 @@ Info (332114): Report Metastability: Found 21 synchronizer chains.
 Info (332102): Design is not fully constrained for setup requirements
 Info (332102): Design is not fully constrained for hold requirements
 Info: Quartus Prime Timing Analyzer was successful. 0 errors, 1 warning
-    Info: Peak virtual memory: 1042 megabytes
-    Info: Processing ended: Thu Aug 29 15:46:22 2024
+    Info: Peak virtual memory: 1039 megabytes
+    Info: Processing ended: Fri Aug 30 14:05:06 2024
     Info: Elapsed time: 00:00:13
     Info: Total CPU time (on all processors): 00:00:28
 

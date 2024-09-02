@@ -1,0 +1,8 @@
+Warning (10036): Verilog HDL or VHDL warning at neorv32_top.vhd(275): object "rst_cause" assigned a value but never read File: /home/victor/insper/capstone/neorv32-examples/neorv32/rtl/core/neorv32_top.vhd Line: 275
+Warning (10036): Verilog HDL or VHDL warning at neorv32_top.vhd(289): object "cpu_sleep" assigned a value but never read File: /home/victor/insper/capstone/neorv32-examples/neorv32/rtl/core/neorv32_top.vhd Line: 289
+Warning (10036): Verilog HDL or VHDL warning at neorv32_top.vhd(313): object "xip_req" assigned a value but never read File: /home/victor/insper/capstone/neorv32-examples/neorv32/rtl/core/neorv32_top.vhd Line: 313
+Warning (10036): Verilog HDL or VHDL warning at neorv32_top.vhd(313): object "xbus_req" assigned a value but never read File: /home/victor/insper/capstone/neorv32-examples/neorv32/rtl/core/neorv32_top.vhd Line: 313
+Warning (10036): Verilog HDL or VHDL warning at neorv32_cpu.vhd(132): object "fetch_pc" assigned a value but never read File: /home/victor/insper/capstone/neorv32-examples/neorv32/rtl/core/neorv32_cpu.vhd Line: 132
+Warning (10445): VHDL Subtype or Type Declaration warning at neorv32_cpu_control.vhd(300): subtype or type has null range File: /home/victor/insper/capstone/neorv32-examples/neorv32/rtl/core/neorv32_cpu_control.vhd Line: 300
+Warning (10037): Verilog HDL or VHDL warning at neorv32_cpu_control.vhd(1030): conditional expression evaluates to a constant File: /home/victor/insper/capstone/neorv32-examples/neorv32/rtl/core/neorv32_cpu_control.vhd Line: 1030
+Warning (10445): VHDL Subtype or Type Declaration warning at neorv32_cpu_control.vhd(2287): subtype or type has null range File: /home/victor/insper/capstone/neorv32-examples/neorv32/rtl/core/neorv32_cpu_control.vhd Line: 2287

@@ -1,0 +1,14 @@
+Analysis & Synthesis Status : Successful - Mon Sep  2 13:34:08 2024
+Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
+Revision Name : de0n-neorv32-blinky
+Top-level Entity Name : top
+Family : Cyclone IV E
+Total logic elements : 4,200
+    Total combinational functions : 3,678
+    Dedicated logic registers : 1,889
+Total registers : 1889
+Total pins : 18
+Total virtual pins : 0
+Total memory bits : 428,032
+Embedded Multiplier 9-bit elements : 0
+Total PLLs : 1
