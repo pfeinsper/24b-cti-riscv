@@ -86,7 +86,7 @@ entity top is
       --
       -- User LEDs
       --
-      --LED         : out std_logic_vector(7 downto 0);
+      LED         : out std_logic_vector(7 downto 0);
 
       --
       -- Keys
@@ -102,13 +102,13 @@ entity top is
 		--
 		-- PWM   
       --
-		PWM          : out std_ulogic_vector(3 downto 0);
+		PWM          : out std_ulogic_vector(3 downto 0)
 
 		--
       -- GPIO
       --
-		GPIO_i	    : in std_logic_vector(12 downto 0);
-		GPIO_o		 :	out std_logic_vector(2 downto 0)
+		--GPIO_i	    : in std_logic_vector(12 downto 0);
+		--GPIO_o		 :	out std_logic_vector(2 downto 0)
    );
 end entity top;
 
@@ -591,7 +591,9 @@ begin
          IO_MTIME_EN                  => true,              -- implement machine system timer (MTIME)?
          IO_UART0_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART0)?
 			IO_TWI_EN                    => true,              -- implement two-wire interface (TWI)?
-			IO_PWM_NUM_CH					  => 4						-- number of PWM channels to implement (0..12); 0 = disabled
+			IO_PWM_NUM_CH					  => 4,						-- number of PWM channels to implement (0..12); 0 = disabled
+			
+			IO_GPTMR_EN                  => true
 		)
       port map (
          -- Global control --
@@ -733,12 +735,12 @@ begin
    -- Output
    --------------------------------------------------------
 
-   -- LED <= To_StdLogicVector( gpio(9 downto 0) ); -- The 
+   LED <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
 
    -- GPIO_pin <= To_StdLogicVector( gpio(31 downto 16) );
 	
-	gpio_i_signal <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
-	GPIO_o <= To_StdLogicVector( gpio_o_signal(2 downto 0) );
+	-- gpio_i_signal <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
+	-- GPIO_o <= To_StdLogicVector( gpio_o_signal(2 downto 0) );
 
 end architecture syn;
 
