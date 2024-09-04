@@ -451,10 +451,6 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[11]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[12]
 
 
-set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[0]
-set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[1]
-set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[2]
-
 #============================================================
 
 
