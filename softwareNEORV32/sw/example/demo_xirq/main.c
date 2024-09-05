@@ -57,6 +57,10 @@ void xirq_handler_ch3(void) {
   neorv32_uart0_printf("XIRQ interrupt from channel %i\n", 3);
 }
 
+void xirq_handler_ch4(void) {
+  neorv32_uart0_printf("XIRQ interrupt from channel %i\n", 4);
+}
+
 
 /**********************************************************************//**
  * Main function
@@ -100,20 +104,22 @@ int main() {
 
 
   // configure per-channel trigger type
-  neorv32_xirq_setup_trigger(0, XIRQ_TRIGGER_EDGE_RISING); // rising-edge
+  //neorv32_xirq_setup_trigger(0, XIRQ_TRIGGER_EDGE_RISING); // rising-edge
   neorv32_xirq_setup_trigger(1, XIRQ_TRIGGER_EDGE_RISING); // rising-edge
   neorv32_xirq_setup_trigger(2, XIRQ_TRIGGER_EDGE_RISING); // rising-edge
   neorv32_xirq_setup_trigger(3, XIRQ_TRIGGER_EDGE_RISING); // rising-edge
+  neorv32_xirq_setup_trigger(4, XIRQ_TRIGGER_EDGE_RISING); // rising-edge
 
 
   // install handler functions for XIRQ channel 0,1,2,3. note that these functions are "normal" functions!
   // (details: these are "third-level" interrupt handlers)
   // neorv32_xirq_install() also enables the specified XIRQ channel and clears any pending interrupts
   err_cnt = 0;
-  err_cnt += neorv32_xirq_install(0, xirq_handler_ch0); // handler function for channel 0
+  //err_cnt += neorv32_xirq_install(0, xirq_handler_ch0); // handler function for channel 0
   err_cnt += neorv32_xirq_install(1, xirq_handler_ch1); // handler function for channel 1
   err_cnt += neorv32_xirq_install(2, xirq_handler_ch2); // handler function for channel 2
   err_cnt += neorv32_xirq_install(3, xirq_handler_ch3); // handler function for channel 3
+  err_cnt += neorv32_xirq_install(4, xirq_handler_ch4); // handler function for channel 4
 
   // check if installation went fine
   if (err_cnt) {
@@ -122,10 +128,11 @@ int main() {
   }
 
   // enable XIRQ channels
-  neorv32_xirq_channel_enable(0);
+  //neorv32_xirq_channel_enable(0);
   neorv32_xirq_channel_enable(1);
   neorv32_xirq_channel_enable(2);
   neorv32_xirq_channel_enable(3);
+  neorv32_xirq_channel_enable(4);
 
 
   // allow XIRQ to trigger CPU interrupt
@@ -148,7 +155,7 @@ int main() {
     // 2. xirq_handler_ch1
     // 3. xirq_handler_ch2
     // 4. xirq_handler_ch3
-    neorv32_gpio_port_set(0xF); // set output pins 3:0 -> trigger XIRQ 3:0
+    neorv32_gpio_port_set(0x1F); // set output pins 3:0 -> trigger XIRQ 3:0
     neorv32_gpio_port_set(0x0);
   }
 
@@ -166,10 +173,11 @@ int main() {
 
   // just as an example: to disable certain XIRQ interrupt channels, we can
   // un-install the according handler. this will also clear a pending interrupt for that channel
-  neorv32_xirq_uninstall(0); // disable XIRQ channel 0 and remove associated handler
+  //neorv32_xirq_uninstall(0); // disable XIRQ channel 0 and remove associated handler
   neorv32_xirq_uninstall(1); // disable XIRQ channel 1 and remove associated handler
   neorv32_xirq_uninstall(2); // disable XIRQ channel 2 and remove associated handler
   neorv32_xirq_uninstall(3); // disable XIRQ channel 3 and remove associated handler
+  neorv32_xirq_uninstall(4); // disable XIRQ channel 4 and remove associated handler
 
   // you can also manually clear pending interrupts
   neorv32_xirq_clear_pending(0); // clear pending interrupt of channel 0
