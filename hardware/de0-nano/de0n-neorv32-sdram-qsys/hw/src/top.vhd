@@ -610,7 +610,7 @@ begin
 			IO_TWI_EN                    => true,              -- implement two-wire interface (TWI)?
 			IO_PWM_NUM_CH					  => 4,						-- number of PWM channels to implement (0..12); 0 = disabled
 			
-			IO_GPTMR_EN                  => true,
+			IO_GPTMR_EN                  => true,              -- implement general purpose timer (GPTMR)?
 
          -- External Interrupts Controller (XIRQ) --
          XIRQ_NUM_CH                  => 8,                 -- number of external IRQ channels (0..32)
