@@ -37,7 +37,6 @@
 # -------------------------------------------------------------------------- #
 
 
-set_global_assignment -name FAMILY "Cyclone IV E"
 set_global_assignment -name DEVICE EP4CE22F17C6
 set_global_assignment -name FAMILY "Cyclone IV E"
 set_global_assignment -name TOP_LEVEL_ENTITY top
@@ -230,6 +229,8 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[2]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[3]
 
 
+
+
 #============================================================
 # GPIO
 #============================================================
@@ -288,6 +289,14 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[11]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[12]
 
 
+#============================================================
+
+
+
+
+
+
+
 #set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[0]
 #set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[1]
 #set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[2]
@@ -316,32 +325,32 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[12]
 #============================================================
 # LED_GREEN
 #============================================================
-#set_location_assignment PIN_A15 -to LED[0]
-#set_location_assignment PIN_A13 -to LED[1]
-#set_location_assignment PIN_B13 -to LED[2]
-#set_location_assignment PIN_A11 -to LED[3]
-#set_location_assignment PIN_D1 -to LED[4]
-#set_location_assignment PIN_F3 -to LED[5]
-#set_location_assignment PIN_B1 -to LED[6]
-#set_location_assignment PIN_L3 -to LED[7]
+set_location_assignment PIN_A15 -to LED[0]
+set_location_assignment PIN_A13 -to LED[1]
+set_location_assignment PIN_B13 -to LED[2]
+set_location_assignment PIN_A11 -to LED[3]
+set_location_assignment PIN_D1 -to LED[4]
+set_location_assignment PIN_F3 -to LED[5]
+set_location_assignment PIN_B1 -to LED[6]
+set_location_assignment PIN_L3 -to LED[7]
 
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[1]
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[0]
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[2]
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[3]
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[4]
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[5]
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[6]
-#set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[7]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[2]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[3]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[4]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[5]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[6]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[7]
 
-#set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[0]
-#set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[1]
-#set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[2]
-#set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[3]
-#set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[4]
-#set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[5]
-#set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[6]
-#set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[7]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[1]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[2]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[3]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[4]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[5]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[6]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to LED[7]
 
 
 #============================================================
@@ -358,8 +367,8 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to KEY[1]
 # UART0
 #============================================================
 
-set_location_assignment PIN_J14 -to UART0_TXD
-set_location_assignment PIN_J13 -to UART0_RXD
+set_location_assignment PIN_N14 -to UART0_TXD
+set_location_assignment PIN_L14 -to UART0_RXD
 
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART0_TXD
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART0_RXD
