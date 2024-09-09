@@ -109,13 +109,13 @@ entity top is
       MSW_IRQ     : in  std_logic;
       MEXT_IRQ    : in  std_logic;
 
-      XIRQ        : in  std_logic_vector(31 downto 0)
+      XIRQ        : in  std_logic_vector(31 downto 0);
 
 		--
       -- GPIO
       --
-		--GPIO_i	    : in std_logic_vector(12 downto 0);
-		--GPIO_o		 :	out std_logic_vector(2 downto 0)
+		GPIO_i	    : in std_logic_vector(12 downto 0);
+		GPIO_o		 :	out std_logic_vector(5 downto 0)
    );
 end entity top;
 
@@ -777,8 +777,8 @@ begin
 
    -- GPIO_pin <= To_StdLogicVector( gpio(31 downto 16) );
 	
-	-- gpio_i_signal <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
-	-- GPIO_o <= To_StdLogicVector( gpio_o_signal(2 downto 0) );
+	gpio_i_signal <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
+	GPIO_o <= To_StdLogicVector( gpio_o_signal(5 downto 0) );
 
    -- CPU interrupts set to zero
    mtime_irq_i_signal <= MTIME_IRQ;

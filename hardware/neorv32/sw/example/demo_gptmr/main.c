@@ -48,7 +48,22 @@
 /**@{*/
 /** UART BAUD rate */
 #define BAUD_RATE 19200
+#define IN1 0
+#define IN2 1
+#define IN3 2
+#define EN1 3
+#define EN2 4
+#define EN3 5
 /**@}*/
+
+uint8_t led_state[6] = {0, 1, 0, 1, 0, 1};
+
+uint8_t in_seq[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 1, 0},
+                        {0, 0, 1}, {0, 0, 1}, {1, 0, 0}};
+uint8_t en_seq[6][3] = {{1, 0, 1}, {0, 1, 1}, {1, 1, 0},
+                        {1, 0, 1}, {0, 1, 1}, {1, 1, 0}};
+
+volatile uint32_t counter = 0;
 
 
 // Prototypes
@@ -90,7 +105,7 @@ int main() {
   neorv32_rte_handler_install(GPTMR_RTE_ID, gptmr_firq_handler);
 
   // configure timer for 1Hz ticks in continuous mode (with clock divisor = 8)
-  neorv32_gptmr_setup(CLK_PRSC_8, 1, NEORV32_SYSINFO->CLK / (8 * 2));
+  neorv32_gptmr_setup(CLK_PRSC_8, 1, NEORV32_SYSINFO->CLK / (8 * 200));
 
   // enable interrupt
   neorv32_cpu_csr_clr(CSR_MIP, 1 << GPTMR_FIRQ_PENDING);  // make sure there is no GPTMR IRQ pending already
@@ -116,6 +131,39 @@ void gptmr_firq_handler(void) {
 
   neorv32_cpu_csr_write(CSR_MIP, ~(1<<GPTMR_FIRQ_PENDING)); // clear/ack pending FIRQ
 
-  neorv32_uart0_putc('.'); // send tick symbol via UART0
-  neorv32_gpio_pin_toggle(0); // toggle output port bit 0
+  // toggle GPIO.output(0)
+  //neorv32_gpio_pin_toggle(0);
+  if (in_seq[counter][0]){
+    neorv32_gpio_pin_set(IN1);
+  } else {
+    neorv32_gpio_pin_clr(IN1);
+  }
+  if (in_seq[counter][1]){
+    neorv32_gpio_pin_set(IN2);
+  } else {
+    neorv32_gpio_pin_clr(IN2);
+  }
+  if (in_seq[counter][2]){
+    neorv32_gpio_pin_set(IN3);
+  } else {
+    neorv32_gpio_pin_clr(IN3);
+  }
+
+  if (en_seq[counter][0]){
+    neorv32_gpio_pin_set(EN1);
+  } else {
+    neorv32_gpio_pin_clr(EN1);
+  }
+  if (en_seq[counter][1]){
+    neorv32_gpio_pin_set(EN2);
+  } else {
+    neorv32_gpio_pin_clr(EN2);
+  }
+  if (en_seq[counter][2]){
+    neorv32_gpio_pin_set(EN3);
+  } else {
+    neorv32_gpio_pin_clr(EN3);
+  }
+
+  counter = (counter + 1) % 6;
 }
