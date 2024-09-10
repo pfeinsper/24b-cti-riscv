@@ -67,7 +67,7 @@ entity top is
       --
       -- User LEDs
       --
-      --LED         : out std_logic_vector(7 downto 0);
+      LED         : out std_logic_vector(7 downto 0);
 
       --
       -- Keys
@@ -84,6 +84,13 @@ entity top is
 		-- PWM   
       --
 		PWM          : out std_ulogic_vector(3 downto 0);
+
+      -- CPU Interrupts
+      MTIME_IRQ   : in  std_logic;
+      MSW_IRQ     : in  std_logic;
+      MEXT_IRQ    : in  std_logic;
+
+      XIRQ        : in  std_logic_vector(31 downto 0);
 
 		--
       -- GPIO
@@ -132,7 +139,6 @@ architecture syn of top is
       );
    end component pll_sys;
 
-
    --
    -- neorv32 top
    --
@@ -161,7 +167,7 @@ architecture syn of top is
        CPU_EXTENSION_RISCV_Zihpm    : boolean := false;  -- implement hardware performance monitors?
        CPU_EXTENSION_RISCV_Zmmul    : boolean := false;  -- implement multiply-only M sub-extension?
        CPU_EXTENSION_RISCV_Zxcfu    : boolean := false;  -- implement custom (instr.) functions unit?
-
+		 
        -- Tuning Options --
        FAST_MUL_EN                  : boolean := false;  -- use DSPs for M extension's multiplier
        FAST_SHIFT_EN                : boolean := false;  -- use barrel shifter for shift operations
@@ -368,8 +374,8 @@ architecture syn of top is
 	-- signal gpio             : std_ulogic_vector(63 downto 0);
 	signal gpio_o_signal : std_ulogic_vector(15 downto 0);
 	signal gpio_i_signal : std_ulogic_vector(15 downto 0);
-	
-	   -- XIRQ
+
+   -- XIRQ
    signal xirq_i_signal           : std_ulogic_vector(31 downto 0);
 
    -- CPU interrupts
@@ -397,7 +403,7 @@ begin
    --
 
    -- Asynchronous assert
-   fpga_reset <= '1' when ((KEY(1) = '0') OR (KEY(0) = '0')) else '0';
+   fpga_reset <= '1' when (KEY(0) = '0') else '0';
    reset      <= '1' when ((fpga_reset = '1') OR (pll_locked = '0')) else '0';
 
    -- Synchronize deassert
@@ -431,7 +437,7 @@ begin
          INT_BOOTLOADER_EN            => true,             -- boot configuration: true = boot explicit bootloader; false = boot from int/ext (I)MEM
 
          -- On-Chip Debugger (OCD) --
-         ON_CHIP_DEBUGGER_EN          => true,              -- implement on-chip debugger
+         ON_CHIP_DEBUGGER_EN          => false,              -- implement on-chip debugger
 
          -- RISC-V CPU Extensions --
          CPU_EXTENSION_RISCV_C        => true,              -- implement compressed extension?
@@ -452,7 +458,17 @@ begin
          IO_MTIME_EN                  => true,              -- implement machine system timer (MTIME)?
          IO_UART0_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART0)?
 			IO_TWI_EN                    => true,              -- implement two-wire interface (TWI)?
-			IO_PWM_NUM_CH					  => 4						-- number of PWM channels to implement (0..12); 0 = disabled
+			IO_PWM_NUM_CH					  => 4,						-- number of PWM channels to implement (0..12); 0 = disabled
+			
+			IO_GPTMR_EN                  => true,              -- implement general purpose timer (GPTMR)?
+
+         -- External Interrupts Controller (XIRQ) --
+         XIRQ_NUM_CH                  => 8,                 -- number of external IRQ channels (0..32)
+         -- set to edge and rising for all channels
+         XIRQ_TRIGGER_TYPE            => (others => '1'),   -- trigger type: 0=level, 1=edge
+         XIRQ_TRIGGER_POLARITY        => (others => '1')    -- trigger polarity: 0=low-level/falling-edge, 1=high-level/rising-edge
+      
+         
 		)
       port map (
          -- Global control --
@@ -481,15 +497,21 @@ begin
          mtime_irq_i                  => mtime_irq_i_signal, -- machine timer interrupt, available if IO_MTIME_EN = false
          msw_irq_i                    => msw_irq_i_signal,   -- machine software interrupt
          mext_irq_i                   => mext_irq_i_signal   -- machine external interrupt
-		
 		);
 
 
+
+
    --------------------------------------------------------
-   -- Output
+   -- Output/Input signals
    --------------------------------------------------------
 
-   -- LED <= To_StdLogicVector( gpio(9 downto 0) ); -- The 
+   LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
+
+   -- Testing configurations for XIRQ
+   -- xirq_i_signal <= To_StduLogicVector(XIRQ);
+   -- xirq_i_signal(4 downto 0) <= gpio_o_signal(4 downto 0);
+   -- xirq_i_signal(31 downto 5) <= (others => '0'); -- CPU interrupts set to zero
 
    -- GPIO_pin <= To_StdLogicVector( gpio(31 downto 16) );
 	
