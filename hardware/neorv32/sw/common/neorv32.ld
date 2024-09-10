@@ -1,43 +1,17 @@
-/* ################################################################################################# */
-/* # << NEORV32 - RISC-V GCC Linker Script >>                                                      # */
-/* # ********************************************************************************************* # */
-/* # BSD 3-Clause License                                                                          # */
-/* #                                                                                               # */
-/* # Copyright (c) 2022, Stephan Nolting. All rights reserved.                                     # */
-/* #                                                                                               # */
-/* # Redistribution and use in source and binary forms, with or without modification, are          # */
-/* # permitted provided that the following conditions are met:                                     # */
-/* #                                                                                               # */
-/* # 1. Redistributions of source code must retain the above copyright notice, this list of        # */
-/* #    conditions and the following disclaimer.                                                   # */
-/* #                                                                                               # */
-/* # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     # */
-/* #    conditions and the following disclaimer in the documentation and/or other materials        # */
-/* #    provided with the distribution.                                                            # */
-/* #                                                                                               # */
-/* # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  # */
-/* #    endorse or promote products derived from this software without specific prior written      # */
-/* #    permission.                                                                                # */
-/* #                                                                                               # */
-/* # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   # */
-/* # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               # */
-/* # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    # */
-/* # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     # */
-/* # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE # */
-/* # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    # */
-/* # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     # */
-/* # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  # */
-/* # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            # */
-/* # ********************************************************************************************* # */
-/* # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting # */
-/* ################################################################################################# */
+/* ================================================================================ */
+/* NEORV32 CPU - RISC-V GCC Linker Script                                           */
+/* -------------------------------------------------------------------------------- */
+/* The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              */
+/* Copyright (c) NEORV32 contributors.                                              */
+/* Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  */
+/* Licensed under the BSD-3-Clause license, see LICENSE for details.                */
+/* SPDX-License-Identifier: BSD-3-Clause                                            */
+/* ================================================================================ */
 
-/* Default linker script, for normal executables .
- * Copyright (C) 2014-2020 Free Software Foundation, Inc.
+/* Copyright (C) 2014-2020 Free Software Foundation, Inc.
  * Copying and distribution of this script, with or without modification,
  * are permitted in any medium without royalty provided the copyright
- * notice and this notice are preserved.
- * Modified for the NEORV32 processor by Stephan Nolting. */
+ * notice and this notice are preserved. */
 
 
 OUTPUT_FORMAT("elf32-littleriscv")
@@ -50,7 +24,7 @@ SEARCH_DIR("=/usr/lib")
 
 
 /* ************************************************************************************************* */
-/* +++ NEORV32 memory configuration +++                                                              */
+/* +++ NEORV32 memory layout configuration +++                                                       */
 /* If the symbols are not explicitly defined the default configurations are used. If required, only  */
 /* edit the very last entry in each row.                                                             */
 /* NOTE: section sizes have to be a multiple of 4 bytes; base addresses have to be 32-bit-aligned.   */
@@ -69,21 +43,25 @@ __neorv32_ram_base = DEFINED(__neorv32_ram_base) ? __neorv32_ram_base : 0x800000
 
 
 /* ************************************************************************************************* */
-/* If compiling the bootloader, the ROM section is automatically re-mapped to the processor-internal */
-/* bootloader ROM address space.                                                                     */
+/* when compiling the bootloader the ROM section is automatically re-mapped to the                   */
+/* processor-internal bootloader ROM address space.                                                  */
 /* ************************************************************************************************* */
 MEMORY
 {
-  rom  (rx) : ORIGIN = DEFINED(make_bootloader) ? 0xFFFFC000 : __neorv32_rom_base, LENGTH = DEFINED(make_bootloader) ? 8K : __neorv32_rom_size
-  ram (rwx) : ORIGIN = __neorv32_ram_base, LENGTH = DEFINED(make_bootloader) ? 512 : __neorv32_ram_size
+  rom  (rx) : ORIGIN = DEFINED(MAKE_BOOTLOADER) ? 0xFFFFC000 : __neorv32_rom_base, LENGTH = DEFINED(MAKE_BOOTLOADER) ? 8K : __neorv32_rom_size
+  ram (rwx) : ORIGIN = __neorv32_ram_base, LENGTH = DEFINED(MAKE_BOOTLOADER) ? 512 : __neorv32_ram_size
+  xip  (rx) : ORIGIN = 0xE0000000, LENGTH = 256M
+  boot (rx) : ORIGIN = 0xFFFFC000, LENGTH = 8K
+  io  (rwx) : ORIGIN = 0xFFFFE000, LENGTH = 8K
 }
 
 
 /* ************************************************************************************************* */
+/* Section ".text" - program code                                                                    */
+/* This is the first part of the actual/final executable                                             */
+/* ************************************************************************************************* */
 SECTIONS
 {
-
-  /* First part of the actual executable file: actual instructions */
   .text : ALIGN(4)
   {
     PROVIDE(__text_start = .);
@@ -130,7 +108,10 @@ SECTIONS
   } > rom
 
 
-  /* Second part of the actual executable: read-only data, PLACED RIGHT NEXT to .text using "__etext" symbol */
+/* ************************************************************************************************* */
+/* Section ".rodata" - read-only constants and ".data" initialization                                */
+/* This is the second part of the actual/final executable the will be places right after ".text"     */
+/* ************************************************************************************************* */
   .rodata __etext :
   {
     /* constant data like strings */
@@ -143,7 +124,10 @@ SECTIONS
   } > rom
 
 
-  /* initialized read/write data, accessed in RAM, placed in ROM, copied during boot - not part of the final executable */
+/* ************************************************************************************************* */
+/* Section ".data" - pre-initialized variables                                                       */
+/* The start-up code will initialize this RAM section from the executable's ".rodata" section        */
+/* ************************************************************************************************* */
   .data : ALIGN(4)
   {
     __DATA_BEGIN__ = .;
@@ -175,7 +159,10 @@ SECTIONS
   } > ram AT > rom
 
 
-  /* zero/non-initialized read/write data placed in RAM - not part of the final executable */
+/* ************************************************************************************************* */
+/* Section ".bss" - non-initialized variables                                                        */
+/* The start-up code will clear this section during boot-up                                          */
+/* ************************************************************************************************* */
   .bss (NOLOAD): ALIGN(4)
   {
     __BSS_START__ = .;
@@ -206,10 +193,14 @@ SECTIONS
   } > ram
 
 
-  /* heap for dynamic memory allocation (use carefully!) - not part of the final executable */
+/* ************************************************************************************************* */
+/* Section ".heap" - dynamic memory (e.g. malloc)                                                    */
+/* ************************************************************************************************* */
   .heap : ALIGN(4)
   {
     PROVIDE(__heap_start = .);
+    /* start section on WORD boundary */
+    . = ALIGN(4);
     . = __neorv32_heap_size;
     /* finish section on WORD boundary */
     . = ALIGN(4);
@@ -217,7 +208,9 @@ SECTIONS
   } > ram
 
 
-  /* Yet unused */
+/* ************************************************************************************************* */
+/* Unused sections                                                                                   */
+/* ************************************************************************************************* */
   .jcr                : { KEEP (*(.jcr)) }
   .got                : { *(.got.plt) *(.igot.plt) *(.got) *(.igot) }  .interp         : { *(.interp) }
   .note.gnu.build-id  : { *(.note.gnu.build-id) }
@@ -246,7 +239,9 @@ SECTIONS
   .rela.bss           : { *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*) }
 
 
-  /* Stabs debugging sections.  */
+/* ************************************************************************************************* */
+/* Debug symbols                                                                                     */
+/* ************************************************************************************************* */
   .stab          0 : { *(.stab) }
   .stabstr       0 : { *(.stabstr) }
   .stab.excl     0 : { *(.stab.excl) }
@@ -290,11 +285,13 @@ SECTIONS
   /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
 
 
-  /* Export symbols for neorv32 crt0 start-up code */
+/* ************************************************************************************************* */
+/* Export symbols for neorv32 crt0 start-up code                                                     */
+/* ************************************************************************************************* */
   PROVIDE(__crt0_max_heap            = __neorv32_heap_size);
   PROVIDE(__crt0_imem_begin          = ORIGIN(rom));
   PROVIDE(__crt0_dmem_begin          = ORIGIN(ram));
-  PROVIDE(__crt0_stack_begin         = (ORIGIN(ram) + LENGTH(ram)) - 4);
+  PROVIDE(__crt0_stack_end           = (ORIGIN(ram) + LENGTH(ram)) - 1);
   PROVIDE(__crt0_bss_start           = __BSS_START__);
   PROVIDE(__crt0_bss_end             = __BSS_END__);
   PROVIDE(__crt0_copy_data_src_begin = LOADADDR(.data));

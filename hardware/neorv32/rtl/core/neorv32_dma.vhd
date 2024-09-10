@@ -1,39 +1,12 @@
--- #################################################################################################
--- # << NEORV32 - Direct Memory Access (DMA) Controller >>                                         #
--- # ********************************************************************************************* #
--- # Simple single-channel scatter/gather DMA controller that is also capable of transforming data #
--- # while moving it from source to destination.                                                   #
--- # ********************************************************************************************* #
--- # BSD 3-Clause License                                                                          #
--- #                                                                                               #
--- # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
--- #                                                                                               #
--- # Redistribution and use in source and binary forms, with or without modification, are          #
--- # permitted provided that the following conditions are met:                                     #
--- #                                                                                               #
--- # 1. Redistributions of source code must retain the above copyright notice, this list of        #
--- #    conditions and the following disclaimer.                                                   #
--- #                                                                                               #
--- # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
--- #    conditions and the following disclaimer in the documentation and/or other materials        #
--- #    provided with the distribution.                                                            #
--- #                                                                                               #
--- # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
--- #    endorse or promote products derived from this software without specific prior written      #
--- #    permission.                                                                                #
--- #                                                                                               #
--- # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
--- # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
--- # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
--- # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
--- # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
--- # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
--- # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
--- # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
--- # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
--- # ********************************************************************************************* #
--- # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
--- #################################################################################################
+-- ================================================================================ --
+-- NEORV32 SoC - Direct Memory Access Controller (DMA)                              --
+-- -------------------------------------------------------------------------------- --
+-- The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              --
+-- Copyright (c) NEORV32 contributors.                                              --
+-- Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  --
+-- Licensed under the BSD-3-Clause license, see LICENSE for details.                --
+-- SPDX-License-Identifier: BSD-3-Clause                                            --
+-- ================================================================================ --
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -68,15 +41,18 @@ architecture neorv32_dma_rtl of neorv32_dma is
   constant type_endian_c  : natural := 31; -- r/w: Convert Endianness when set
 
   -- control and status register bits --
-  constant ctrl_en_c            : natural :=  0; -- r/w: DMA enable
-  constant ctrl_auto_c          : natural :=  1; -- r/w: enable FIRQ-triggered transfer
+  constant ctrl_en_c           : natural :=  0; -- r/w: DMA enable
+  constant ctrl_auto_c         : natural :=  1; -- r/w: enable FIRQ-triggered transfer
+  constant ctrl_fence_c        : natural :=  2; -- r/w: issue FENCE operation when DMA is done
   --
-  constant ctrl_error_rd_c      : natural :=  8; -- r/-: error during read transfer
-  constant ctrl_error_wr_c      : natural :=  9; -- r/-: error during write transfer
-  constant ctrl_busy_c          : natural := 10; -- r/-: DMA transfer in progress
+  constant ctrl_error_rd_c     : natural :=  8; -- r/-: error during read transfer
+  constant ctrl_error_wr_c     : natural :=  9; -- r/-: error during write transfer
+  constant ctrl_busy_c         : natural := 10; -- r/-: DMA transfer in progress
+  constant ctrl_done_c         : natural := 11; -- r/c: a DMA transfer was executed/attempted
   --
-  constant ctrl_firq_mask_lsb_c : natural := 16; -- r/w: FIRQ trigger mask LSB
-  constant ctrl_firq_mask_msb_c : natural := 31; -- r/w: FIRQ trigger mask MSB
+  constant ctrl_firq_type_c    : natural := 15; -- r/w: trigger on FIRQ rising-edge or on high-level
+  constant ctrl_firq_sel_lsb_c : natural := 16; -- r/w: FIRQ trigger select LSB
+  constant ctrl_firq_sel_msb_c : natural := 19; -- r/w: FIRQ trigger select MSB
 
   -- transfer quantities --
   constant qsel_b2b_c  : std_ulogic_vector(1 downto 0) := "00"; -- byte to byte
@@ -88,15 +64,18 @@ architecture neorv32_dma_rtl of neorv32_dma is
   type config_t is record
     enable    : std_ulogic; -- DMA enabled when set
     auto      : std_ulogic; -- FIRQ-driven auto transfer
-    firq_mask : std_ulogic_vector(15 downto 0); -- FIRQ trigger mask
+    fence     : std_ulogic; -- issue FENCE operation when DMA is done
+    firq_sel  : std_ulogic_vector(3 downto 0);  -- FIRQ trigger select
+    firq_type : std_ulogic; -- trigger on FIRQ rising-edge (0) or high-level (1)
     src_base  : std_ulogic_vector(31 downto 0); -- source base address
     dst_base  : std_ulogic_vector(31 downto 0); -- destination base address
     num       : std_ulogic_vector(23 downto 0); -- number of elements
-    qsel      : std_ulogic_vector(01 downto 0); -- data quantity select
+    qsel      : std_ulogic_vector(1 downto 0);  -- data quantity select
     src_inc   : std_ulogic; -- constant (0) or incrementing (1) source address
     dst_inc   : std_ulogic; -- constant (0) or incrementing (1) destination address
     endian    : std_ulogic; -- convert endianness when set
     start     : std_ulogic; -- transfer start trigger
+    done      : std_ulogic; -- transfer was executed (but might have failed)
   end record;
   signal config : config_t;
 
@@ -128,16 +107,17 @@ architecture neorv32_dma_rtl of neorv32_dma is
 
 begin
 
-  -- Control Interface -------------------------------------------------------------------
+  -- Bus Access -----------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-
-  -- write access --
-  write_access: process(rstn_i, clk_i)
+  bus_access: process(rstn_i, clk_i)
   begin
     if (rstn_i = '0') then
+      bus_rsp_o        <= rsp_terminate_c;
       config.enable    <= '0';
       config.auto      <= '0';
-      config.firq_mask <= (others => '0');
+      config.fence     <= '0';
+      config.firq_sel  <= (others => '0');
+      config.firq_type <= '0';
       config.src_base  <= (others => '0');
       config.dst_base  <= (others => '0');
       config.num       <= (others => '0');
@@ -146,79 +126,94 @@ begin
       config.dst_inc   <= '0';
       config.endian    <= '0';
       config.start     <= '0';
+      config.done      <= '0';
     elsif rising_edge(clk_i) then
-      config.start <= '0'; -- default
-      if (bus_req_i.we = '1') then
-        if (bus_req_i.addr(3 downto 2) = "00") then -- control and status register
-          config.enable    <= bus_req_i.data(ctrl_en_c);
-          config.auto      <= bus_req_i.data(ctrl_auto_c);
-          config.firq_mask <= bus_req_i.data(ctrl_firq_mask_msb_c downto ctrl_firq_mask_lsb_c);
-        end if;
-        if (bus_req_i.addr(3 downto 2) = "01") then -- source base address
-          config.src_base <= bus_req_i.data;
-        end if;
-        if (bus_req_i.addr(3 downto 2) = "10") then -- destination base address
-          config.dst_base <= bus_req_i.data;
-        end if;
-        if (bus_req_i.addr(3 downto 2) = "11") then -- transfer type register
-          config.num     <= bus_req_i.data(type_num_hi_c downto type_num_lo_c);
-          config.qsel    <= bus_req_i.data(type_qsel_hi_c downto type_qsel_lo_c);
-          config.src_inc <= bus_req_i.data(type_src_inc_c);
-          config.dst_inc <= bus_req_i.data(type_dst_inc_c);
-          config.endian  <= bus_req_i.data(type_endian_c);
-          config.start   <= '1'; -- trigger DMA operation
-        end if;
-      end if;
-    end if;
-  end process write_access;
-
-  -- read access --
-  read_access: process(clk_i)
-  begin
-    if rising_edge(clk_i) then
-      bus_rsp_o.ack  <= bus_req_i.re or bus_req_i.we; -- bus access acknowledge
+      -- bus handshake --
+      bus_rsp_o.ack  <= bus_req_i.stb;
+      bus_rsp_o.err  <= '0';
       bus_rsp_o.data <= (others => '0');
-      if (bus_req_i.re = '1') then
-        case bus_req_i.addr(3 downto 2) is
-          when "00" => -- control and status register
-            bus_rsp_o.data(ctrl_en_c)       <= config.enable;
-            bus_rsp_o.data(ctrl_auto_c)     <= config.auto;
-            bus_rsp_o.data(ctrl_error_rd_c) <= engine.err_rd;
-            bus_rsp_o.data(ctrl_error_wr_c) <= engine.err_wr;
-            bus_rsp_o.data(ctrl_busy_c)     <= engine.busy;
-            bus_rsp_o.data(ctrl_firq_mask_msb_c downto ctrl_firq_mask_lsb_c) <= config.firq_mask;
-          when "01" => -- address of last read access
-            bus_rsp_o.data <= engine.src_addr;
-          when "10" => -- address of last write access
-            bus_rsp_o.data <= engine.dst_addr;
-          when others => -- transfer type register
-            bus_rsp_o.data(type_num_hi_c downto type_num_lo_c)   <= engine.num;
-            bus_rsp_o.data(type_qsel_hi_c downto type_qsel_lo_c) <= config.qsel;
-            bus_rsp_o.data(type_src_inc_c)                       <= config.src_inc;
-            bus_rsp_o.data(type_dst_inc_c)                       <= config.dst_inc;
-            bus_rsp_o.data(type_endian_c)                        <= config.endian;
-        end case;
+
+      -- defaults --
+      config.start <= '0'; -- default
+      config.done  <= config.enable and (config.done or engine.done); -- set if enabled and transfer done
+
+      if (bus_req_i.stb = '1') then
+        if (bus_req_i.rw = '1') then -- write access
+          if (bus_req_i.addr(3 downto 2) = "00") then -- control and status register
+            config.enable    <= bus_req_i.data(ctrl_en_c);
+            config.auto      <= bus_req_i.data(ctrl_auto_c);
+            config.fence     <= bus_req_i.data(ctrl_fence_c);
+            config.done      <= '0'; -- clear on write access
+            config.firq_type <= bus_req_i.data(ctrl_firq_type_c);
+            config.firq_sel  <= bus_req_i.data(ctrl_firq_sel_msb_c downto ctrl_firq_sel_lsb_c);
+          end if;
+          if (bus_req_i.addr(3 downto 2) = "01") then -- source base address
+            config.src_base <= bus_req_i.data;
+          end if;
+          if (bus_req_i.addr(3 downto 2) = "10") then -- destination base address
+            config.dst_base <= bus_req_i.data;
+          end if;
+          if (bus_req_i.addr(3 downto 2) = "11") then -- transfer type register
+            config.num     <= bus_req_i.data(type_num_hi_c downto type_num_lo_c);
+            config.qsel    <= bus_req_i.data(type_qsel_hi_c downto type_qsel_lo_c);
+            config.src_inc <= bus_req_i.data(type_src_inc_c);
+            config.dst_inc <= bus_req_i.data(type_dst_inc_c);
+            config.endian  <= bus_req_i.data(type_endian_c);
+            config.start   <= '1'; -- trigger DMA operation
+          end if;
+        else -- read access
+          case bus_req_i.addr(3 downto 2) is
+            when "00" => -- control and status register
+              bus_rsp_o.data(ctrl_en_c)        <= config.enable;
+              bus_rsp_o.data(ctrl_auto_c)      <= config.auto;
+              bus_rsp_o.data(ctrl_fence_c)     <= config.fence;
+              bus_rsp_o.data(ctrl_error_rd_c)  <= engine.err_rd;
+              bus_rsp_o.data(ctrl_error_wr_c)  <= engine.err_wr;
+              bus_rsp_o.data(ctrl_busy_c)      <= engine.busy;
+              bus_rsp_o.data(ctrl_done_c)      <= config.done;
+              bus_rsp_o.data(ctrl_firq_type_c) <= config.firq_type;
+              bus_rsp_o.data(ctrl_firq_sel_msb_c downto ctrl_firq_sel_lsb_c) <= config.firq_sel;
+            when "01" => -- address of last read access
+              bus_rsp_o.data <= engine.src_addr;
+            when "10" => -- address of last write access
+              bus_rsp_o.data <= engine.dst_addr;
+            when others => -- transfer type register
+              bus_rsp_o.data(type_num_hi_c downto type_num_lo_c)   <= engine.num;
+              bus_rsp_o.data(type_qsel_hi_c downto type_qsel_lo_c) <= config.qsel;
+              bus_rsp_o.data(type_src_inc_c)                       <= config.src_inc;
+              bus_rsp_o.data(type_dst_inc_c)                       <= config.dst_inc;
+              bus_rsp_o.data(type_endian_c)                        <= config.endian;
+          end case;
+        end if;
       end if;
     end if;
-  end process read_access;
+  end process bus_access;
 
-  -- no access error possible --
-  bus_rsp_o.err <= '0';
+  -- transfer-done interrupt --
+  irq_o <= config.done;
 
 
   -- Automatic Trigger ----------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  automatic_trigger: process(clk_i)
+  automatic_trigger: process(rstn_i, clk_i)
   begin
-    if rising_edge(clk_i) then
+    if (rstn_i = '0') then
+      firq_buf <= (others => '0');
+      match_ff <= '0';
+      atrigger <= '0';
+    elsif rising_edge(clk_i) then
       firq_buf <= firq_i;
       match_ff <= match;
-      atrigger <= match and (not match_ff); -- trigger on rising edge of FIRQ
+      if (config.firq_type = '0') then -- auto-trigger on rising-edge of FIRQ
+        atrigger <= match and (not match_ff);
+      else -- auto-trigger on high-level of FIRQ
+        atrigger <= match;
+      end if;
     end if;
   end process automatic_trigger;
 
-  -- logical OR of all enabled trigger FIRQs --
-  match <= or_reduce_f(firq_buf and config.firq_mask);
+  -- select a single FIRQ --
+  match <= firq_buf(to_integer(unsigned(config.firq_sel)));
 
 
   -- Bus Access Engine ----------------------------------------------------------------------
@@ -233,13 +228,12 @@ begin
       engine.err_rd   <= '0';
       engine.err_wr   <= '0';
       engine.done     <= '0';
-      dma_req_o.re    <= '0';
-      dma_req_o.we    <= '0';
+      dma_req_o.rw    <= '0';
+      dma_req_o.stb   <= '0';
     elsif rising_edge(clk_i) then
       -- defaults --
-      engine.done  <= '0';
-      dma_req_o.re <= '0';
-      dma_req_o.we <= '0';
+      engine.done   <= '0';
+      dma_req_o.stb <= '0';
 
       -- state machine --
       case engine.state is
@@ -254,7 +248,8 @@ begin
               ((config.auto = '1') and (atrigger = '1'))) then -- automatic trigger
             engine.err_rd <= '0';
             engine.err_wr <= '0';
-            dma_req_o.re  <= '1'; -- issue read request
+            dma_req_o.rw  <= '0'; -- read
+            dma_req_o.stb <= '1'; -- issue read request
             engine.state  <= S_READ;
           end if;
 
@@ -265,8 +260,9 @@ begin
             engine.err_rd <= '1';
             engine.state  <= S_IDLE;
           elsif (dma_rsp_i.ack = '1') then
-            dma_req_o.we <= '1';
-            engine.state <= S_WRITE;
+            dma_req_o.rw  <= '1'; -- write
+            dma_req_o.stb <= '1'; -- issue write request
+            engine.state  <= S_WRITE;
           end if;
 
         when S_WRITE => -- pending write access
@@ -292,8 +288,9 @@ begin
             if (config.dst_inc = '1') then -- incrementing destination address
               engine.dst_addr <= std_ulogic_vector(unsigned(engine.dst_addr) + engine.dst_add);
             end if;
-            dma_req_o.re <= '1'; -- issue read request
-            engine.state <= S_READ;
+            dma_req_o.rw  <= '0'; -- read
+            dma_req_o.stb <= '1'; -- issue read request
+            engine.state  <= S_READ;
           end if;
 
         when others => -- undefined
@@ -307,14 +304,12 @@ begin
   -- transfer in progress? --
   engine.busy <= '0' when (engine.state = S_IDLE) else '1';
 
-  -- transfer-done interrupt --
-  irq_o <= engine.done and config.enable; -- no interrupt if transfer was aborted
-
   -- bus output --
-  dma_req_o.priv <= priv_mode_m_c;
-  dma_req_o.src  <= '0'; -- source = data access
-  dma_req_o.addr <= engine.src_addr when (engine.state = S_READ) else engine.dst_addr;
-  dma_req_o.rvso <= '0'; -- no reservation set operation possible
+  dma_req_o.priv  <= priv_mode_m_c; -- privileged access
+  dma_req_o.src   <= '0'; -- source = data access
+  dma_req_o.addr  <= engine.src_addr when (engine.state = S_READ) else engine.dst_addr;
+  dma_req_o.rvso  <= '0'; -- no reservation set operation possible
+  dma_req_o.fence <= config.enable and config.fence and engine.done; -- issue FENCE operation when transfer is done
 
   -- address increment --
   address_inc: process(config.qsel)
@@ -331,7 +326,7 @@ begin
   -- -------------------------------------------------------------------------------------------
 
   -- endianness conversion --
-  align_end <= dma_rsp_i.data when (config.endian = '0') else bswap32_f(dma_rsp_i.data);
+  align_end <= dma_rsp_i.data when (config.endian = '0') else bswap_f(dma_rsp_i.data);
 
   -- source data alignment --
   src_align: process(rstn_i, clk_i)
@@ -344,18 +339,10 @@ begin
           align_buf <= align_end;
         else -- byte
           case engine.src_addr(1 downto 0) is
-            when "00" => -- byte 0
-              align_buf(07 downto 0) <= align_end(07 downto 00);
-              align_buf(31 downto 8) <= (others => (config.qsel(1) and align_end(07))); -- sign extension
-            when "01" => -- byte 1
-              align_buf(07 downto 0) <= align_end(15 downto 08);
-              align_buf(31 downto 8) <= (others => (config.qsel(1) and align_end(15))); -- sign extension
-            when "10" => -- byte 2
-              align_buf(07 downto 0) <= align_end(23 downto 16);
-              align_buf(31 downto 8) <= (others => (config.qsel(1) and align_end(23))); -- sign extension
-            when others => -- byte 3
-              align_buf(07 downto 0) <= align_end(31 downto 24);
-              align_buf(31 downto 8) <= (others => (config.qsel(1) and align_end(31))); -- sign extension
+            when "00"   => align_buf <= replicate_f(config.qsel(1) and align_end(7),  24) & align_end(7 downto 0);
+            when "01"   => align_buf <= replicate_f(config.qsel(1) and align_end(15), 24) & align_end(15 downto 8);
+            when "10"   => align_buf <= replicate_f(config.qsel(1) and align_end(23), 24) & align_end(23 downto 16);
+            when others => align_buf <= replicate_f(config.qsel(1) and align_end(31), 24) & align_end(31 downto 24);
           end case;
         end if;
       end if;
@@ -367,14 +354,11 @@ begin
   begin
     dma_req_o.ben <= (others => '0'); -- default
     if (config.qsel = qsel_b2b_c) then -- byte
-      dma_req_o.data(07 downto 00) <= align_buf(7 downto 0);
-      dma_req_o.data(15 downto 08) <= align_buf(7 downto 0);
-      dma_req_o.data(23 downto 16) <= align_buf(7 downto 0);
-      dma_req_o.data(31 downto 24) <= align_buf(7 downto 0);
+      dma_req_o.data <= align_buf(7 downto 0) & align_buf(7 downto 0) & align_buf(7 downto 0) & align_buf(7 downto 0);
       dma_req_o.ben(to_integer(unsigned(engine.dst_addr(1 downto 0)))) <= '1';
     else -- word
       dma_req_o.data <= align_buf;
-      dma_req_o.ben  <= "1111";
+      dma_req_o.ben  <= (others => '1');
     end if;
   end process dst_align;
 

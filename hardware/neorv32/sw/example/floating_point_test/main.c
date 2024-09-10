@@ -1,36 +1,10 @@
-// #################################################################################################
-// # << NEORV32 - RISC-V Single-Precision Floating-Point 'Zfinx' Extension Verification Program >> #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
-// #################################################################################################
+// ================================================================================ //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
 
 /**********************************************************************//**
@@ -69,6 +43,8 @@
 #define SILENT_MODE        (1)
 //** Run FPU CSR tests when != 0 */
 #define RUN_CSR_TESTS      (1)
+//** Run FPU exception tests when != 0 */
+#define RUN_EXC_TESTS      (1)
 //** Run conversion tests when != 0 */
 #define RUN_CONV_TESTS     (1)
 //** Run add/sub tests when != 0 */
@@ -90,16 +66,26 @@
 /**@}*/
 
 
+/**********************************************************************//**
+ * @name Special floating-point encodings
+ **************************************************************************/
+/**@{*/
+#define FLOAT32_SNAN ( (uint32_t)(0x7fa00000U) )
+#define FLOAT32_PMIN ( (uint32_t)(0x00800000U) )
+#define FLOAT32_PMAX ( (uint32_t)(0x7f7fffffU) )
+/**@}*/
+
+
 // Prototypes
 uint32_t get_test_vector(void);
-uint32_t xorshift32(void);
 uint32_t verify_result(uint32_t num, uint32_t opa, uint32_t opb, uint32_t ref, uint32_t res);
 void print_report(uint32_t num_err);
 
 
 /**********************************************************************//**
- * Main function; test all available operations of the NEORV32 'Zfinx' extensions using bit floating-point
- * hardware intrinsics and software-only reference functions (emulation).
+ * Main function; test all available operations of the NEORV32 'Zfinx'
+ * extensions using floating-point  * hardware intrinsics and software-only
+ * reference functions (emulation).
  *
  * @note This program requires the Zfinx CPU extension.
  *
@@ -122,8 +108,6 @@ int main() {
   // capture all exceptions and give debug info via UART
   neorv32_rte_setup();
 
-  // check available hardware extensions and compare with compiler flags
-  neorv32_rte_check_isa(0); // silent = 0 -> show message if isa mismatch
 
   // check if Zfinx extension is implemented at all
   if ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_ZFINX)) == 0) {
@@ -196,8 +180,45 @@ int main() {
   test_cnt++;
 #endif
 
-  // clear FPU status/control word
-  neorv32_cpu_csr_write(CSR_FCSR, 0);
+
+// ----------------------------------------------------------------------------
+// CSR Exception Tests
+// ----------------------------------------------------------------------------
+#if (RUN_EXC_TESTS != 0)
+  neorv32_uart0_printf("\n#%u: FFLAGS.NX (inexact)... <WORK IN PROGRESS>\n", test_cnt);
+  test_cnt++;
+
+  neorv32_uart0_printf("\n#%u: FFLAGS.DZ (divide by zero)... DIVISON NOT SUPPORTED!\n", test_cnt);
+  test_cnt++;
+
+  neorv32_uart0_printf("\n#%u: FFLAGS.UF (underflow)... <WORK IN PROGRESS>\n", test_cnt);
+  test_cnt++;
+
+  neorv32_uart0_printf("\n#%u: FFLAGS.OV (overflow)... <WORK IN PROGRESS>\n", test_cnt);
+  test_cnt++;
+
+  neorv32_uart0_printf("\n#%u: FFLAGS.NV (invalid operation)...\n", test_cnt);
+  err_cnt = 0;
+  for (i=0;i<(uint32_t)NUM_TEST_CASES; i++) {
+    neorv32_cpu_csr_write(CSR_FFLAGS, 0);
+    opa.binary_value = FLOAT32_SNAN; // signaling NAN
+    opb.binary_value = get_test_vector(); // any number
+    res_hw.float_value = riscv_intrinsic_fadds(opa.float_value, opb.float_value); // discard result
+
+    res_sw.binary_value = (uint32_t)(1 << CSR_FFLAGS_NV);
+    res_hw.binary_value = neorv32_cpu_csr_read(CSR_FFLAGS) & (1 << CSR_FFLAGS_NV);
+    err_cnt += verify_result(i, opa.binary_value, opb.binary_value, res_sw.binary_value, res_hw.binary_value);
+  }
+  print_report(err_cnt);
+  err_cnt_total += err_cnt;
+  test_cnt++;
+#endif
+
+
+// ----------------------------------------------------------------------------
+// Initialize FPU hardware
+// ----------------------------------------------------------------------------
+  neorv32_cpu_csr_write(CSR_FCSR, 0); // clear exception flags and set "round to nearest"
 
 
 // ----------------------------------------------------------------------------
@@ -879,9 +900,9 @@ uint32_t get_test_vector(void) {
   float_conv_t tmp;
 
   // generate special value "every" ~256th time this function is called
-  if ((xorshift32() & 0xff) == 0xff) {
+  if ((neorv32_aux_xorshift32() & 0xff) == 0xff) {
 
-    switch((xorshift32() >> 10) & 0x3) { // random decision which special value we are taking
+    switch((neorv32_aux_xorshift32() >> 10) & 0x3) { // random decision which special value we are taking
       case  0: tmp.float_value  = +INFINITY; break;
       case  1: tmp.float_value  = -INFINITY; break;
       case  2: tmp.float_value  = +0.0f; break;
@@ -894,27 +915,10 @@ uint32_t get_test_vector(void) {
     }
   }
   else {
-    tmp.binary_value = xorshift32();
+    tmp.binary_value = neorv32_aux_xorshift32();
   }
 
   return tmp.binary_value;
-}
-
-
-/**********************************************************************//**
- * PSEUDO-RANDOM number generator.
- *
- * @return Random data (32-bit).
- **************************************************************************/
-uint32_t xorshift32(void) {
-
-  static uint32_t x32 = 314159265;
-
-  x32 ^= x32 << 13;
-  x32 ^= x32 >> 17;
-  x32 ^= x32 << 5;
-
-  return x32;
 }
 
 

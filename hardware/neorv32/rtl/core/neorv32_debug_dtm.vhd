@@ -1,39 +1,12 @@
--- #################################################################################################
--- # << NEORV32 - RISC-V Debug Transport Module (DTM) >>                                           #
--- # ********************************************************************************************* #
--- # Provides a JTAG-compatible TAP to access the DMI register interface.                          #
--- # Compatible to the RISC-V debug specification version 1.0.                                     #
--- # ********************************************************************************************* #
--- # BSD 3-Clause License                                                                          #
--- #                                                                                               #
--- # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
--- #                                                                                               #
--- # Redistribution and use in source and binary forms, with or without modification, are          #
--- # permitted provided that the following conditions are met:                                     #
--- #                                                                                               #
--- # 1. Redistributions of source code must retain the above copyright notice, this list of        #
--- #    conditions and the following disclaimer.                                                   #
--- #                                                                                               #
--- # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
--- #    conditions and the following disclaimer in the documentation and/or other materials        #
--- #    provided with the distribution.                                                            #
--- #                                                                                               #
--- # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
--- #    endorse or promote products derived from this software without specific prior written      #
--- #    permission.                                                                                #
--- #                                                                                               #
--- # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
--- # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
--- # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
--- # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
--- # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
--- # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
--- # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
--- # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
--- # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
--- # ********************************************************************************************* #
--- # https://github.com/stnolting/riscv-debug-dtm                              (c) Stephan Nolting #
--- #################################################################################################
+-- ================================================================================ --
+-- NEORV32 SoC - RISC-V-Compatible Debug Transport Module (DTM)                     --
+-- -------------------------------------------------------------------------------- --
+-- The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              --
+-- Copyright (c) NEORV32 contributors.                                              --
+-- Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  --
+-- Licensed under the BSD-3-Clause license, see LICENSE for details.                --
+-- SPDX-License-Identifier: BSD-3-Clause                                            --
+-- ================================================================================ --
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -43,32 +16,31 @@ use neorv32.neorv32_package.all;
 
 entity neorv32_debug_dtm is
   generic (
-    IDCODE_VERSION : std_ulogic_vector(03 downto 0); -- version
+    IDCODE_VERSION : std_ulogic_vector(3 downto 0);  -- version
     IDCODE_PARTID  : std_ulogic_vector(15 downto 0); -- part number
     IDCODE_MANID   : std_ulogic_vector(10 downto 0)  -- manufacturer id
   );
   port (
     -- global control --
-    clk_i       : in  std_ulogic; -- global clock line
-    rstn_i      : in  std_ulogic; -- global reset line, low-active
+    clk_i      : in  std_ulogic; -- global clock line
+    rstn_i     : in  std_ulogic; -- global reset line, low-active
     -- jtag connection --
-    jtag_trst_i : in  std_ulogic;
-    jtag_tck_i  : in  std_ulogic;
-    jtag_tdi_i  : in  std_ulogic;
-    jtag_tdo_o  : out std_ulogic;
-    jtag_tms_i  : in  std_ulogic;
+    jtag_tck_i : in  std_ulogic;
+    jtag_tdi_i : in  std_ulogic;
+    jtag_tdo_o : out std_ulogic;
+    jtag_tms_i : in  std_ulogic;
     -- debug module interface (DMI) --
-    dmi_req_o   : out dmi_req_t; -- request
-    dmi_rsp_i   : in  dmi_rsp_t  -- response
+    dmi_req_o  : out dmi_req_t; -- request
+    dmi_rsp_i  : in  dmi_rsp_t  -- response
   );
 end neorv32_debug_dtm;
 
 architecture neorv32_debug_dtm_rtl of neorv32_debug_dtm is
 
   -- DMI Configuration (fixed!) --
-  constant dmi_idle_c    : std_ulogic_vector(02 downto 0) := "000";    -- no idle cycles required
-  constant dmi_version_c : std_ulogic_vector(03 downto 0) := "0001";   -- debug spec. version (0.13 & 1.0)
-  constant dmi_abits_c   : std_ulogic_vector(05 downto 0) := "000111"; -- number of DMI address bits (7)
+  constant dmi_idle_c    : std_ulogic_vector(2 downto 0) := "000";    -- no idle cycles required
+  constant dmi_version_c : std_ulogic_vector(3 downto 0) := "0001";   -- debug spec. version (0.13 & 1.0)
+  constant dmi_abits_c   : std_ulogic_vector(5 downto 0) := "000111"; -- number of DMI address bits (7)
 
   -- TAP data register addresses --
   constant addr_idcode_c : std_ulogic_vector(4 downto 0) := "00001"; -- identifier
@@ -78,16 +50,9 @@ architecture neorv32_debug_dtm_rtl of neorv32_debug_dtm is
   -- tap JTAG signal synchronizer --
   type tap_sync_t is record
     -- internal --
-    trst_ff     : std_ulogic_vector(2 downto 0);
-    tck_ff      : std_ulogic_vector(2 downto 0);
-    tdi_ff      : std_ulogic_vector(2 downto 0);
-    tms_ff      : std_ulogic_vector(2 downto 0);
+    tck_ff, tdi_ff, tms_ff : std_ulogic_vector(2 downto 0);
     -- external --
-    trst        : std_ulogic;
-    tck_rising  : std_ulogic;
-    tck_falling : std_ulogic;
-    tdi         : std_ulogic;
-    tms         : std_ulogic;
+    tck_rising, tck_falling, tdi, tms: std_ulogic;
   end record;
   signal tap_sync : tap_sync_t;
 
@@ -98,7 +63,7 @@ architecture neorv32_debug_dtm_rtl of neorv32_debug_dtm is
 
   -- tap registers --
   type tap_reg_t is record
-    ireg             : std_ulogic_vector(04 downto 0);
+    ireg             : std_ulogic_vector(4 downto 0);
     bypass           : std_ulogic;
     idcode           : std_ulogic_vector(31 downto 0);
     dtmcs, dtmcs_nxt : std_ulogic_vector(31 downto 0);
@@ -116,13 +81,13 @@ architecture neorv32_debug_dtm_rtl of neorv32_debug_dtm is
   -- debug module interface controller --
   type dmi_ctrl_t is record
     busy         : std_ulogic;
-    op           : std_ulogic_vector(01 downto 0);
+    op           : std_ulogic_vector(1 downto 0);
     dmihardreset : std_ulogic;
     dmireset     : std_ulogic;
     err          : std_ulogic;
     rdata        : std_ulogic_vector(31 downto 0);
     wdata        : std_ulogic_vector(31 downto 0);
-    addr         : std_ulogic_vector(06 downto 0);
+    addr         : std_ulogic_vector(6 downto 0);
   end record;
   signal dmi_ctrl : dmi_ctrl_t;
 
@@ -133,20 +98,15 @@ begin
   tap_synchronizer: process(rstn_i, clk_i)
   begin
     if (rstn_i = '0') then
-      tap_sync.trst_ff <= (others => '0');
-      tap_sync.tck_ff  <= (others => '0');
-      tap_sync.tdi_ff  <= (others => '0');
-      tap_sync.tms_ff  <= (others => '0');
+      tap_sync.tck_ff <= (others => '0');
+      tap_sync.tdi_ff <= (others => '0');
+      tap_sync.tms_ff <= (others => '0');
     elsif rising_edge(clk_i) then
-      tap_sync.trst_ff <= tap_sync.trst_ff(1 downto 0) & jtag_trst_i;
-      tap_sync.tck_ff  <= tap_sync.tck_ff( 1 downto 0) & jtag_tck_i;
-      tap_sync.tdi_ff  <= tap_sync.tdi_ff( 1 downto 0) & jtag_tdi_i;
-      tap_sync.tms_ff  <= tap_sync.tms_ff( 1 downto 0) & jtag_tms_i;
+      tap_sync.tck_ff <= tap_sync.tck_ff(1 downto 0) & jtag_tck_i;
+      tap_sync.tdi_ff <= tap_sync.tdi_ff(1 downto 0) & jtag_tdi_i;
+      tap_sync.tms_ff <= tap_sync.tms_ff(1 downto 0) & jtag_tms_i;
     end if;
   end process tap_synchronizer;
-
-  -- JTAG reset --
-  tap_sync.trst <= '0' when (tap_sync.trst_ff(2 downto 1) = "00") else '1';
 
   -- JTAG clock edge --
   tap_sync.tck_rising  <= '1' when (tap_sync.tck_ff(2 downto 1) = "01") else '0';
@@ -166,9 +126,7 @@ begin
     if (rstn_i = '0') then
       tap_ctrl_state <= LOGIC_RESET;
     elsif rising_edge(clk_i) then
-      if (tap_sync.trst = '0') then -- reset
-        tap_ctrl_state <= LOGIC_RESET;
-      elsif (tap_sync.tck_rising = '1') then -- clock pulse (evaluate TMS on the rising edge of TCK)
+      if (tap_sync.tck_rising = '1') then -- clock pulse (evaluate TMS on the rising edge of TCK)
         case tap_ctrl_state is -- JTAG state machine
           when LOGIC_RESET => if (tap_sync.tms = '0') then tap_ctrl_state <= RUN_IDLE;   else tap_ctrl_state <= LOGIC_RESET; end if;
           when RUN_IDLE    => if (tap_sync.tms = '0') then tap_ctrl_state <= RUN_IDLE;   else tap_ctrl_state <= DR_SCAN;     end if;
@@ -298,7 +256,6 @@ begin
       dmi_ctrl.wdata        <= (others => '0');
       dmi_ctrl.addr         <= (others => '0');
     elsif rising_edge(clk_i) then
-
       -- DMI reset control --
       if (dr_trigger.valid = '1') and (tap_reg.ireg = addr_dtmcs_c) then
         dmi_ctrl.dmireset     <= tap_reg.dtmcs(16);
@@ -318,7 +275,6 @@ begin
       -- DMI interface arbiter --
       dmi_ctrl.op <= dmi_req_nop_c; -- default
       if (dmi_ctrl.busy = '0') then -- idle: waiting for new request
-
         if (dmi_ctrl.dmihardreset = '0') then -- no DMI hard reset
           if (dr_trigger.valid = '1') and (tap_reg.ireg = addr_dmi_c) then
             dmi_ctrl.addr  <= tap_reg.dmi(40 downto 34);
@@ -329,14 +285,11 @@ begin
             end if;
           end if;
         end if;
-
-        else -- busy: read/write access in progress
-
-          dmi_ctrl.rdata <= dmi_rsp_i.data;
-          if (dmi_rsp_i.ack = '1') then
-            dmi_ctrl.busy <= '0';
-          end if;
-
+      else -- busy: read/write access in progress
+        dmi_ctrl.rdata <= dmi_rsp_i.data;
+        if (dmi_rsp_i.ack = '1') then
+          dmi_ctrl.busy <= '0';
+        end if;
       end if;
     end if;
   end process dmi_controller;

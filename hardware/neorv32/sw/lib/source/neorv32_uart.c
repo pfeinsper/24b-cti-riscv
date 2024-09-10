@@ -1,54 +1,24 @@
-// #################################################################################################
-// # << NEORV32: neorv32_uart.c - Universal Asynchronous Receiver/Transmitter (UART) HW Driver >>  #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
-// #################################################################################################
+// ================================================================================ //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
-
-/**********************************************************************//**
+/**
  * @file neorv32_uart.c
  * @brief Universal asynchronous receiver/transmitter (UART0/UART1) HW driver source file.
  *
  * @note These functions should only be used if the UART0/UART1 unit was synthesized.
- **************************************************************************/
+ *
+ * @see https://stnolting.github.io/neorv32/sw/files.html
+ */
 
 #include "neorv32.h"
-#include "neorv32_uart.h"
 #include <string.h>
 #include <stdarg.h>
-
-// Private functions
-static void __neorv32_uart_itoa(uint32_t x, char *res) __attribute__((unused)); // GCC: do not output a warning when this variable is unused
-static void __neorv32_uart_tohex(uint32_t x, char *res) __attribute__((unused)); // GCC: do not output a warning when this variable is unused
-static void __neorv32_uart_touppercase(uint32_t len, char *ptr) __attribute__((unused)); // GCC: do not output a warning when this variable is unused
+#include <ctype.h>
 
 
 /**********************************************************************//**
@@ -57,17 +27,17 @@ static void __neorv32_uart_touppercase(uint32_t len, char *ptr) __attribute__((u
  * @param[in,out] Hardware handle to UART register struct, #neorv32_uart_t.
  * @return 0 if UART0/1 was not synthesized, 1 if UART0/1 is available.
  **************************************************************************/
-int neorv32_uart_available (neorv32_uart_t *UARTx) {
-
-  int available = 0;
+int neorv32_uart_available(neorv32_uart_t *UARTx) {
 
   if ( ((uint32_t)UARTx == NEORV32_UART0_BASE) && (NEORV32_SYSINFO->SOC & (1 << SYSINFO_SOC_IO_UART0)) ) {
-    available = 1;
+    return 1;
   }
-  if ( ((uint32_t)UARTx == NEORV32_UART1_BASE) && (NEORV32_SYSINFO->SOC & (1 << SYSINFO_SOC_IO_UART1)) ) {
-    available = 1;
+  else if ( ((uint32_t)UARTx == NEORV32_UART1_BASE) && (NEORV32_SYSINFO->SOC & (1 << SYSINFO_SOC_IO_UART1)) ) {
+    return 1;
   }
-  return(available);
+  else {
+    return 0;
+  }
 }
 
 
@@ -87,8 +57,8 @@ void neorv32_uart_setup(neorv32_uart_t *UARTx, uint32_t baudrate, uint32_t irq_m
   UARTx->CTRL = 0;
 
   // raw clock prescaler
-  uint32_t clock = NEORV32_SYSINFO->CLK; // system clock in Hz
-#ifndef make_bootloader // use div instructions
+  uint32_t clock = neorv32_sysinfo_get_clk(); // system clock in Hz
+#ifndef MAKE_BOOTLOADER // use div instructions
   baud_div = clock / (2*baudrate);
 #else // division via repeated subtraction (minimal size, only for bootloader)
   while (clock >= 2*baudrate) {
@@ -217,6 +187,28 @@ void neorv32_uart_putc(neorv32_uart_t *UARTx, char c) {
 
 
 /**********************************************************************//**
+ * Clear RX FIFO.
+ *
+ * @param[in,out] UARTx Hardware handle to UART register struct, #neorv32_uart_t.
+ **************************************************************************/
+void neorv32_uart_rx_clear(neorv32_uart_t *UARTx) {
+
+  UARTx->CTRL |= (uint32_t)(1 << UART_CTRL_RX_CLR);
+}
+
+
+/**********************************************************************//**
+ * Clear TX FIFO.
+ *
+ * @param[in,out] UARTx Hardware handle to UART register struct, #neorv32_uart_t.
+ **************************************************************************/
+void neorv32_uart_tx_clear(neorv32_uart_t *UARTx) {
+
+  UARTx->CTRL |= (uint32_t)(1 << UART_CTRL_TX_CLR);
+}
+
+
+/**********************************************************************//**
  * Check if UART TX is busy (transmitter busy or data left in TX buffer).
  *
  * @param[in,out] UARTx Hardware handle to UART register struct, #neorv32_uart_t.
@@ -307,68 +299,66 @@ void neorv32_uart_puts(neorv32_uart_t *UARTx, const char *s) {
 
 
 /**********************************************************************//**
- * Custom version of 'printf' function using UART.
+ * Custom version of 'vprintf' printing to UART.
  *
+ * @warning: This functions only provides a minimal subset of the 'vprintf' formating features!
  * @note This function is blocking.
  *
  * @param[in,out] UARTx Hardware handle to UART register struct, #neorv32_uart_t.
  * @param[in] format Pointer to format string.
- *
- * <TABLE>
- * <TR><TD>%s</TD><TD>String (array of chars, zero-terminated)</TD></TR>
- * <TR><TD>%c</TD><TD>Single char</TD></TR>
- * <TR><TD>%d/%i</TD><TD>32-bit signed number, printed as decimal</TD></TR>
- * <TR><TD>%u</TD><TD>32-bit unsigned number, printed as decimal</TD></TR>
- * <TR><TD>%x</TD><TD>32-bit number, printed as 8-char hexadecimal - lower-case</TD></TR>
- * <TR><TD>%X</TD><TD>32-bit number, printed as 8-char hexadecimal - upper-case</TD></TR>
- * <TR><TD>%p</TD><TD>32-bit pointer, printed as 8-char hexadecimal - lower-case</TD></TR>
- * </TABLE>
+ * @param[in] args A value identifying a variable arguments list.
  **************************************************************************/
-void neorv32_uart_printf(neorv32_uart_t *UARTx, const char *format, ...) {
+void neorv32_uart_vprintf(neorv32_uart_t *UARTx, const char *format, va_list args) {
 
-  char c, string_buf[11];
+  char c;
+  char string_buf[33];
   int32_t n;
-
-  va_list a;
-  va_start(a, format);
+  unsigned int tmp;
 
   while ((c = *format++)) {
     if (c == '%') {
-      c = *format++;
+      c = tolower(*format++);
       switch (c) {
+
         case 's': // string
-          neorv32_uart_puts(UARTx, va_arg(a, char*));
+          neorv32_uart_puts(UARTx, va_arg(args, char*));
           break;
+
         case 'c': // char
-          neorv32_uart_putc(UARTx, (char)va_arg(a, int));
+          neorv32_uart_putc(UARTx, (char)va_arg(args, int));
           break;
+
         case 'i': // 32-bit signed
         case 'd':
-          n = (int32_t)va_arg(a, int32_t);
+          n = (int32_t)va_arg(args, int32_t);
           if (n < 0) {
             n = -n;
             neorv32_uart_putc(UARTx, '-');
           }
-          __neorv32_uart_itoa((uint32_t)n, string_buf);
+          neorv32_aux_itoa(string_buf, (uint32_t)n, 10);
           neorv32_uart_puts(UARTx, string_buf);
           break;
+
         case 'u': // 32-bit unsigned
-          __neorv32_uart_itoa(va_arg(a, uint32_t), string_buf);
+          neorv32_aux_itoa(string_buf, va_arg(args, uint32_t), 10);
           neorv32_uart_puts(UARTx, string_buf);
           break;
-        case 'x': // 32-bit hexadecimal
+
+        case 'x': // 32-bit hexadecimal with leading zeros
         case 'p':
-        case 'X':
-          __neorv32_uart_tohex(va_arg(a, uint32_t), string_buf);
-          if (c == 'X') {
-            __neorv32_uart_touppercase(11, string_buf);
+          neorv32_aux_itoa(string_buf, va_arg(args, uint32_t), 16);
+          tmp = 8 - strlen(string_buf);
+          while (tmp--) { // add leading zeros
+            neorv32_uart_putc(UARTx, '0');
           }
           neorv32_uart_puts(UARTx, string_buf);
           break;
+
         case '%': // escaped percent sign
-          neorv32_uart_putc(UARTx, '%');
+          neorv32_uart_putc(UARTx, c);
           break;
-        default: // unsupported format
+
+        default: // unsupported formating character
           neorv32_uart_putc(UARTx, '%');
           neorv32_uart_putc(UARTx, c);
           break;
@@ -381,18 +371,35 @@ void neorv32_uart_printf(neorv32_uart_t *UARTx, const char *format, ...) {
       neorv32_uart_putc(UARTx, c);
     }
   }
-  va_end(a);
 }
 
 
 /**********************************************************************//**
- * Simplified custom version of 'scanf' function for UART.
+ * Custom version of 'printf' printing to UART.
+ *
+ * @warning: This functions only provides a minimal subset of the 'printf' formating features!
+ * @note This function is blocking.
+ *
+ * @param[in,out] UARTx Hardware handle to UART register struct, #neorv32_uart_t.
+ * @param[in] format Pointer to format string. See neorv32_uart_vprintf.
+ **************************************************************************/
+void neorv32_uart_printf(neorv32_uart_t *UARTx, const char *format, ...) {
+
+  va_list args;
+  va_start(args, format);
+  neorv32_uart_vprintf(UARTx, format, args);
+  va_end(args);
+}
+
+
+/**********************************************************************//**
+ * Simplified custom version of 'scanf' reading from UART.
  *
  * @note This function is blocking.
  *
  * @param[in,out] UARTx Hardware handle to UART register struct, #neorv32_uart_t.
  * @param[in,out] buffer Pointer to array of chars to store string.
- * @param[in] max_size Maximum number of chars to sample.
+ * @param[in] max_size Maximum number of chars to sample (including zero-termination).
  * @param[in] echo Echo UART input when 1.
  * @return Number of chars read.
  **************************************************************************/
@@ -425,113 +432,4 @@ int neorv32_uart_scan(neorv32_uart_t *UARTx, char *buffer, int max_size, int ech
   *buffer = '\0'; // terminate string
 
   return length;
-}
-
-
-/**********************************************************************//**
- * Private function for 'neorv32_printf' to convert into decimal.
- *
- * @param[in] x Unsigned input number.
- * @param[in,out] res Pointer for storing the reuslting number string (11 chars).
- **************************************************************************/
-static void __neorv32_uart_itoa(uint32_t x, char *res) {
-
-  static const char numbers[] = "0123456789";
-  char buffer1[11];
-  uint16_t i, j;
-
-  buffer1[10] = '\0';
-  res[10] = '\0';
-
-  // convert
-  for (i=0; i<10; i++) {
-    buffer1[i] = numbers[x%10];
-    x /= 10;
-  }
-
-  // delete 'leading' zeros
-  for (i=9; i!=0; i--) {
-    if (buffer1[i] == '0')
-      buffer1[i] = '\0';
-    else
-      break;
-  }
-
-  // reverse
-  j = 0;
-  do {
-    if (buffer1[i] != '\0')
-      res[j++] = buffer1[i];
-  } while (i--);
-
-  res[j] = '\0'; // terminate result string
-}
-
-
-/**********************************************************************//**
- * Private function for 'neorv32_printf' to convert into hexadecimal.
- *
- * @param[in] x Unsigned input number.
- * @param[in,out] res Pointer for storing the resulting number string (9 chars).
- **************************************************************************/
-static void __neorv32_uart_tohex(uint32_t x, char *res) {
-
-  static const char symbols[] = "0123456789abcdef";
-
-  int i;
-  for (i=0; i<8; i++) { // nibble by nibble
-    uint32_t num_tmp = x >> (4*i);
-    res[7-i] = (char)symbols[num_tmp & 0x0f];
-  }
-
-  res[8] = '\0'; // terminate result string
-}
-
-
-/**********************************************************************//**
- * Private function to cast a string to UPPERCASE.
- *
- * @param[in] len Total length of input string.
- * @param[in,out] ptr Pointer for input/output string.
- **************************************************************************/
-static void __neorv32_uart_touppercase(uint32_t len, char *ptr) {
-
-  char tmp;
-
-  while (len > 0) {
-    tmp = *ptr;
-    if ((tmp >= 'a') && (tmp <= 'z')) {
-      *ptr = tmp - 32;
-    }
-    ptr++;
-    len--;
-  }
-}
-
-
-// ================================================================================================
-// ================================================================================================
-
-
-/**********************************************************************//**
- * STDIO: Send char via UART0
- *
- * @param[in] Char to be send.
- * @return Char that has been sent.
- **************************************************************************/
-int putchar(int ch) {
-
-  neorv32_uart_putc(NEORV32_UART0, (char)ch);
-  return ch;
-}
-
-
-/**********************************************************************//**
- * STDIO: Read char from UART0.
- *
- * @return Read char.
- **************************************************************************/
-int getchar(void) {
-
-  return (int)neorv32_uart_getc(NEORV32_UART0);
 }

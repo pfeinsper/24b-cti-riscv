@@ -1,43 +1,16 @@
--- #################################################################################################
--- # << NEORV32 - External Interrupt Controller (XIRQ) >>                                          #
--- # ********************************************************************************************* #
--- # Simple interrupt controller for platform (processor-external) interrupts. Up to 32 channels   #
--- # are supported that get (optionally) prioritized into a single CPU interrupt.                  #
--- #                                                                                               #
--- # The actual trigger configuration has to be done BEFORE synthesis using the XIRQ_TRIGGER_TYPE  #
--- # and XIRQ_TRIGGER_POLARITY generics. These allow to configure channel-independent low-level,   #
--- # high-level, falling-edge and rising-edge triggers.                                            #
--- # ********************************************************************************************* #
--- # BSD 3-Clause License                                                                          #
--- #                                                                                               #
--- # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
--- #                                                                                               #
--- # Redistribution and use in source and binary forms, with or without modification, are          #
--- # permitted provided that the following conditions are met:                                     #
--- #                                                                                               #
--- # 1. Redistributions of source code must retain the above copyright notice, this list of        #
--- #    conditions and the following disclaimer.                                                   #
--- #                                                                                               #
--- # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
--- #    conditions and the following disclaimer in the documentation and/or other materials        #
--- #    provided with the distribution.                                                            #
--- #                                                                                               #
--- # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
--- #    endorse or promote products derived from this software without specific prior written      #
--- #    permission.                                                                                #
--- #                                                                                               #
--- # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
--- # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
--- # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
--- # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
--- # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
--- # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
--- # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
--- # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
--- # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
--- # ********************************************************************************************* #
--- # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
--- #################################################################################################
+-- ================================================================================ --
+-- NEORV32 SoC - External Interrupt Controller (XIRQ)                               --
+-- -------------------------------------------------------------------------------- --
+-- Simple interrupt controller for platform (processor-external) interrupts. Up to  --
+-- 32 channels are supported that get (optionally) prioritized into a single CPU    --
+-- interrupt. Trigger type is programmable per channel by configuration registers.  --
+-- -------------------------------------------------------------------------------- --
+-- The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              --
+-- Copyright (c) NEORV32 contributors.                                              --
+-- Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  --
+-- Licensed under the BSD-3-Clause license, see LICENSE for details.                --
+-- SPDX-License-Identifier: BSD-3-Clause                                            --
+-- ================================================================================ --
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -48,9 +21,7 @@ use neorv32.neorv32_package.all;
 
 entity neorv32_xirq is
   generic (
-    XIRQ_NUM_CH           : natural range 0 to 32; -- number of external IRQ channels
-    XIRQ_TRIGGER_TYPE     : std_ulogic_vector(31 downto 0); -- trigger type: 0=level, 1=edge
-    XIRQ_TRIGGER_POLARITY : std_ulogic_vector(31 downto 0)  -- trigger polarity: 0=low-level/falling-edge, 1=high-level/rising-edge
+    XIRQ_NUM_CH : natural range 0 to 32 -- number of IRQ channels
   );
   port (
     clk_i     : in  std_ulogic; -- global clock line
@@ -64,74 +35,83 @@ end neorv32_xirq;
 
 architecture neorv32_xirq_rtl of neorv32_xirq is
 
+  -- register addresses --
+  constant addr_enable_c    : std_ulogic_vector(2 downto 0) := "000"; -- r/w: channel enable
+  constant addr_pending_c   : std_ulogic_vector(2 downto 0) := "001"; -- r/w: pending IRQs
+  constant addr_source_c    : std_ulogic_vector(2 downto 0) := "010"; -- r/w: source IRQ, ACK on write
+  constant addr_ttype_c     : std_ulogic_vector(2 downto 0) := "011"; -- r/w: trigger type (level/edge)
+  constant addr_tpolarity_c : std_ulogic_vector(2 downto 0) := "100"; -- r/w: trigger polarity (high/low or rising/falling)
+
   -- interface registers --
-  signal irq_enable   : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0); -- r/w: channel enable
-  signal nclr_pending : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0); -- r/w: pending IRQs
-  signal irq_source   : std_ulogic_vector(4 downto 0); -- r/w: source IRQ, ACK on write
+  signal irq_enable, nclr_pending, irq_type, irq_polarity : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0);
+  signal irq_source : std_ulogic_vector(4 downto 0);
 
   -- interrupt trigger --
-  signal irq_sync  : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0);
-  signal irq_sync2 : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0);
-  signal irq_trig  : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0);
+  signal irq_sync, irq_sync2, irq_trig : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0);
 
   -- interrupt buffer --
-  signal irq_pending : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0);
-  signal irq_raw     : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0);
-  signal irq_fire    : std_ulogic;
+  signal irq_pending, irq_raw    : std_ulogic_vector(XIRQ_NUM_CH-1 downto 0);
+  signal irq_fire,    irq_active : std_ulogic;
 
-  -- interrupt arbiter --
-  signal irq_source_nxt : std_ulogic_vector(4 downto 0);
-  signal irq_active     : std_ulogic;
+  -- priority encoder --
+  type prio_enc_t is array (0 to XIRQ_NUM_CH-1) of std_ulogic_vector(4 downto 0);
+  signal prio_enc : prio_enc_t;
 
 begin
 
-  -- Host Access ----------------------------------------------------------------------------
+  -- Bus Access -----------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-
-  -- write access --
-  write_access: process(rstn_i, clk_i)
+  bus_access: process(rstn_i, clk_i)
   begin
     if (rstn_i = '0') then
-      nclr_pending <= (others => '0'); -- clear all pending interrupts on reset
+      bus_rsp_o    <= rsp_terminate_c;
+      nclr_pending <= (others => '0');
+      irq_type     <= (others => '0');
+      irq_polarity <= (others => '0');
       irq_enable   <= (others => '0');
     elsif rising_edge(clk_i) then
-      nclr_pending <= (others => '1');
-      if (bus_req_i.we = '1') then
-        if (bus_req_i.addr(3 downto 2) = "00") then -- channel-enable
-          irq_enable <= bus_req_i.data(XIRQ_NUM_CH-1 downto 0);
-        end if;
-        if (bus_req_i.addr(3 downto 2) = "01") then -- clear pending IRQs
-          nclr_pending <= bus_req_i.data(XIRQ_NUM_CH-1 downto 0); -- set zero to clear pending IRQ
-        end if;
-      end if;
-    end if;
-  end process write_access;
-
-  -- read access --
-  read_access: process(clk_i)
-  begin
-    if rising_edge(clk_i) then
-      bus_rsp_o.ack  <= bus_req_i.re or bus_req_i.we; -- bus handshake
+      -- defaults --
+      bus_rsp_o.ack  <= bus_req_i.stb;
+      bus_rsp_o.err  <= '0';
       bus_rsp_o.data <= (others => '0');
-      if (bus_req_i.re = '1') then
-        case bus_req_i.addr(3 downto 2) is
-          when "00"   => bus_rsp_o.data(XIRQ_NUM_CH-1 downto 0) <= irq_enable; -- channel-enable
-          when "01"   => bus_rsp_o.data(XIRQ_NUM_CH-1 downto 0) <= irq_pending; -- pending IRQs
-          when others => bus_rsp_o.data(4 downto 0)             <= irq_source; -- IRQ source
-        end case;
+      nclr_pending   <= (others => '1');
+      -- bus access --
+      if (bus_req_i.stb = '1') then
+        if (bus_req_i.rw = '1') then -- write access
+          if (bus_req_i.addr(4 downto 2) = addr_enable_c) then -- channel-enable
+            irq_enable <= bus_req_i.data(XIRQ_NUM_CH-1 downto 0);
+          end if;
+          if (bus_req_i.addr(4 downto 2) = addr_pending_c) then -- clear pending IRQs
+            nclr_pending <= bus_req_i.data(XIRQ_NUM_CH-1 downto 0); -- set zero to clear pending IRQ
+          end if;
+          if (bus_req_i.addr(4 downto 2) = addr_ttype_c) then -- trigger type
+            irq_type <= bus_req_i.data(XIRQ_NUM_CH-1 downto 0);
+          end if;
+          if (bus_req_i.addr(4 downto 2) = addr_tpolarity_c) then -- trigger polarity
+            irq_polarity <= bus_req_i.data(XIRQ_NUM_CH-1 downto 0);
+          end if;
+        else -- read access
+          case bus_req_i.addr(4 downto 2) is
+            when addr_enable_c  => bus_rsp_o.data(XIRQ_NUM_CH-1 downto 0) <= irq_enable;   -- channel-enable
+            when addr_pending_c => bus_rsp_o.data(XIRQ_NUM_CH-1 downto 0) <= irq_pending;  -- pending IRQs
+            when addr_source_c  => bus_rsp_o.data(4 downto 0)             <= irq_source;   -- IRQ source
+            when addr_ttype_c   => bus_rsp_o.data(XIRQ_NUM_CH-1 downto 0) <= irq_type;     -- trigger type
+            when others         => bus_rsp_o.data(XIRQ_NUM_CH-1 downto 0) <= irq_polarity; -- trigger polarity
+          end case;
+        end if;
       end if;
     end if;
-  end process read_access;
-
-  -- no access error possible --
-  bus_rsp_o.err <= '0';
+  end process bus_access;
 
 
   -- IRQ Trigger --------------------------------------------------------------
   -- -----------------------------------------------------------------------------
-  synchronizer: process(clk_i)
+  synchronizer: process(rstn_i, clk_i)
   begin
-    if rising_edge(clk_i) then
+    if (rstn_i = '0') then
+      irq_sync  <= (others => '0');
+      irq_sync2 <= (others => '0');
+    elsif rising_edge(clk_i) then
       irq_sync  <= xirq_i(XIRQ_NUM_CH-1 downto 0);
       irq_sync2 <= irq_sync;
     end if;
@@ -140,10 +120,10 @@ begin
   -- trigger type select --
   irq_trigger_gen:
   for i in 0 to XIRQ_NUM_CH-1 generate
-    irq_trigger: process(irq_sync, irq_sync2)
+    irq_trigger: process(irq_sync, irq_sync2, irq_type, irq_polarity)
       variable sel_v : std_ulogic_vector(1 downto 0);
     begin
-      sel_v := XIRQ_TRIGGER_TYPE(i) & XIRQ_TRIGGER_POLARITY(i);
+      sel_v := irq_type(i) & irq_polarity(i);
       case sel_v is
         when "00"   => irq_trig(i) <= not irq_sync(i); -- low-level
         when "01"   => irq_trig(i) <= irq_sync(i); -- high-level
@@ -157,9 +137,11 @@ begin
 
   -- IRQ Buffer ---------------------------------------------------------------
   -- -----------------------------------------------------------------------------
-  irq_buffer: process(clk_i)
+  irq_buffer: process(rstn_i, clk_i)
   begin
-    if rising_edge(clk_i) then
+    if (rstn_i = '0') then
+      irq_pending <= (others => '0');
+    elsif rising_edge(clk_i) then
       irq_pending <= (irq_pending and nclr_pending) or irq_trig;
     end if;
   end process irq_buffer;
@@ -167,22 +149,15 @@ begin
   -- filter enabled channels --
   irq_raw <= irq_pending and irq_enable;
 
-  -- encode current IRQ's priority --
-  priority_encoder: process(irq_raw)
-  begin
-    irq_source_nxt <= (others => '0');
-    if (XIRQ_NUM_CH > 1) then
-      for i in 0 to XIRQ_NUM_CH-1 loop
-        if (irq_raw(i) = '1') then
-          irq_source_nxt <= std_ulogic_vector(to_unsigned(i, irq_source_nxt'length));
-          exit;
-        end if;
-      end loop;
-    end if;
-  end process priority_encoder;
-
   -- anyone firing? --
-  irq_fire <= '1' when (or_reduce_f(irq_raw) = '1') else '0';
+  irq_fire <= or_reduce_f(irq_raw);
+
+  -- encode highest-priority source (structural code) --
+  priority_encoder_gen:
+  for i in 0 to XIRQ_NUM_CH-2 generate -- start with highest priority
+    prio_enc(i) <= std_ulogic_vector(to_unsigned(i, 5)) when (irq_raw(i) = '1') else prio_enc(i+1);
+  end generate;
+  prio_enc(XIRQ_NUM_CH-1) <= std_ulogic_vector(to_unsigned(XIRQ_NUM_CH-1, 5)); -- lowest priority
 
 
   -- IRQ Arbiter --------------------------------------------------------------
@@ -190,22 +165,23 @@ begin
   irq_arbiter: process(rstn_i, clk_i)
   begin
     if (rstn_i = '0') then
-      cpu_irq_o  <= '0';
       irq_active <= '0';
       irq_source <= (others => '0');
     elsif rising_edge(clk_i) then
-      cpu_irq_o <= '0';
       if (irq_active = '0') then -- no active IRQ
-        irq_source <= irq_source_nxt; -- get IRQ source that has highest priority
+        irq_source <= prio_enc(0); -- get IRQ source
         if (irq_fire = '1') then
-          cpu_irq_o  <= '1';
           irq_active <= '1';
         end if;
-      elsif (bus_req_i.we = '1') and (bus_req_i.addr(3 downto 2) = "10") then -- acknowledge on write access
+      elsif (bus_req_i.stb = '1') and (bus_req_i.rw = '1') and
+            (bus_req_i.addr(4 downto 2) = addr_source_c) then -- acknowledge on write access
         irq_active <= '0';
       end if;
     end if;
   end process irq_arbiter;
+
+  -- CPU interrupt --
+  cpu_irq_o <= irq_active;
 
 
 end neorv32_xirq_rtl;

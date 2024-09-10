@@ -1,45 +1,12 @@
--- #################################################################################################
--- # << NEORV32 - 1-Wire Interface Host Controller (ONEWIRE) >>                                    #
--- # ********************************************************************************************* #
--- # Single-wire bus controller, compatible to the "Dallas 1-Wire Bus System".                     #
--- # Provides three basic operations:                                                              #
--- # * generate reset pulse and check for device presence                                          #
--- # * transfer single bit (read-while-write)                                                      #
--- # * transfer full byte (read-while-write)                                                       #
--- # After completing any of the operations the interrupt signal is triggered.                     #
--- # The base time for bus interactions is configured using a 2-bit clock prescaler and a 8-bit    #
--- # clock divider. All bus operations are timed using (hardwired) multiples of this base time.    #
--- # ********************************************************************************************* #
--- # BSD 3-Clause License                                                                          #
--- #                                                                                               #
--- # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
--- #                                                                                               #
--- # Redistribution and use in source and binary forms, with or without modification, are          #
--- # permitted provided that the following conditions are met:                                     #
--- #                                                                                               #
--- # 1. Redistributions of source code must retain the above copyright notice, this list of        #
--- #    conditions and the following disclaimer.                                                   #
--- #                                                                                               #
--- # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
--- #    conditions and the following disclaimer in the documentation and/or other materials        #
--- #    provided with the distribution.                                                            #
--- #                                                                                               #
--- # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
--- #    endorse or promote products derived from this software without specific prior written      #
--- #    permission.                                                                                #
--- #                                                                                               #
--- # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
--- # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
--- # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
--- # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
--- # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
--- # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
--- # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
--- # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
--- # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
--- # ********************************************************************************************* #
--- # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
--- #################################################################################################
+-- ================================================================================ --
+-- NEORV32 SoC - 1-Wire Interface Host Controller (ONEWIRE)                         --
+-- -------------------------------------------------------------------------------- --
+-- The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              --
+-- Copyright (c) NEORV32 contributors.                                              --
+-- Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  --
+-- Licensed under the BSD-3-Clause license, see LICENSE for details.                --
+-- SPDX-License-Identifier: BSD-3-Clause                                            --
+-- ================================================================================ --
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -122,7 +89,6 @@ architecture neorv32_onewire_rtl of neorv32_onewire is
     tick     : std_ulogic;
     tick_ff  : std_ulogic;
     sreg     : std_ulogic_vector(7 downto 0);
-    done     : std_ulogic;
     wire_in  : std_ulogic_vector(1 downto 0);
     wire_lo  : std_ulogic;
     wire_hi  : std_ulogic;
@@ -133,13 +99,12 @@ architecture neorv32_onewire_rtl of neorv32_onewire is
 
 begin
 
-  -- Write Access ---------------------------------------------------------------------------
+  -- Bus Access ---------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-
-  -- write access --
-  write_access: process(rstn_i, clk_i)
+  bus_access: process(rstn_i, clk_i)
   begin
     if (rstn_i = '0') then
+      bus_rsp_o      <= rsp_terminate_c;
       ctrl.enable    <= '0';
       ctrl.clk_prsc  <= (others => '0');
       ctrl.clk_div   <= (others => '0');
@@ -148,8 +113,13 @@ begin
       ctrl.trig_byte <= '0';
       tx_data        <= (others => '0');
     elsif rising_edge(clk_i) then
+      -- bus handshake --
+      bus_rsp_o.ack  <= bus_req_i.stb;
+      bus_rsp_o.err  <= '0';
+      bus_rsp_o.data <= (others => '0');
+
       -- write access --
-      if (bus_req_i.we = '1') then
+      if (bus_req_i.stb = '1') and (bus_req_i.rw = '1') then
         -- control register --
         if (bus_req_i.addr(2) = '0') then
           ctrl.enable   <= bus_req_i.data(ctrl_en_c);
@@ -163,7 +133,7 @@ begin
       end if;
 
       -- operation triggers --
-      if (bus_req_i.we = '1') and (bus_req_i.addr(2) = '0') then -- set by host
+      if (bus_req_i.stb = '1') and (bus_req_i.rw = '1') and (bus_req_i.addr(2) = '0') then -- set by host
         ctrl.trig_rst  <= bus_req_i.data(ctrl_trig_rst_c);
         ctrl.trig_bit  <= bus_req_i.data(ctrl_trig_bit_c);
         ctrl.trig_byte <= bus_req_i.data(ctrl_trig_byte_c);
@@ -172,16 +142,9 @@ begin
         ctrl.trig_bit  <= '0';
         ctrl.trig_byte <= '0';
       end if;
-    end if;
-  end process write_access;
 
-  -- read access --
-  read_access: process(clk_i)
-  begin
-    if rising_edge(clk_i) then
-      bus_rsp_o.ack  <= bus_req_i.re or bus_req_i.we; -- bus handshake
-      bus_rsp_o.data <= (others => '0');
-      if (bus_req_i.re = '1') then
+      -- read access --
+      if (bus_req_i.stb = '1') and (bus_req_i.rw = '0') then
         -- control register --
         if (bus_req_i.addr(2) = '0') then
           bus_rsp_o.data(ctrl_en_c)                            <= ctrl.enable;
@@ -196,18 +159,21 @@ begin
           bus_rsp_o.data(7 downto 0) <= serial.sreg;
         end if;
       end if;
-    end if;
-  end process read_access;
 
-  -- no access error possible --
-  bus_rsp_o.err <= '0';
+    end if;
+  end process bus_access;
 
 
   -- Tick Generator -------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  tick_generator: process(clk_i)
+  tick_generator: process(rstn_i, clk_i)
   begin
-    if rising_edge(clk_i) then
+    if (rstn_i = '0') then
+      clk_tick       <= '0';
+      clk_cnt        <= (others => '0');
+      serial.tick    <= '0';
+      serial.tick_ff <= '0';
+    elsif rising_edge(clk_i) then
       clk_tick    <= clk_sel(to_integer(unsigned(ctrl.clk_prsc)));
       serial.tick <= '0'; -- default
       if (ctrl.enable = '0') then
@@ -233,9 +199,19 @@ begin
 
   -- Serial Engine --------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  serial_engine: process(clk_i)
+  serial_engine: process(rstn_i, clk_i)
   begin
-    if rising_edge(clk_i) then
+    if (rstn_i = '0') then
+      serial.wire_in  <= (others => '0');
+      serial.wire_lo  <= '0';
+      serial.wire_hi  <= '0';
+      serial.state    <= (others => '0');
+      serial.tick_cnt <= (others => '0');
+      serial.bit_cnt  <= (others => '0');
+      serial.sreg     <= (others => '0');
+      serial.sample   <= '0';
+      onewire_o       <= '0';
+    elsif rising_edge(clk_i) then
       -- input synchronizer --
       serial.wire_in <= serial.wire_in(0) & to_stdulogic(to_bit(onewire_i)); -- "to_bit" to avoid hardware-vs-simulation mismatch
 
@@ -247,7 +223,6 @@ begin
       end if;
 
       -- defaults --
-      serial.done    <= '0';
       serial.wire_lo <= '0';
       serial.wire_hi <= '0';
 
@@ -297,7 +272,6 @@ begin
             serial.sreg     <= serial.sample & serial.sreg(7 downto 1); -- new bit; LSB first
             serial.bit_cnt  <= serial.bit_cnt - 1;
             if (serial.bit_cnt = "000") then -- all done
-              serial.done              <= '1'; -- operation done
               serial.state(1 downto 0) <= "00"; -- go back to IDLE
             else -- next bit
               serial.wire_lo <= '1'; -- force bus to low again
@@ -321,7 +295,6 @@ begin
           end if;
           -- end of presence phase --
           if (serial.tick_cnt = t_presence_end_c) then
-            serial.done              <= '1'; -- operation done
             serial.state(1 downto 0) <= "00"; -- go back to IDLE
           end if;
 
@@ -338,8 +311,21 @@ begin
   -- serial engine busy? --
   serial.busy <= '0' when (serial.state(1 downto 0) = "00") else '1';
 
-  -- operation done interrupt --
-  irq_o <= serial.done;
+
+  -- Interrupt Generator --------------------------------------------------------------------
+  -- -------------------------------------------------------------------------------------------
+  irq_generator: process(rstn_i, clk_i)
+  begin
+    if (rstn_i = '0') then
+      irq_o <= '0';
+    elsif rising_edge(clk_i) then
+      if (serial.state = "100") then -- enabled and in idle state
+        irq_o <= '1';
+      else
+        irq_o <= '0';
+      end if;
+    end if;
+  end process irq_generator;
 
 
 end neorv32_onewire_rtl;

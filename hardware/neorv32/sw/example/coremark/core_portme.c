@@ -16,7 +16,7 @@ limitations under the License.
 Original Author: Shay Gal-on
 */
 
-/* Modified for the NEORV32 Processor - by Stephan Nolting */
+/* Ported to the NEORV32 RISC-V Processor by Stephan Nolting, 2024 */
 
 #include "coremark.h"
 #include "core_portme.h"
@@ -44,9 +44,7 @@ volatile ee_s32 seed5_volatile = 0;
    cpu clock cycles performance counter etc. Sample implementation for standard
    time.h and windows.h definitions included.
 */
-CORETIMETYPE
-barebones_clock()
-{
+CORETIMETYPE barebones_clock() {
 /*
 #error \
     "You must implement a method to measure time in barebones_clock()! This function should return current time.\n"
@@ -78,9 +76,7 @@ static CORETIMETYPE start_time_val, stop_time_val;
    example code) or zeroing some system parameters - e.g. setting the cpu clocks
    cycles to 0.
 */
-void
-start_time(void)
-{
+void start_time(void) {
     GETMYTIME(&start_time_val);
     neorv32_cpu_csr_write(CSR_MCOUNTINHIBIT, 0); // start all counters
 }
@@ -92,9 +88,7 @@ start_time(void)
    example code) or other system parameters - e.g. reading the current value of
    cpu cycles counter.
 */
-void
-stop_time(void)
-{
+void stop_time(void) {
     neorv32_cpu_csr_write(CSR_MCOUNTINHIBIT, -1); // stop all counters
     GETMYTIME(&stop_time_val);
 }
@@ -107,9 +101,7 @@ stop_time(void)
    sample implementation returns milliseconds by default, and the resolution is
    controlled by <TIMER_RES_DIVIDER>
 */
-CORE_TICKS
-get_time(void)
-{
+CORE_TICKS get_time(void) {
     CORE_TICKS elapsed
         = (CORE_TICKS)(MYTIMEDIFF(stop_time_val, start_time_val));
     return elapsed;
@@ -121,11 +113,9 @@ get_time(void)
    floating point. Default implementation implemented by the EE_TICKS_PER_SEC
    macro above.
 */
-secs_ret
-time_in_secs(CORE_TICKS ticks)
-{
+secs_ret time_in_secs(CORE_TICKS ticks) {
     /* NEORV32-specific */
-    secs_ret retval = (secs_ret)(((CORE_TICKS)ticks) / ((CORE_TICKS)NEORV32_SYSINFO->CLK));
+    secs_ret retval = (secs_ret)(((CORE_TICKS)ticks) / ((CORE_TICKS)neorv32_sysinfo_get_clk()));
     return retval;
 }
 
@@ -139,58 +129,40 @@ uint32_t num_hpm_cnts_global = 0;
         Target specific initialization code
         Test for some common mistakes.
 */
-#ifndef RUN_COREMARK
-void
-__attribute__((__noreturn__))
-portable_init(core_portable *p, int *argc, char *argv[])
-#else
-void
-portable_init(core_portable *p, int *argc, char *argv[])
-#endif
-{
+void portable_init(core_portable *p, int *argc, char *argv[]) {
+
   /* NEORV32-specific */
   neorv32_cpu_csr_write(CSR_MIE, 0); // no interrupt, thanks
-  neorv32_rte_setup(); // capture all exceptions and give debug information, no HW flow control
+  neorv32_rte_setup(); // capture all trap and give debug information, no HW flow control
+
+  // abort if CPU base counter not available
+  if ((neorv32_cpu_csr_read(CSR_MXISA) & (1 << CSR_MXISA_ZICNTR)) == 0) {
+    neorv32_uart0_printf("ERROR! No CPU base counters available (Zicntr)!\n");
+    while(1); // halt
+  }
 
   // setup UART at default baud rate, no interrupts
   neorv32_uart0_setup(BAUD_RATE, 0);
-
-
-// Disable coremark compilation by default
-#ifndef RUN_COREMARK
-  #warning COREMARK HAS NOT BEEN COMPILED! Use >>make USER_FLAGS+=-DRUN_COREMARK clean_all exe<< to compile it.
-
-  // inform the user if you are actually executing this
-  neorv32_uart0_printf("ERROR! CoreMark has not been compiled. Use >>make USER_FLAGS+=-DRUN_COREMARK clean_all exe<< to compile it.\n");
-
-  while(1);
-#endif
-
-  // check available hardware extensions and compare with compiler flags
-  neorv32_rte_check_isa(0); // silent = 0 -> show message if isa mismatch
 
   num_hpm_cnts_global = neorv32_cpu_hpm_get_num_counters();
 
   // stop all counters for now
   neorv32_cpu_csr_write(CSR_MCOUNTINHIBIT, -1);
-  neorv32_cpu_csr_write(CSR_MCOUNTEREN, -1); // enable access to all counters
 
-  // try to setup as many counters/HPMs as possible
   neorv32_cpu_set_mcycle(0);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER3,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT3,  1 << HPMCNT_EVENT_CIR);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER4,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT4,  1 << HPMCNT_EVENT_WAIT_IF);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER5,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT5,  1 << HPMCNT_EVENT_WAIT_II);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER6,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT6,  1 << HPMCNT_EVENT_WAIT_MC);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER7,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT7,  1 << HPMCNT_EVENT_LOAD);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER8,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT8,  1 << HPMCNT_EVENT_STORE);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER9,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT9,  1 << HPMCNT_EVENT_WAIT_LS);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER10, 0); neorv32_cpu_csr_write(CSR_MHPMEVENT10, 1 << HPMCNT_EVENT_JUMP);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER11, 0); neorv32_cpu_csr_write(CSR_MHPMEVENT11, 1 << HPMCNT_EVENT_BRANCH);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER12, 0); neorv32_cpu_csr_write(CSR_MHPMEVENT12, 1 << HPMCNT_EVENT_TBRANCH);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER13, 0); neorv32_cpu_csr_write(CSR_MHPMEVENT13, 1 << HPMCNT_EVENT_TRAP);
-  neorv32_cpu_csr_write(CSR_MHPMCOUNTER14, 0); neorv32_cpu_csr_write(CSR_MHPMEVENT14, 1 << HPMCNT_EVENT_ILLEGAL);
 
-  neorv32_uart0_printf("NEORV32: Processor running at %u Hz\n", (uint32_t)NEORV32_SYSINFO->CLK);
+  // try to setup as many HPMs as possible
+  if (num_hpm_cnts_global > 0)  {neorv32_cpu_csr_write(CSR_MHPMCOUNTER3,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT3,  1 << HPMCNT_EVENT_COMPR);    }
+  if (num_hpm_cnts_global > 1)  {neorv32_cpu_csr_write(CSR_MHPMCOUNTER4,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT4,  1 << HPMCNT_EVENT_WAIT_DIS); }
+  if (num_hpm_cnts_global > 2)  {neorv32_cpu_csr_write(CSR_MHPMCOUNTER5,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT5,  1 << HPMCNT_EVENT_WAIT_ALU); }
+  if (num_hpm_cnts_global > 3)  {neorv32_cpu_csr_write(CSR_MHPMCOUNTER6,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT6,  1 << HPMCNT_EVENT_BRANCH);   }
+  if (num_hpm_cnts_global > 4)  {neorv32_cpu_csr_write(CSR_MHPMCOUNTER7,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT7,  1 << HPMCNT_EVENT_BRANCHED); }
+  if (num_hpm_cnts_global > 5)  {neorv32_cpu_csr_write(CSR_MHPMCOUNTER8,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT8,  1 << HPMCNT_EVENT_LOAD);     }
+  if (num_hpm_cnts_global > 6)  {neorv32_cpu_csr_write(CSR_MHPMCOUNTER9,  0); neorv32_cpu_csr_write(CSR_MHPMEVENT9,  1 << HPMCNT_EVENT_STORE);    }
+  if (num_hpm_cnts_global > 7)  {neorv32_cpu_csr_write(CSR_MHPMCOUNTER10, 0); neorv32_cpu_csr_write(CSR_MHPMEVENT10, 1 << HPMCNT_EVENT_WAIT_LSU); }
+  if (num_hpm_cnts_global > 8)  {neorv32_cpu_csr_write(CSR_MHPMCOUNTER11, 0); neorv32_cpu_csr_write(CSR_MHPMEVENT11, 1 << HPMCNT_EVENT_TRAP);     }
+
+  neorv32_uart0_printf("NEORV32: Processor running at %u Hz\n", (uint32_t)neorv32_sysinfo_get_clk());
   neorv32_uart0_printf("NEORV32: Executing coremark (%u iterations). This may take some time...\n\n", (uint32_t)ITERATIONS);
 
 /*
@@ -208,36 +180,28 @@ portable_init(core_portable *p, int *argc, char *argv[])
         ee_printf("ERROR! Please define ee_u32 to a 32b unsigned type!\n");
     }
     p->portable_id = 1;
-
-#ifndef RUN_COREMARK
-  while(1);
-#endif
 }
 
 
 /* Function : portable_fini
-        Target specific final code
+   Target specific final code
 */
-void
-portable_fini(core_portable *p)
-{
+void portable_fini(core_portable *p) {
+
     p->portable_id = 0;
 
     neorv32_uart0_printf("\nNEORV32: Hardware Performance Monitors (low words only)\n");
-    neorv32_uart0_printf(" > Active clock cycles:          %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MCYCLE));
-    neorv32_uart0_printf(" > Retired instructions:         %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MINSTRET));
+    neorv32_uart0_printf(" > Active clock cycles         : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MCYCLE));
+    neorv32_uart0_printf(" > Retired instructions        : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MINSTRET));
     if (num_hpm_cnts_global == 0) {neorv32_uart0_printf("no HPMs available\n"); }
-    if (num_hpm_cnts_global > 0)  {neorv32_uart0_printf(" > Retired compr. instructions:  %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER3)); }
-    if (num_hpm_cnts_global > 1)  {neorv32_uart0_printf(" > Instr.-fetch wait cycles:     %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER4)); }
-    if (num_hpm_cnts_global > 2)  {neorv32_uart0_printf(" > Instr.-issue wait cycles:     %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER5)); }
-    if (num_hpm_cnts_global > 3)  {neorv32_uart0_printf(" > Multi-cycle ALU wait cycles:  %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER6)); }
-    if (num_hpm_cnts_global > 4)  {neorv32_uart0_printf(" > Load operations:              %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER7)); }
-    if (num_hpm_cnts_global > 5)  {neorv32_uart0_printf(" > Store operations:             %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER8)); }
-    if (num_hpm_cnts_global > 6)  {neorv32_uart0_printf(" > Load/store wait cycles:       %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER9)); }
-    if (num_hpm_cnts_global > 7)  {neorv32_uart0_printf(" > Unconditional jumps:          %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER10)); }
-    if (num_hpm_cnts_global > 8)  {neorv32_uart0_printf(" > Conditional branches (all):   %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER11)); }
-    if (num_hpm_cnts_global > 9)  {neorv32_uart0_printf(" > Conditional branches (taken): %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER12)); }
-    if (num_hpm_cnts_global > 10) {neorv32_uart0_printf(" > Entered traps:                %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER13)); }
-    if (num_hpm_cnts_global > 11) {neorv32_uart0_printf(" > Illegal operations:           %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER14)); }
+    if (num_hpm_cnts_global > 0)  {neorv32_uart0_printf(" > Compressed instructions     : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER3));  }
+    if (num_hpm_cnts_global > 1)  {neorv32_uart0_printf(" > Instr. dispatch wait cycles : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER4));  }
+    if (num_hpm_cnts_global > 2)  {neorv32_uart0_printf(" > ALU wait cycles             : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER5));  }
+    if (num_hpm_cnts_global > 3)  {neorv32_uart0_printf(" > Branch instructions         : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER6));  }
+    if (num_hpm_cnts_global > 4)  {neorv32_uart0_printf(" > Control flow transfers      : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER7));  }
+    if (num_hpm_cnts_global > 5)  {neorv32_uart0_printf(" > Load instructions           : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER8));  }
+    if (num_hpm_cnts_global > 6)  {neorv32_uart0_printf(" > Store instructions          : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER9));  }
+    if (num_hpm_cnts_global > 7)  {neorv32_uart0_printf(" > Load/store wait cycles      : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER10)); }
+    if (num_hpm_cnts_global > 8)  {neorv32_uart0_printf(" > Entered traps               : %u\n", (uint32_t)neorv32_cpu_csr_read(CSR_MHPMCOUNTER11)); }
     neorv32_uart0_printf("\n");
 }

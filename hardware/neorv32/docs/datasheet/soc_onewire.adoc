@@ -5,13 +5,14 @@
 [cols="<3,<3,<4"]
 [frame="topbot",grid="none"]
 |=======================
-| Hardware source file(s): | neorv32_onewire.vhd | 
-| Software driver file(s): | neorv32_onewire.c |
-|                          | neorv32_onewire.h |
-| Top entity port:         | `onewire_i` | 1-bit 1-wire bus sense input
-|                          | `onewire_o` | 1-bit 1-wire bus output (pull low only)
-| Configuration generics:  | `IO_ONEWIRE_EN`     | implement ONEWIRE interface controller when `true`
-| CPU interrupts:          | fast IRQ channel 13 | operation done interrupt (see <<_processor_interrupts>>)
+| Hardware source files:  | neorv32_onewire.vhd |
+| Software driver files:  | neorv32_onewire.c |
+|                         | neorv32_onewire.h |
+| Top entity ports:       | `onewire_i` | 1-bit 1-wire bus sense input
+|                         | `onewire_o` | 1-bit 1-wire bus output (pull low only)
+| Configuration generics: | `IO_ONEWIRE_EN`     | implement ONEWIRE interface controller when `true`
+| CPU interrupts:         | fast IRQ channel 13 | operation done interrupt (see <<_processor_interrupts>>)
+| Access restrictions:  2+| privileged access only, non-32-bit write accesses are ignored
 |=======================
 
 
@@ -76,7 +77,7 @@ operation to allow the accessed device to pull-down the bus. Accordingly, `DATA`
 triggering the byte transmission operation when the controller shall read a byte from the bus.
 
 The `ONEWIRE_CTRL_PRESENCE` bit gets set if at least one device has send a "presence" signal right after the
-reset pulse. 
+reset pulse.
 
 
 **Bus Timing**
@@ -163,10 +164,8 @@ time **T~base~** (and by eventually changing the hardwired timing configuration 
 
 **Interrupt**
 
-A single interrupt is provided by the ONEWIRE module to signal "operation done" condition to the CPU. Whenever the
-controller completes a "generate reset pulse", a "transfer single-bit" or a "transfer full-byte" operation the
-interrupt is triggered. Once triggered, the interrupt has to be _explicitly_ cleared again by writing zero to the
-according <<_mip>> CSR FIRQ bit.
+A single interrupt is provided by the ONEWIRE module to signal "idle" condition to the CPU. Whenever the
+controller is idle (again) the interrupt becomes active.
 
 
 **Register Map**

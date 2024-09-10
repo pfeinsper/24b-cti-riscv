@@ -22,8 +22,15 @@ GHDL="${GHDL:-ghdl}"
 
 $GHDL -m --work=neorv32 --workdir=build neorv32_tb_simple
 
-GHDL_RUN_ARGS="${@:---stop-time=10ms}"
-echo "Using simulation runtime args: $GHDL_RUN_ARGS";
+if [ -z "$1" ]
+  then
+    GHDL_RUN_ARGS="${@:---stop-time=10ms}"
+  else
+    # Lets pass down all the parameters to GHDL instead of just 1
+    GHDL_RUN_ARGS=$@
+fi
+
+echo "Using simulation run arguments: $GHDL_RUN_ARGS";
 
 runcmd="$GHDL -r --work=neorv32 --workdir=build neorv32_tb_simple \
   --max-stack-alloc=0 \
@@ -35,6 +42,3 @@ if [ -n "$GHDL_DEVNULL" ]; then
 else
   $runcmd
 fi
-
-# verify results of processor check: sw/example/processor_check
-cat neorv32.uart0.sim_mode.text.out | grep "PROCESSOR TEST COMPLETED SUCCESSFULLY!"

@@ -1,43 +1,17 @@
--- #################################################################################################
--- # << NEORV32 - Custom Functions Subsystem (CFS) >>                                              #
--- # ********************************************************************************************* #
--- # Intended for tightly-coupled, application-specific custom co-processors. This module provides #
--- # 64x 32-bit memory-mapped interface registers, one interrupt request signal and custom IO      #
--- # conduits for processor-external or chip-external interface.                                   #
--- #                                                                                               #
--- # NOTE: This is just an example/illustration template. Modify/replace this file to implement    #
--- #       your own custom design logic.                                                           #
--- # ********************************************************************************************* #
--- # BSD 3-Clause License                                                                          #
--- #                                                                                               #
--- # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
--- #                                                                                               #
--- # Redistribution and use in source and binary forms, with or without modification, are          #
--- # permitted provided that the following conditions are met:                                     #
--- #                                                                                               #
--- # 1. Redistributions of source code must retain the above copyright notice, this list of        #
--- #    conditions and the following disclaimer.                                                   #
--- #                                                                                               #
--- # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
--- #    conditions and the following disclaimer in the documentation and/or other materials        #
--- #    provided with the distribution.                                                            #
--- #                                                                                               #
--- # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
--- #    endorse or promote products derived from this software without specific prior written      #
--- #    permission.                                                                                #
--- #                                                                                               #
--- # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
--- # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
--- # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
--- # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
--- # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
--- # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
--- # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
--- # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
--- # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
--- # ********************************************************************************************* #
--- # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
--- #################################################################################################
+-- ================================================================================ --
+-- NEORV32 SoC - Custom Functions Subsystem (CFS)                                   --
+-- -------------------------------------------------------------------------------- --
+-- Intended for tightly-coupled, application-specific custom co-processors. This    --
+-- module provides up to 64x 32-bit memory-mapped interface registers, one CPU      --
+-- interrupt request signal and custom IO conduits for processor-external or chip-  --
+-- external interface.                                                              --
+-- -------------------------------------------------------------------------------- --
+-- The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              --
+-- Copyright (c) NEORV32 contributors.                                              --
+-- Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  --
+-- Licensed under the BSD-3-Clause license, see LICENSE for details.                --
+-- SPDX-License-Identifier: BSD-3-Clause                                            --
+-- ================================================================================ --
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -55,13 +29,13 @@ entity neorv32_cfs is
   port (
     clk_i       : in  std_ulogic; -- global clock line
     rstn_i      : in  std_ulogic; -- global reset line, low-active, use as async
-    bus_req_i   : in  bus_req_t;  -- bus request
-    bus_rsp_o   : out bus_rsp_t;  -- bus response
-    clkgen_en_o : out std_ulogic; -- enable clock generator
-    clkgen_i    : in  std_ulogic_vector(07 downto 0); -- "clock" inputs
-    irq_o       : out std_ulogic; -- interrupt request
+    bus_req_i   : in  bus_req_t; -- bus request
+    bus_rsp_o   : out bus_rsp_t := rsp_terminate_c; -- bus response
+    clkgen_en_o : out std_ulogic := '0'; -- enable clock generator
+    clkgen_i    : in  std_ulogic_vector(7 downto 0); -- "clock" inputs
+    irq_o       : out std_ulogic := '0'; -- interrupt request
     cfs_in_i    : in  std_ulogic_vector(CFS_IN_SIZE-1 downto 0); -- custom inputs
-    cfs_out_o   : out std_ulogic_vector(CFS_OUT_SIZE-1 downto 0) -- custom outputs
+    cfs_out_o   : out std_ulogic_vector(CFS_OUT_SIZE-1 downto 0) := (others => '0') -- custom outputs
   );
 end neorv32_cfs;
 
@@ -140,9 +114,7 @@ begin
   -- Interrupt ------------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
   -- The CFS features a single interrupt signal, which is connected to the CPU's "fast interrupt" channel 1 (FIRQ1).
-  -- The interrupt is triggered by a one-cycle high-level. After triggering, the interrupt appears as "pending" in the CPU's
-  -- mip CSR ready to trigger execution of the according interrupt handler. It is the task of the application to programmer
-  -- to enable/clear the CFS interrupt using the CPU's mie and mip registers when required.
+  -- The according CPU interrupt becomes pending as long as <irq_o> is high.
 
   irq_o <= '0'; -- not used for this minimal example
 
@@ -165,61 +137,63 @@ begin
   -- and is set INSTEAD of the ACK signal. Setting the ERR signal will raise a bus access exception with a "Device Error" qualifier
   -- that can be handled by the application software. Note that the current privilege level should not be exposed to software to
   -- maintain full virtualization. Hence, CFS-based "privilege escalation" should trigger a bus access exception (e.g. by setting 'err_o').
-
-  bus_rsp_o.err <= '0'; -- Tie to zero if not explicitly used.
-
-
+  --
   -- Host access example: Read and write access to the interface registers + bus transfer acknowledge. This example only
   -- implements four physical r/w register (the four lowest CFS registers). The remaining addresses of the CFS are not associated
   -- with any physical registers - any access to those is simply ignored but still acknowledged. Only full-word write accesses are
   -- supported (and acknowledged) by this example. Sub-word write access will not alter any CFS register state and will cause
   -- a "bus store access" exception (with a "Device Timeout" qualifier as not ACK is generated in that case).
 
-  host_access: process(rstn_i, clk_i)
+  bus_access: process(rstn_i, clk_i)
   begin
     if (rstn_i = '0') then
       cfs_reg_wr(0) <= (others => '0');
       cfs_reg_wr(1) <= (others => '0');
       cfs_reg_wr(2) <= (others => '0');
       cfs_reg_wr(3) <= (others => '0');
-      --
-      bus_rsp_o.ack  <= '0';
-      bus_rsp_o.data <= (others => '0');
+      bus_rsp_o     <= rsp_terminate_c;
     elsif rising_edge(clk_i) then -- synchronous interface for read and write accesses
       -- transfer/access acknowledge --
-      -- default: required for the CPU to check the CFS is answering a bus read OR write request;
-      -- all read and write accesses (to any cfs_reg, even if there is no according physical register implemented) will succeed.
-      bus_rsp_o.ack <= bus_req_i.re or bus_req_i.we;
+      bus_rsp_o.ack <= bus_req_i.stb;
 
-      -- write access --
-      if (bus_req_i.we = '1') then -- full-word write access, high for one cycle if there is an actual write access
-        if (bus_req_i.addr(7 downto 2) = "000000") then -- make sure to use the internal "addr" signal for the read/write interface
-          cfs_reg_wr(0) <= bus_req_i.data; -- some physical register, for example: control register
-        end if;
-        if (bus_req_i.addr(7 downto 2) = "000001") then
-          cfs_reg_wr(1) <= bus_req_i.data; -- some physical register, for example: data in/out fifo
-        end if;
-        if (bus_req_i.addr(7 downto 2) = "000010") then
-          cfs_reg_wr(2) <= bus_req_i.data; -- some physical register, for example: command fifo
-        end if;
-        if (bus_req_i.addr(7 downto 2) = "000011") then
-          cfs_reg_wr(3) <= bus_req_i.data; -- some physical register, for example: status register
-        end if;
-      end if;
+      -- tie to zero if not explicitly used --
+      bus_rsp_o.err <= '0';
 
-      -- read access --
-      bus_rsp_o.data <= (others => '0'); -- the output HAS TO BE ZERO if there is no actual read access
-      if (bus_req_i.re = '1') then -- the read access is always 32-bit wide, high for one cycle if there is an actual read access
-        case bus_req_i.addr(7 downto 2) is -- make sure to use the internal 'addr' signal for the read/write interface
-          when "000000" => bus_rsp_o.data <= cfs_reg_rd(0);
-          when "000001" => bus_rsp_o.data <= cfs_reg_rd(1);
-          when "000010" => bus_rsp_o.data <= cfs_reg_rd(2);
-          when "000011" => bus_rsp_o.data <= cfs_reg_rd(3);
-          when others   => bus_rsp_o.data <= (others => '0'); -- the remaining registers are not implemented and will read as zero
-        end case;
+      -- defaults --
+      bus_rsp_o.data <= (others => '0'); -- the output HAS TO BE ZERO if there is no actual (read) access
+
+      -- bus access --
+      if (bus_req_i.stb = '1') then -- valid access cycle, STB is high for one cycle
+
+        -- write access --
+        if (bus_req_i.rw = '1') then
+          if (bus_req_i.addr(7 downto 2) = "000000") then -- address size is fixed!
+            cfs_reg_wr(0) <= bus_req_i.data;
+          end if;
+          if (bus_req_i.addr(7 downto 2) = "000001") then
+            cfs_reg_wr(1) <= bus_req_i.data;
+          end if;
+          if (bus_req_i.addr(7 downto 2) = "000010") then
+            cfs_reg_wr(2) <= bus_req_i.data;
+          end if;
+          if (bus_req_i.addr(7 downto 2) = "000011") then
+            cfs_reg_wr(3) <= bus_req_i.data;
+          end if;
+
+        -- read access --
+        else
+          case bus_req_i.addr(7 downto 2) is -- address size is fixed!
+            when "000000" => bus_rsp_o.data <= cfs_reg_rd(0);
+            when "000001" => bus_rsp_o.data <= cfs_reg_rd(1);
+            when "000010" => bus_rsp_o.data <= cfs_reg_rd(2);
+            when "000011" => bus_rsp_o.data <= cfs_reg_rd(3);
+            when others   => bus_rsp_o.data <= (others => '0');
+          end case;
+        end if;
+
       end if;
     end if;
-  end process host_access;
+  end process bus_access;
 
 
   -- CFS Function Core ----------------------------------------------------------------------
@@ -229,10 +203,10 @@ begin
   -- The logic below is just a very simple example that transforms data
   -- from an input register into data in an output register.
 
-  cfs_reg_rd(0) <= bin_to_gray_f(cfs_reg_wr(0)); -- convert binary to gray code
-  cfs_reg_rd(1) <= gray_to_bin_f(cfs_reg_wr(1)); -- convert gray to binary code
+  cfs_reg_rd(0) <= x"0000000" & "000" & or_reduce_f(cfs_reg_wr(0)); -- OR all bits
+  cfs_reg_rd(1) <= x"0000000" & "000" & xor_reduce_f(cfs_reg_wr(1)); -- XOR all bits
   cfs_reg_rd(2) <= bit_rev_f(cfs_reg_wr(2)); -- bit reversal
-  cfs_reg_rd(3) <= bswap32_f(cfs_reg_wr(3)); -- byte swap (endianness conversion)
+  cfs_reg_rd(3) <= bswap_f(cfs_reg_wr(3)); -- byte swap (endianness conversion)
 
 
 end neorv32_cfs_rtl;

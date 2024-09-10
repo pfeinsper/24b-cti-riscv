@@ -1,40 +1,17 @@
-/* ################################################################################################# */
-/* # << NEORV32 - crt0.S Start-Up Code >>                                                          # */
-/* # ********************************************************************************************* # */
-/* # BSD 3-Clause License                                                                          # */
-/* #                                                                                               # */
-/* # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     # */
-/* #                                                                                               # */
-/* # Redistribution and use in source and binary forms, with or without modification, are          # */
-/* # permitted provided that the following conditions are met:                                     # */
-/* #                                                                                               # */
-/* # 1. Redistributions of source code must retain the above copyright notice, this list of        # */
-/* #    conditions and the following disclaimer.                                                   # */
-/* #                                                                                               # */
-/* # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     # */
-/* #    conditions and the following disclaimer in the documentation and/or other materials        # */
-/* #    provided with the distribution.                                                            # */
-/* #                                                                                               # */
-/* # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  # */
-/* #    endorse or promote products derived from this software without specific prior written      # */
-/* #    permission.                                                                                # */
-/* #                                                                                               # */
-/* # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   # */
-/* # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               # */
-/* # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    # */
-/* # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     # */
-/* # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE # */
-/* # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    # */
-/* # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     # */
-/* # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  # */
-/* # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            # */
-/* # ********************************************************************************************* # */
-/* # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting # */
-/* ################################################################################################# */
+// ================================================================================ //
+// NEORV32 CPU - crt0.S Start-Up Code                                               //
+// -------------------------------------------------------------------------------- //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
 .file "crt0.S"
 .section .text.crt0
 .balign 4
+.option norvc // only 32-bit instructions
 .global _start
 .global __crt0_entry
 .global __crt0_main_exit
@@ -45,21 +22,14 @@ __crt0_entry:
 .cfi_undefined ra
 
 // ************************************************************************************************
-// We need to ensure interrupts are completely disabled at start. This is required if this code
-// is part of a program uploaded by the on-chip debugger (potentionally taking over control from the
-// bootloader). We setup a new stack pointer here and WE DO NOT WANT TO trap to an outdated trap
-// handler with a modified stack pointer.
-// ************************************************************************************************
-  csrrwi zero, mstatus, 0 // clear mstatus; disable machine-level interrupts
-
-
-// ************************************************************************************************
 // Setup CPU core CSRs
 // ************************************************************************************************
 __crt0_cpu_csr_init:
-  csrw mie,   zero                // disable all interrupt sources
-  la   x1,    __crt0_trap_handler // configure early-boot trap handler
-  csrw mtvec, x1
+  li   x1,      0x00001800          // mstatus.mpp = machine-mode
+  csrw mstatus, x1
+  la   x1,      __crt0_trap_handler // configure early-boot trap handler
+  csrw mtvec,   x1
+  csrw mie,     zero                // disable all interrupt sources
 
 
 // ************************************************************************************************
@@ -68,9 +38,11 @@ __crt0_cpu_csr_init:
 __crt0_pointer_init:
   .option push
   .option norelax
-  // Setup pointers using linker script symbols
-  la sp, __crt0_stack_begin // stack pointer
-  la gp, __global_pointer$  // global pointer
+  // setup pointers using linker script symbols
+  la   x4, __crt0_stack_end  // stack pointer
+  andi sp, x4, 0xfffffffc    // word-aligned
+  la   x5, __global_pointer$ // global pointer
+  andi gp, x5, 0xfffffffc    // word-aligned
   .option pop
 
 __crt0_reg_file_init:
@@ -78,8 +50,8 @@ __crt0_reg_file_init:
 //addi  x1, x0, 0 // implicitly initialized within crt0
 //addi  x2, x0, 0 // stack pointer sp
 //addi  x3, x0, 0 // global pointer gp
-  addi  x4, x0, 0
-  addi  x5, x0, 0
+//addi  x4, x0, 0 // implicitly initialized within crt0
+//addi  x5, x0, 0 // implicitly initialized within crt0
   addi  x6, x0, 0
   addi  x7, x0, 0
   addi  x8, x0, 0
@@ -149,7 +121,7 @@ __crt0_clear_bss_loop_end:
 // ************************************************************************************************
 // Call constructors
 // ************************************************************************************************
-#ifndef make_bootloader // constructors are not supported for bootloader
+#ifndef MAKE_BOOTLOADER // constructors are not supported for bootloader
 __crt0_call_constructors:
   la   x8,  __init_array_start
   la   x9,  __init_array_end
@@ -171,20 +143,23 @@ __crt0_call_constructors_loop_end:
 __crt0_main_entry:
   addi x10, zero, 0 // x10 = a0 = argc = 0
   addi x11, zero, 0 // x11 = a1 = argv = 0
-  jal  x1,  main    // call actual app's main function
+  jal  x1,  main    // call actual main function
 
 __crt0_main_exit:   // main's "return" and "exit" will arrive here
   csrw mie, zero    // disable all interrupt sources
-  csrw mscratch, a0 // backup main's return code to mscratch (for debugger)
+  csrw mscratch, a0 // backup main's return code to mscratch (for debugger or destructors)
+
 
 
 // ************************************************************************************************
 // Call destructors
 // ************************************************************************************************
-#ifndef make_bootloader // destructors are not supported for bootloader
+#ifndef MAKE_BOOTLOADER // destructors are not supported for bootloader
 __crt0_call_destructors:
-  la   x8, __fini_array_start
-  la   x9, __fini_array_end
+  la   x8,    __crt0_trap_handler // use the crt0 trap handler if there are exceptions in the destructors
+  csrw mtvec, x8
+  la   x8,    __fini_array_start
+  la   x9,    __fini_array_end
 
 __crt0_call_destructors_loop:
   bge  x8, x9, __crt0_call_destructors_loop_end
@@ -198,60 +173,46 @@ __crt0_call_destructors_loop_end:
 
 
 // ************************************************************************************************
-// Call "after main" handler (if there is any) if main really returns
-// ************************************************************************************************
-#ifndef make_bootloader              // after_main handler not supported for bootloader
-__crt0_main_aftermath:
-  .weak    __neorv32_crt0_after_main
-  la   ra, __neorv32_crt0_after_main
-  beqz ra, __crt0_main_aftermath_end // check if an aftermath handler has been specified
-  jalr ra                            // execute handler with main's return code still in a0
-
-__crt0_main_aftermath_end:
-#endif
-
-
-// ************************************************************************************************
 // Go to endless sleep mode
 // ************************************************************************************************
 __crt0_shutdown:
-  wfi // go to sleep mode
-  j __crt0_shutdown // endless loop
+  wfi
+  j __crt0_shutdown
 
 
 // ************************************************************************************************
-// Dummy trap handler (for all traps during very early boot stage)
-// - does nothing but trying to move on to the next instruction
+// Early-boot trap handler - does nothing but trying to move on to the next linear instruction
 // ************************************************************************************************
-.balign 4                                   // the trap handler has to be 32-bit aligned
+.balign 4 // the trap handler has to be 32-bit aligned
 __crt0_trap_handler:
 
-  addi  sp,   sp, -8
-  sw    x8,   0(sp)
-  sw    x9,   4(sp)
+  // backup x8 in mscratch - no need to use the stack
+  csrw  mscratch, x8
 
+  // exit if interrupt
   csrr  x8,   mcause
-  blt   x8,   zero, __crt0_trap_handler_end // skip mepc modification if interrupt
+  srli  x8,   x8, 31 // isolate MSB (set for interrupts)
+  bnez  x8,   __crt0_trap_handler_end
 
-// update mepc
+  // mepc = mepc + 4 (for UNCOMPRESSED instruction)
   csrr  x8,   mepc
-  lh    x9,   0(x8)                         // get compressed instruction or lower 16 bits of uncompressed instruction that caused exception
-  andi  x9,   x9, 3                         // mask: isolate lowest 2 opcode bits (= 11 for uncompressed instructions)
-
-  addi  x8,   x8, +2                        // mepc +2 only for compressed instructions
-  csrw  mepc, x8                            // set new return address
-
-  addi  x8,   zero, 3
-  bne   x8,   x9, __crt0_trap_handler_end   // done if compressed instruction
-
-  csrr  x8,   mepc
-  addi  x8,   x8, +2                        // add another +2 to mepc (making +4) for uncompressed instructions
+  addi  x8,   x8, +4
   csrw  mepc, x8
 
+  // exit if exception-causing instruction is uncompressed
+  csrr  x8,   mtinst // get transformed exception-causing instruction
+  andi  x8,   x8,  3 // isolate lowest 2 opcode bits (= 11 for uncompressed instructions)
+  addi  x8,   x8, -3 // x8 is zero after this if uncompressed instruction
+  beqz  x8,   __crt0_trap_handler_end
+
+  // mepc = mepc - 2 (making mepc_new = mepc_old + 2 for COMPRESSED instruction)
+  csrr  x8,   mepc
+  addi  x8,   x8, -2
+  csrw  mepc, x8
+
+  // restore x8
 __crt0_trap_handler_end:
-  lw    x8,   0(sp)
-  lw    x9,   4(sp)
-  addi  sp,   sp, +8
+  csrr  x8,   mscratch
 
   mret
 

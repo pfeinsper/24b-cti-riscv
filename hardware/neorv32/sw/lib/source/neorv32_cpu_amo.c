@@ -1,56 +1,19 @@
-// #################################################################################################
-// # << NEORV32: neorv32_amo.c - CPU Core - Atomic Memory Access Emulation Functions >>            #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
-// #################################################################################################
+// ================================================================================ //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
-
-/**********************************************************************//**
+/**
  * @file neorv32_cpu_amo.c
  * @brief Atomic memory access (read-modify-write) emulation functions using LR/SC pairs - source file.
- **************************************************************************/
+ *
+ * @see https://stnolting.github.io/neorv32/sw/files.html
+ */
 
 #include "neorv32.h"
-#include "neorv32_cpu_amo.h"
-
-
-/**********************************************************************//**
- * MIN/MAX helpers.
- **************************************************************************/
-/**@{*/
-static inline int32_t MAX(int32_t a, int32_t b) { return((a) > (b) ? a : b); }
-static inline int32_t MIN(int32_t a, int32_t b) { return((a) < (b) ? a : b); }
-static inline int32_t MAXU(uint32_t a, uint32_t b) { return((a) > (b) ? a : b); }
-static inline int32_t MINU(uint32_t a, uint32_t b) { return((a) < (b) ? a : b); }
-/**@}*/
 
 
 /**********************************************************************//**
@@ -65,18 +28,25 @@ static inline int32_t MINU(uint32_t a, uint32_t b) { return((a) < (b) ? a : b); 
  **************************************************************************/
 uint32_t neorv32_cpu_amoswapw(uint32_t addr, uint32_t wdata) {
 
+#if defined __riscv_atomic
   uint32_t rdata;
   uint32_t status;
 
   while(1) {
-    rdata  = neorv32_cpu_load_reservate_word(addr);
-    status = neorv32_cpu_store_conditional_word(addr, wdata);
+    rdata  = neorv32_cpu_amolr(addr);
+    status = neorv32_cpu_amosc(addr, wdata);
     if (status == 0) {
       break;
     }
   }
 
   return rdata;
+#else
+  (void)addr;
+  (void)wdata;
+
+  return 0;
+#endif
 }
 
 
@@ -92,20 +62,27 @@ uint32_t neorv32_cpu_amoswapw(uint32_t addr, uint32_t wdata) {
  **************************************************************************/
 uint32_t neorv32_cpu_amoaddw(uint32_t addr, uint32_t wdata) {
 
+#if defined __riscv_atomic
   uint32_t rdata;
   uint32_t tmp;
   uint32_t status;
 
   while(1) {
-    rdata  = neorv32_cpu_load_reservate_word(addr);
+    rdata  = neorv32_cpu_amolr(addr);
     tmp    = rdata + wdata;
-    status = neorv32_cpu_store_conditional_word(addr, tmp);
+    status = neorv32_cpu_amosc(addr, tmp);
     if (status == 0) {
       break;
     }
   }
 
   return rdata;
+#else
+  (void)addr;
+  (void)wdata;
+
+  return 0;
+#endif
 }
 
 
@@ -121,20 +98,27 @@ uint32_t neorv32_cpu_amoaddw(uint32_t addr, uint32_t wdata) {
  **************************************************************************/
 uint32_t neorv32_cpu_amoandw(uint32_t addr, uint32_t wdata) {
 
+#if defined __riscv_atomic
   uint32_t rdata;
   uint32_t tmp;
   uint32_t status;
 
   while(1) {
-    rdata  = neorv32_cpu_load_reservate_word(addr);
+    rdata  = neorv32_cpu_amolr(addr);
     tmp    = rdata & wdata;
-    status = neorv32_cpu_store_conditional_word(addr, tmp);
+    status = neorv32_cpu_amosc(addr, tmp);
     if (status == 0) {
       break;
     }
   }
 
   return rdata;
+#else
+  (void)addr;
+  (void)wdata;
+
+  return 0;
+#endif
 }
 
 
@@ -150,20 +134,27 @@ uint32_t neorv32_cpu_amoandw(uint32_t addr, uint32_t wdata) {
  **************************************************************************/
 uint32_t neorv32_cpu_amoorw(uint32_t addr, uint32_t wdata) {
 
+#if defined __riscv_atomic
   uint32_t rdata;
   uint32_t tmp;
   uint32_t status;
 
   while(1) {
-    rdata  = neorv32_cpu_load_reservate_word(addr);
+    rdata  = neorv32_cpu_amolr(addr);
     tmp    = rdata | wdata;
-    status = neorv32_cpu_store_conditional_word(addr, tmp);
+    status = neorv32_cpu_amosc(addr, tmp);
     if (status == 0) {
       break;
     }
   }
 
   return rdata;
+#else
+  (void)addr;
+  (void)wdata;
+
+  return 0;
+#endif
 }
 
 
@@ -179,20 +170,27 @@ uint32_t neorv32_cpu_amoorw(uint32_t addr, uint32_t wdata) {
  **************************************************************************/
 uint32_t neorv32_cpu_amoxorw(uint32_t addr, uint32_t wdata) {
 
+#if defined __riscv_atomic
   uint32_t rdata;
   uint32_t tmp;
   uint32_t status;
 
   while(1) {
-    rdata  = neorv32_cpu_load_reservate_word(addr);
+    rdata  = neorv32_cpu_amolr(addr);
     tmp    = rdata ^ wdata;
-    status = neorv32_cpu_store_conditional_word(addr, tmp);
+    status = neorv32_cpu_amosc(addr, tmp);
     if (status == 0) {
       break;
     }
   }
 
   return rdata;
+#else
+  (void)addr;
+  (void)wdata;
+
+  return 0;
+#endif
 }
 
 
@@ -208,20 +206,27 @@ uint32_t neorv32_cpu_amoxorw(uint32_t addr, uint32_t wdata) {
  **************************************************************************/
 int32_t neorv32_cpu_amomaxw(uint32_t addr, int32_t wdata) {
 
+#if defined __riscv_atomic
   int32_t rdata;
   int32_t tmp;
   uint32_t status;
 
   while(1) {
-    rdata  = (int32_t)neorv32_cpu_load_reservate_word(addr);
-    tmp    = MAX(rdata, wdata);
-    status = neorv32_cpu_store_conditional_word(addr, tmp);
+    rdata  = (int32_t)neorv32_cpu_amolr(addr);
+    tmp    = neorv32_aux_max(rdata, wdata);
+    status = neorv32_cpu_amosc(addr, tmp);
     if (status == 0) {
       break;
     }
   }
 
   return rdata;
+#else
+  (void)addr;
+  (void)wdata;
+
+  return 0;
+#endif
 }
 
 
@@ -237,20 +242,27 @@ int32_t neorv32_cpu_amomaxw(uint32_t addr, int32_t wdata) {
  **************************************************************************/
 uint32_t neorv32_cpu_amomaxuw(uint32_t addr, uint32_t wdata) {
 
+#if defined __riscv_atomic
   uint32_t rdata;
   uint32_t tmp;
   uint32_t status;
 
   while(1) {
-    rdata  = (uint32_t)neorv32_cpu_load_reservate_word(addr);
-    tmp    = MAXU(rdata, wdata);
-    status = neorv32_cpu_store_conditional_word(addr, tmp);
+    rdata  = (uint32_t)neorv32_cpu_amolr(addr);
+    tmp    = neorv32_aux_max(rdata, wdata);
+    status = neorv32_cpu_amosc(addr, tmp);
     if (status == 0) {
       break;
     }
   }
 
   return rdata;
+#else
+  (void)addr;
+  (void)wdata;
+
+  return 0;
+#endif
 }
 
 
@@ -266,20 +278,27 @@ uint32_t neorv32_cpu_amomaxuw(uint32_t addr, uint32_t wdata) {
  **************************************************************************/
 int32_t neorv32_cpu_amominw(uint32_t addr, int32_t wdata) {
 
+#if defined __riscv_atomic
   int32_t rdata;
   int32_t tmp;
   uint32_t status;
 
   while(1) {
-    rdata  = (int32_t)neorv32_cpu_load_reservate_word(addr);
-    tmp    = MIN(rdata, wdata);
-    status = neorv32_cpu_store_conditional_word(addr, tmp);
+    rdata  = (int32_t)neorv32_cpu_amolr(addr);
+    tmp    = neorv32_aux_min(rdata, wdata);
+    status = neorv32_cpu_amosc(addr, tmp);
     if (status == 0) {
       break;
     }
   }
 
   return rdata;
+#else
+  (void)addr;
+  (void)wdata;
+
+  return 0;
+#endif
 }
 
 
@@ -295,18 +314,25 @@ int32_t neorv32_cpu_amominw(uint32_t addr, int32_t wdata) {
  **************************************************************************/
 uint32_t neorv32_cpu_amominuw(uint32_t addr, uint32_t wdata) {
 
+#if defined __riscv_atomic
   uint32_t rdata;
   uint32_t tmp;
   uint32_t status;
 
   while(1) {
-    rdata  = (uint32_t)neorv32_cpu_load_reservate_word(addr);
-    tmp    = MINU(rdata, wdata);
-    status = neorv32_cpu_store_conditional_word(addr, tmp);
+    rdata  = (uint32_t)neorv32_cpu_amolr(addr);
+    tmp    = neorv32_aux_min(rdata, wdata);
+    status = neorv32_cpu_amosc(addr, tmp);
     if (status == 0) {
       break;
     }
   }
 
   return rdata;
+#else
+  (void)addr;
+  (void)wdata;
+
+  return 0;
+#endif
 }

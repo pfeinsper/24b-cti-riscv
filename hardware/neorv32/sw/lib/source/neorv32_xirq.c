@@ -3,7 +3,7 @@
 // # ********************************************************************************************* #
 // # BSD 3-Clause License                                                                          #
 // #                                                                                               #
-// # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
+// # Copyright (c) 2024, Stephan Nolting. All rights reserved.                                     #
 // #                                                                                               #
 // # Redistribution and use in source and binary forms, with or without modification, are          #
 // # permitted provided that the following conditions are met:                                     #
@@ -32,14 +32,16 @@
 // # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
 // #################################################################################################
 
-
-/**********************************************************************//**
+/**
  * @file neorv32_xirq.c
  * @brief External Interrupt controller HW driver source file.
- **************************************************************************/
+ *
+ * @note These functions should only be used if the XIRQ controller was synthesized.
+ *
+ * @see https://stnolting.github.io/neorv32/sw/files.html
+ */
 
 #include "neorv32.h"
-#include "neorv32_xirq.h"
 
 
 /**********************************************************************//**
@@ -94,6 +96,8 @@ int neorv32_xirq_setup(void) {
 
 /**********************************************************************//**
  * Globally enable XIRQ interrupts (via according FIRQ channel).
+ *
+ * @note Triggered / triggering XIRQ will remain pending.
  **************************************************************************/
 void neorv32_xirq_global_enable(void) {
 
@@ -104,6 +108,8 @@ void neorv32_xirq_global_enable(void) {
 
 /**********************************************************************//**
  * Globally disable XIRQ interrupts (via according FIRQ channel).
+ *
+ * @note Triggered / triggering XIRQ will remain pending.
  **************************************************************************/
 void neorv32_xirq_global_disable(void) {
 
@@ -139,6 +145,35 @@ int neorv32_xirq_get_num(void) {
   else {
     return 0;
   }
+}
+
+
+/**********************************************************************//**
+ * Configure a channel's trigger type.
+ *
+ * @param[in] channel XIRQ interrupt channel (0..31).
+ * @param[in] config Trigger type: 00 = low-level, 01 = high-level, 10 = falling-edge, 11 = rising-edge.
+ **************************************************************************/
+void neorv32_xirq_setup_trigger(int channel, int config) {
+
+  if (channel > 31) {
+    return;
+  }
+
+  uint32_t t = (((uint32_t)config) >> 1) & 1;
+  uint32_t p = (((uint32_t)config) >> 0) & 1;
+
+  uint32_t trig_typ = NEORV32_XIRQ->TTYP;
+  uint32_t trig_pol = NEORV32_XIRQ->TPOL;
+
+  trig_typ &= ~(1 << channel); // clear bit
+  trig_typ |= t << channel;
+
+  trig_pol &= ~(1 << channel); // clear bit
+  trig_pol |= p << channel;
+
+  NEORV32_XIRQ->TTYP = trig_typ;
+  NEORV32_XIRQ->TPOL = trig_pol;
 }
 
 
@@ -181,8 +216,6 @@ void neorv32_xirq_channel_disable(int channel) {
 /**********************************************************************//**
  * Install interrupt handler function for XIRQ channel.
  *
- * @note This will also activate the according XIRQ channel and clear a pending IRQ at this channel.
- *
  * @param[in] channel XIRQ interrupt channel (0..31).
  * @param[in] handler The actual handler function for the specified interrupt (function MUST be of type "void function(void);").
  * @return 0 if success, 1 if error.
@@ -192,9 +225,6 @@ int neorv32_xirq_install(int channel, void (*handler)(void)) {
   // channel valid?
   if (channel < 32) {
     __neorv32_xirq_vector_lut[channel] = (uint32_t)handler; // install handler
-    uint32_t mask = 1 << channel;
-    NEORV32_XIRQ->EIP = ~mask; // clear if pending
-    NEORV32_XIRQ->EIE |= mask; // enable channel
     return 0;
   }
   return 1;
@@ -228,8 +258,6 @@ int neorv32_xirq_uninstall(int channel) {
  **************************************************************************/
 static void __neorv32_xirq_core(void) {
 
-  neorv32_cpu_csr_write(CSR_MIP, ~(1 << XIRQ_FIRQ_PENDING)); // acknowledge XIRQ FIRQ
-
   // get highest-priority XIRQ channel
   uint32_t src = NEORV32_XIRQ->ESC;
 
@@ -237,10 +265,9 @@ static void __neorv32_xirq_core(void) {
   NEORV32_XIRQ->EIP = ~(1 << src);
 
   // execute handler
-  uint32_t xirq_handler = __neorv32_xirq_vector_lut[src];
-  void (*handler_pnt)(void);
-  handler_pnt = (void*)xirq_handler;
-  (*handler_pnt)();
+  typedef void handler_t();
+  handler_t* handler = (handler_t*)__neorv32_xirq_vector_lut[src];
+  handler();
 
   NEORV32_XIRQ->ESC = 0; // acknowledge the current XIRQ interrupt
 }

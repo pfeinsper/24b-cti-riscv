@@ -1,36 +1,10 @@
-// #################################################################################################
-// # << NEORV32 - RISC-V 'A' Extension - AMO Emulation Test Program >>                             #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
-// #################################################################################################
+// ================================================================================ //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
 
 /**********************************************************************//**
@@ -50,13 +24,12 @@
 /** UART BAUD rate */
 #define BAUD_RATE      (19200)
 //** Number of test cases for each instruction */
-#define NUM_TEST_CASES (10000)
+#define NUM_TEST_CASES (1000)
 //** Silent mode (only show actual errors when != 0) */
 #define SILENT_MODE    (1)
 
 
 // Prototypes
-uint32_t xorshift32(void);
 uint32_t check_result(uint32_t num, uint32_t amo_var_old, uint32_t amo_var_pre, uint32_t amo_var_new, uint32_t amo_var);
 void print_report(int num_err, int num_tests);
 
@@ -65,14 +38,64 @@ volatile uint32_t amo_var;
 
 
 /**********************************************************************//**
- * MIN/MAX helpers.
+ * Emulate atomic memory operation.
+ *
+ * @note This is a RTE "second-level" trap handler.
  **************************************************************************/
-/**@{*/
-static inline int32_t MAX(int32_t a, int32_t b) { return((a) > (b) ? a : b); }
-static inline int32_t MIN(int32_t a, int32_t b) { return((a) < (b) ? a : b); }
-static inline int32_t MAXU(uint32_t a, uint32_t b) { return((a) > (b) ? a : b); }
-static inline int32_t MINU(uint32_t a, uint32_t b) { return((a) < (b) ? a : b); }
-/**@}*/
+void trap_handler_emulate_amo(void) {
+
+  uint32_t inst = neorv32_cpu_csr_read(CSR_MTINST);
+
+  // decompose I-type instruction
+  uint32_t opcode   = (inst >>  0) & 0x07f;
+  uint32_t rd_addr  = (inst >>  7) & 0x01f;
+  uint32_t funct3   = (inst >> 12) & 0x003;
+  uint32_t rs1_addr = (inst >> 15) & 0x01f;
+  uint32_t rs2_addr = (inst >> 20) & 0x01f;
+  uint32_t funct5   = (inst >> 27) & 0x01f;
+
+  // set opcode bit 1 as the instruction word might be transformed (de-compressed)
+  opcode |= 1 << 1;
+
+#if 0
+  neorv32_uart0_printf("\n<< EMULATING >>\n");
+  neorv32_uart0_printf(" opcode:   0x%x\n", opcode);
+  neorv32_uart0_printf(" rd_addr:  %u\n", rd_addr);
+  neorv32_uart0_printf(" funct3:   %u\n", funct3);
+  neorv32_uart0_printf(" rs1_addr: %u\n", rs1_addr);
+  neorv32_uart0_printf(" rs2_addr: %u\n", rs2_addr);
+  neorv32_uart0_printf(" funct5:   0x%x\n", funct5);
+  neorv32_uart0_printf("<< /EMULATING >>\n\n");
+#endif
+
+  // emulate if valid A operation and A ISA extension is available
+  if ((opcode == 0b0101111) && (funct3 == 0b010) && (neorv32_cpu_csr_read(CSR_MISA) & (1 << 0))) {
+    // get operands from main's context
+    uint32_t rs1 = neorv32_rte_context_get(rs1_addr);
+    uint32_t rs2 = neorv32_rte_context_get(rs2_addr);
+    uint32_t rd = 0, valid = 0;
+    // emulated functions
+    switch (funct5) {
+      case 0b00001: rd = neorv32_cpu_amoswapw(rs1, rs2); valid = 1; break; // amoswap.w
+      case 0b00000: rd = neorv32_cpu_amoaddw( rs1, rs2); valid = 1; break; // amoadd.w
+      case 0b00100: rd = neorv32_cpu_amoxorw( rs1, rs2); valid = 1; break; // amoxor.w
+      case 0b01100: rd = neorv32_cpu_amoandw( rs1, rs2); valid = 1; break; // amoand.w
+      case 0b01000: rd = neorv32_cpu_amoorw(  rs1, rs2); valid = 1; break; // amoor.w
+      case 0b10000: rd = neorv32_cpu_amominw( rs1, rs2); valid = 1; break; // amomin.w
+      case 0b10100: rd = neorv32_cpu_amomaxw( rs1, rs2); valid = 1; break; // amomax.w
+      case 0b11000: rd = neorv32_cpu_amominuw(rs1, rs2); valid = 1; break; // amominu.w
+      case 0b11100: rd = neorv32_cpu_amomaxuw(rs1, rs2); valid = 1; break; // amomaxu.w
+      default: neorv32_rte_debug_handler(); break; // use the RTE debug handler for any other misaligned load exception
+    }
+    if (valid) {
+      // write result back to main's context
+      neorv32_rte_context_put(rd_addr, rd);
+    }
+  }
+  else {
+    neorv32_rte_debug_handler();
+  }
+}
 
 
 /**********************************************************************//**
@@ -88,6 +111,8 @@ int main() {
 
   // capture all exceptions and give debug info via UART
   neorv32_rte_setup();
+  // install trap handler for "unaligned load address" exception
+  neorv32_rte_handler_install(RTE_TRAP_I_ILLEGAL, trap_handler_emulate_amo);
 
   // setup UART0 at default baud rate, no interrupts
   neorv32_uart0_setup(BAUD_RATE, 0);
@@ -118,12 +143,12 @@ int main() {
   neorv32_uart0_printf("\namoswap.w:\n");
   err_cnt = 0;
   for (i=0; i<num_tests; i++) {
-    amo_var_old = xorshift32();
-    amo_var_update = xorshift32();
+    amo_var_old = neorv32_aux_xorshift32();
+    amo_var_update = neorv32_aux_xorshift32();
 
     amo_var = amo_var_old;
     asm volatile ("fence");
-    amo_var_pre = neorv32_cpu_amoswapw(amo_addr, amo_var_update);
+    asm volatile ("amoswap.w %[dest], %[data], 0(%[addr])" : [dest] "=r" (amo_var_pre) : [data] "r" (amo_var_update), [addr] "r" (amo_addr));
     asm volatile ("fence");
     amo_var_new = amo_var_update;
 
@@ -136,12 +161,12 @@ int main() {
   neorv32_uart0_printf("\namoadd.w:\n");
   err_cnt = 0;
   for (i=0; i<num_tests; i++) {
-    amo_var_old = xorshift32();
-    amo_var_update = xorshift32();
+    amo_var_old = neorv32_aux_xorshift32();
+    amo_var_update = neorv32_aux_xorshift32();
 
     amo_var = amo_var_old;
     asm volatile ("fence");
-    amo_var_pre = neorv32_cpu_amoaddw(amo_addr, amo_var_update);
+    asm volatile ("amoadd.w %[dest], %[data], 0(%[addr])" : [dest] "=r" (amo_var_pre) : [data] "r" (amo_var_update), [addr] "r" (amo_addr));
     asm volatile ("fence");
     amo_var_new = amo_var_old + amo_var_update;
 
@@ -154,12 +179,12 @@ int main() {
   neorv32_uart0_printf("\namoand.w:\n");
   err_cnt = 0;
   for (i=0; i<num_tests; i++) {
-    amo_var_old = xorshift32();
-    amo_var_update = xorshift32();
+    amo_var_old = neorv32_aux_xorshift32();
+    amo_var_update = neorv32_aux_xorshift32();
 
     amo_var = amo_var_old;
     asm volatile ("fence");
-    amo_var_pre = neorv32_cpu_amoandw(amo_addr, amo_var_update);
+    asm volatile ("amoand.w %[dest], %[data], 0(%[addr])" : [dest] "=r" (amo_var_pre) : [data] "r" (amo_var_update), [addr] "r" (amo_addr));
     asm volatile ("fence");
     amo_var_new = amo_var_old & amo_var_update;
 
@@ -172,12 +197,12 @@ int main() {
   neorv32_uart0_printf("\namoor.w:\n");
   err_cnt = 0;
   for (i=0; i<num_tests; i++) {
-    amo_var_old = xorshift32();
-    amo_var_update = xorshift32();
+    amo_var_old = neorv32_aux_xorshift32();
+    amo_var_update = neorv32_aux_xorshift32();
 
     amo_var = amo_var_old;
     asm volatile ("fence");
-    amo_var_pre = neorv32_cpu_amoorw(amo_addr, amo_var_update);
+    asm volatile ("amoor.w %[dest], %[data], 0(%[addr])" : [dest] "=r" (amo_var_pre) : [data] "r" (amo_var_update), [addr] "r" (amo_addr));
     asm volatile ("fence");
     amo_var_new = amo_var_old | amo_var_update;
 
@@ -190,12 +215,12 @@ int main() {
   neorv32_uart0_printf("\namoxor.w:\n");
   err_cnt = 0;
   for (i=0; i<num_tests; i++) {
-    amo_var_old = xorshift32();
-    amo_var_update = xorshift32();
+    amo_var_old = neorv32_aux_xorshift32();
+    amo_var_update = neorv32_aux_xorshift32();
 
     amo_var = amo_var_old;
     asm volatile ("fence");
-    amo_var_pre = neorv32_cpu_amoxorw(amo_addr, amo_var_update);
+    asm volatile ("amoxor.w %[dest], %[data], 0(%[addr])" : [dest] "=r" (amo_var_pre) : [data] "r" (amo_var_update), [addr] "r" (amo_addr));
     asm volatile ("fence");
     amo_var_new = amo_var_old ^ amo_var_update;
 
@@ -208,14 +233,14 @@ int main() {
   neorv32_uart0_printf("\namomax.w:\n");
   err_cnt = 0;
   for (i=0; i<num_tests; i++) {
-    amo_var_old = xorshift32();
-    amo_var_update = xorshift32();
+    amo_var_old = neorv32_aux_xorshift32();
+    amo_var_update = neorv32_aux_xorshift32();
 
     amo_var = amo_var_old;
     asm volatile ("fence");
-    amo_var_pre = neorv32_cpu_amomaxw(amo_addr, (int32_t)amo_var_update);
+    asm volatile ("amomax.w %[dest], %[data], 0(%[addr])" : [dest] "=r" (amo_var_pre) : [data] "r" (amo_var_update), [addr] "r" (amo_addr));
     asm volatile ("fence");
-    amo_var_new = (uint32_t)MAX((int32_t)amo_var_old, (int32_t)amo_var_update);
+    amo_var_new = (uint32_t)neorv32_aux_max((int32_t)amo_var_old, (int32_t)amo_var_update);
 
     err_cnt += check_result(i, amo_var_old, amo_var_pre, amo_var_new, amo_var);
   }
@@ -226,14 +251,14 @@ int main() {
   neorv32_uart0_printf("\namomaxu.w:\n");
   err_cnt = 0;
   for (i=0; i<num_tests; i++) {
-    amo_var_old = xorshift32();
-    amo_var_update = xorshift32();
+    amo_var_old = neorv32_aux_xorshift32();
+    amo_var_update = neorv32_aux_xorshift32();
 
     amo_var = amo_var_old;
     asm volatile ("fence");
-    amo_var_pre = neorv32_cpu_amomaxuw(amo_addr, amo_var_update);
+    asm volatile ("amomaxu.w %[dest], %[data], 0(%[addr])" : [dest] "=r" (amo_var_pre) : [data] "r" (amo_var_update), [addr] "r" (amo_addr));
     asm volatile ("fence");
-    amo_var_new = MAXU(amo_var_old, amo_var_update);
+    amo_var_new = neorv32_aux_max(amo_var_old, amo_var_update);
 
     err_cnt += check_result(i, amo_var_old, amo_var_pre, amo_var_new, amo_var);
   }
@@ -244,14 +269,14 @@ int main() {
   neorv32_uart0_printf("\namomin.w:\n");
   err_cnt = 0;
   for (i=0; i<num_tests; i++) {
-    amo_var_old = xorshift32();
-    amo_var_update = xorshift32();
+    amo_var_old = neorv32_aux_xorshift32();
+    amo_var_update = neorv32_aux_xorshift32();
 
     amo_var = amo_var_old;
     asm volatile ("fence");
-    amo_var_pre = neorv32_cpu_amominw(amo_addr, (int32_t)amo_var_update);
+    asm volatile ("amomin.w %[dest], %[data], 0(%[addr])" : [dest] "=r" (amo_var_pre) : [data] "r" (amo_var_update), [addr] "r" (amo_addr));
     asm volatile ("fence");
-    amo_var_new = (uint32_t)MIN((int32_t)amo_var_old, (int32_t)amo_var_update);
+    amo_var_new = (uint32_t)neorv32_aux_min((int32_t)amo_var_old, (int32_t)amo_var_update);
 
     err_cnt += check_result(i, amo_var_old, amo_var_pre, amo_var_new, amo_var);
   }
@@ -262,45 +287,28 @@ int main() {
   neorv32_uart0_printf("\namominu.w:\n");
   err_cnt = 0;
   for (i=0; i<num_tests; i++) {
-    amo_var_old = xorshift32();
-    amo_var_update = xorshift32();
+    amo_var_old = neorv32_aux_xorshift32();
+    amo_var_update = neorv32_aux_xorshift32();
 
     amo_var = amo_var_old;
     asm volatile ("fence");
-    amo_var_pre = neorv32_cpu_amominuw(amo_addr, amo_var_update);
+    asm volatile ("amominu.w %[dest], %[data], 0(%[addr])" : [dest] "=r" (amo_var_pre) : [data] "r" (amo_var_update), [addr] "r" (amo_addr));
     asm volatile ("fence");
-    amo_var_new = MINU(amo_var_old, amo_var_update);
+    amo_var_new = neorv32_aux_min(amo_var_old, amo_var_update);
 
     err_cnt += check_result(i, amo_var_old, amo_var_pre, amo_var_new, amo_var);
   }
   print_report(err_cnt, num_tests);
 
-#else 
- 
-  #warning Program HAS NOT BEEN COMPILED as RISC-V A ISA extensions is not enabled!
-  neorv32_uart0_printf("\nProgram HAS NOT BEEN COMPILED as RISC-V A ISA extensions is not enabled!\n");
+#else
+
+  #warning Program HAS NOT BEEN COMPILED since RISC-V 'A' ISA extension is not enabled!
+  neorv32_uart0_printf("\nProgram HAS NOT BEEN COMPILED since RISC-V 'A' ISA extension is not enabled!\n");
 
 #endif
 
   neorv32_uart0_printf("\n\nTests completed.\n");
   return 0;
-}
-
-
-/**********************************************************************//**
- * Pseudo-Random Number Generator (to generate deterministic test vectors).
- *
- * @return Random data (32-bit).
- **************************************************************************/
-uint32_t xorshift32(void) {
-
-  static uint32_t x32 = 314159265;
-
-  x32 ^= x32 << 13;
-  x32 ^= x32 >> 17;
-  x32 ^= x32 << 5;
-
-  return x32;
 }
 
 
@@ -317,12 +325,12 @@ uint32_t xorshift32(void) {
 uint32_t check_result(uint32_t num, uint32_t amo_var_old, uint32_t amo_var_pre, uint32_t amo_var_new, uint32_t amo_var) {
 
 #if (SILENT_MODE == 0)
-  neorv32_uart0_printf("%u: MEM_INITIAL[addr] = 0x%x vs. MEM_PRE[addr] = 0x%x  |  MEM_NEW_ref[addr] = 0x%x vs. MEM_NEW[addr] = 0x%x, ", num, amo_var_old, amo_var_pre, amo_var_new, amo_var);
+  neorv32_uart0_printf("%u: MEM_INITIAL[addr] = 0x%x vs. MEM_PRE[addr] = 0x%x  &  MEM_NEW_ref[addr] = 0x%x vs. MEM_NEW[addr] = 0x%x, ", num, amo_var_old, amo_var_pre, amo_var_new, amo_var);
 #endif
 
   if ((amo_var_old != amo_var_pre) || (amo_var_new != amo_var)) {
 #if (SILENT_MODE != 0)
-    neorv32_uart0_printf("%u: MEM_INITIAL[addr] = 0x%x vs. MEM_PRE[addr] = 0x%x  |  MEM_NEW_ref[addr] = 0x%x vs. MEM_NEW[addr] = 0x%x, ", num, amo_var_old, amo_var_pre, amo_var_new, amo_var);
+    neorv32_uart0_printf("%u: MEM_INITIAL[addr] = 0x%x vs. MEM_PRE[addr] = 0x%x  &  MEM_NEW_ref[addr] = 0x%x vs. MEM_NEW[addr] = 0x%x, ", num, amo_var_old, amo_var_pre, amo_var_new, amo_var);
 #endif
     neorv32_uart0_printf("%c[1m[FAILED]%c[0m\n", 27, 27);
     return 1;

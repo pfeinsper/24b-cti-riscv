@@ -1,47 +1,21 @@
-// #################################################################################################
-// # << NEORV32: neorv32_mtime.c - Machine System Timer (MTIME) HW Driver >>                       #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2022, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
-// #################################################################################################
+// ================================================================================ //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
-
-/**********************************************************************//**
+/**
  * @file neorv32_mtime.c
  * @brief Machine System Timer (MTIME) HW driver source file.
  *
  * @note These functions should only be used if the MTIME unit was synthesized (IO_MTIME_EN = true).
- **************************************************************************/
+ *
+ * @see https://stnolting.github.io/neorv32/sw/files.html
+ */
 
 #include "neorv32.h"
-#include "neorv32_mtime.h"
 
 
 /**********************************************************************//**
@@ -69,18 +43,14 @@ int neorv32_mtime_available(void) {
  **************************************************************************/
 void neorv32_mtime_set_time(uint64_t time) {
 
-  union {
-    uint64_t uint64;
-    uint32_t uint32[sizeof(uint64_t)/sizeof(uint32_t)];
-  } cycles;
+  subwords64_t cycles;
 
   cycles.uint64 = time;
 
+  // prevent low-to-high carry while writing
   NEORV32_MTIME->TIME_LO = 0;
   NEORV32_MTIME->TIME_HI = cycles.uint32[1];
   NEORV32_MTIME->TIME_LO = cycles.uint32[0];
-
-  asm volatile("nop"); // delay due to write buffer
 }
 
 
@@ -93,10 +63,7 @@ void neorv32_mtime_set_time(uint64_t time) {
  **************************************************************************/
 uint64_t neorv32_mtime_get_time(void) {
 
-  union {
-    uint64_t uint64;
-    uint32_t uint32[sizeof(uint64_t)/sizeof(uint32_t)];
-  } cycles;
+  subwords64_t cycles;
 
   uint32_t tmp1, tmp2, tmp3;
   while(1) {
@@ -119,24 +86,20 @@ uint64_t neorv32_mtime_get_time(void) {
  * Set compare time register (MTIMECMP) for generating interrupts.
  *
  * @note The interrupt is triggered when MTIME >= MTIMECMP.
- * @note Global interrupts and the timer interrupt source have to be enabled .
+ * @note Global interrupts and the timer interrupt source have to be enabled.
  *
  * @param[in] timecmp System time for interrupt (uint64_t)
  **************************************************************************/
 void neorv32_mtime_set_timecmp(uint64_t timecmp) {
 
-  union {
-    uint64_t uint64;
-    uint32_t uint32[sizeof(uint64_t)/sizeof(uint32_t)];
-  } cycles;
+  subwords64_t cycles;
 
   cycles.uint64 = timecmp;
 
-  NEORV32_MTIME->TIMECMP_LO = -1; // prevent MTIMECMP from temporarily becoming smaller than the lesser of the old and new values
+  // prevent MTIMECMP from temporarily becoming smaller than the lesser of the old and new values
+  NEORV32_MTIME->TIMECMP_LO = -1;
   NEORV32_MTIME->TIMECMP_HI = cycles.uint32[1];
   NEORV32_MTIME->TIMECMP_LO = cycles.uint32[0];
-
-  asm volatile("nop"); // delay due to write buffer
 }
 
 
@@ -147,13 +110,32 @@ void neorv32_mtime_set_timecmp(uint64_t timecmp) {
  **************************************************************************/
 uint64_t neorv32_mtime_get_timecmp(void) {
 
-  union {
-    uint64_t uint64;
-    uint32_t uint32[sizeof(uint64_t)/sizeof(uint32_t)];
-  } cycles;
+  subwords64_t cycles;
 
   cycles.uint32[0] = NEORV32_MTIME->TIMECMP_LO;
   cycles.uint32[1] = NEORV32_MTIME->TIMECMP_HI;
 
   return cycles.uint64;
+}
+
+
+/**********************************************************************//**
+ * Set TIME to Unix time.
+ *
+ * @param[in] unixtime Unix time since 00:00:00 UTC, January 1st, 1970 in seconds.
+ **************************************************************************/
+void neorv32_mtime_set_unixtime(uint64_t unixtime) {
+
+  neorv32_mtime_set_time(((uint64_t)neorv32_sysinfo_get_clk()) * unixtime);
+}
+
+
+/**********************************************************************//**
+ * Get Unix time from TIME.
+ *
+ * @return Unix time since 00:00:00 UTC, January 1st, 1970 in seconds.
+ **************************************************************************/
+uint64_t neorv32_mtime_get_unixtime(void) {
+
+  return neorv32_mtime_get_time() / ((uint64_t)neorv32_sysinfo_get_clk());
 }

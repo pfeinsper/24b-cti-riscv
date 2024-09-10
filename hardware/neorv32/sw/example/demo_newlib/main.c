@@ -1,36 +1,10 @@
-// #################################################################################################
-// # << NEORV32 - Newlib Demo/Test Program >>                                                      #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
-// #################################################################################################
+// ================================================================================ //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
 
 /**********************************************************************//**
@@ -40,6 +14,7 @@
  **************************************************************************/
 #include <neorv32.h>
 #include <unistd.h>
+#include <time.h>
 #include <stdlib.h>
 
 
@@ -53,9 +28,16 @@
 
 
 /**********************************************************************//**
- * @name Max heap size (from linker script's "__neorv32_heap_size")
+ * @name Print main's return code using a destructor
  **************************************************************************/
-extern const unsigned __crt0_max_heap;
+void __attribute__((destructor)) main_destructor_test(void) {
+
+  int32_t main_ret = (int32_t)neorv32_cpu_csr_read(CSR_MSCRATCH);
+  neorv32_uart0_printf("\nDestructor: main terminated with return/exit code %i.\n", main_ret);
+  if (main_ret == 7) {
+    neorv32_uart0_printf("exit() succeeded.\n");
+  }
+}
 
 
 /**********************************************************************//**
@@ -84,34 +66,51 @@ int main() {
   // say hello
   neorv32_uart0_printf("<<< Newlib demo/test program >>>\n\n");
 
-  // heap size definition
-  volatile uint32_t max_heap = (uint32_t)&__crt0_max_heap;
-  if (max_heap > 0){
-    neorv32_uart0_printf("MAX heap size: %u bytes\n", max_heap);
-  }
-  else {
-    neorv32_uart0_printf("ERROR! No heap size defined (linker script -> '__neorv32_heap_size')!\n");
-    return -1;
-  }
 
   // check if newlib is really available
 #ifndef __NEWLIB__
   neorv32_uart0_printf("ERROR! Seems like the compiler toolchain does not support newlib...\n");
   return -1;
 #endif
+  neorv32_uart0_printf("NEWLIB version %u.%u\n\n", (uint32_t)__NEWLIB__, (uint32_t)__NEWLIB_MINOR__);
 
-  neorv32_uart0_printf("newlib version %i.%i\n\n", (int32_t)__NEWLIB__, (int32_t)__NEWLIB_MINOR__);
 
+  // heap size definition
+  uint32_t max_heap = (uint32_t)neorv32_heap_size_c;
+  if (max_heap > 0){
+    neorv32_uart0_printf("MAX heap size: %u bytes\n", max_heap);
+  }
+  else {
+    neorv32_uart0_printf("ERROR! No heap size defined!\n");
+    neorv32_uart0_printf("Use <USER_FLAGS+='-Wl,--defsym,__neorv32_heap_size=1024'> to set the heap size.\n");
+    return -1;
+  }
+
+
+  // rand test
   neorv32_uart0_printf("<rand> test... ");
-  srand(neorv32_cpu_csr_read(CSR_CYCLE)); // set random seed
+  srand(time(NULL)); // set random seed
   neorv32_uart0_printf("%i, %i, %i, %i\n", rand() % 100, rand() % 100, rand() % 100, rand() % 100);
 
 
-  char *char_buffer; // pointer for dynamic memory allocation
+  // time test
+  neorv32_uart0_printf("<time> test... ");
+  time_t seconds = time(NULL);
+  neorv32_uart0_printf("Seconds since January 1, 1970 (32-bit!) = %u\n", (uint32_t)seconds);
+  neorv32_uart0_printf("%i, %i, %i, %i\n", rand() % 100, rand() % 100, rand() % 100, rand() % 100);
 
+
+  // malloc test
   neorv32_uart0_printf("<malloc> test...\n");
-  char_buffer = (char *) malloc(4 * sizeof(char)); // 4 bytes
+  char *char_buffer = (char *) malloc(4 * sizeof(char)); // 4 bytes
 
+  if (char_buffer == NULL) {
+    neorv32_uart0_printf("malloc FAILED!\n");
+    return -1;
+  }
+
+
+  // STDx tests using read and write
   // do not test read & write in simulation as there would be no UART RX input
   if (neorv32_cpu_csr_read(CSR_MXISA) & (1 << CSR_MXISA_IS_SIM)) {
     neorv32_uart0_printf("Skipping <read> & <write> tests as this seems to be a simulation.\n");
@@ -134,21 +133,16 @@ int main() {
   free(char_buffer);
 
 
+  // exit test
   // NOTE: exit is highly over-sized as it also includes clean-up functions (destructors), which
   // are not required for bare-metal or RTOS applications... better use the simple 'return' or even better
   // make sure main never returns. Anyway, let's check if 'exit' works.
-  neorv32_uart0_printf("<exit> test...");
-  exit(0);
-
-  return 0; // should never be reached
-}
+  int exit_code = 7;
+  neorv32_uart0_printf("<exit> terminating by exit(%i)...\n", exit_code);
+  exit(exit_code);
 
 
-/**********************************************************************//**
- * "after-main" handler that is executed after the application's
- * main function returns (called by crt0.S start-up code)
- **************************************************************************/
-void __neorv32_crt0_after_main(int32_t return_code) {
-
-  neorv32_uart0_printf("\n<RTE> main function returned with exit code %i </RTE>\n", return_code);
+  // should never be reached
+  neorv32_uart0_printf("exit failed!\n");
+  return 0;
 }

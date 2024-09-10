@@ -1,46 +1,14 @@
--- #################################################################################################
--- # << NEORV32 - RISC-V-Compatible Debug Module (DM) >>                                           #
--- # ********************************************************************************************* #
--- # Compatible to the "Minimal RISC-V External Debug Spec. Version 1.0 [Sdext]" (or v0.13) using  #
--- # "execution-based" debugging scheme (via the program buffer). FOR A SINGLE HART ONLY!          #
--- # ********************************************************************************************* #
--- # Key features:                                                                                 #
--- # * register access commands only                                                               #
--- # * auto-execution commands                                                                     #
--- # * for a single hart only                                                                      #
--- # * 2 general purpose program buffer entries                                                    #
--- # * 1 general purpose data buffer entry                                                         #
--- # ********************************************************************************************* #
--- # BSD 3-Clause License                                                                          #
--- #                                                                                               #
--- # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
--- #                                                                                               #
--- # Redistribution and use in source and binary forms, with or without modification, are          #
--- # permitted provided that the following conditions are met:                                     #
--- #                                                                                               #
--- # 1. Redistributions of source code must retain the above copyright notice, this list of        #
--- #    conditions and the following disclaimer.                                                   #
--- #                                                                                               #
--- # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
--- #    conditions and the following disclaimer in the documentation and/or other materials        #
--- #    provided with the distribution.                                                            #
--- #                                                                                               #
--- # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
--- #    endorse or promote products derived from this software without specific prior written      #
--- #    permission.                                                                                #
--- #                                                                                               #
--- # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
--- # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
--- # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
--- # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
--- # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
--- # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
--- # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
--- # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
--- # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
--- # ********************************************************************************************* #
--- # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
--- #################################################################################################
+-- ================================================================================ --
+-- NEORV32 SoC - RISC-V-Compatible Debug Module (DM)                                --
+-- -------------------------------------------------------------------------------- --
+-- Execution-based debugging for a single hart only.                                --
+-- -------------------------------------------------------------------------------- --
+-- The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              --
+-- Copyright (c) NEORV32 contributors.                                              --
+-- Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  --
+-- Licensed under the BSD-3-Clause license, see LICENSE for details.                --
+-- SPDX-License-Identifier: BSD-3-Clause                                            --
+-- ================================================================================ --
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -86,18 +54,18 @@ architecture neorv32_debug_dm_rtl of neorv32_debug_dm is
   -- **********************************************************
 
   -- available DMI registers --
-  constant addr_data0_c        : std_ulogic_vector(6 downto 0) := "000" & x"4";
-  constant addr_dmcontrol_c    : std_ulogic_vector(6 downto 0) := "001" & x"0";
-  constant addr_dmstatus_c     : std_ulogic_vector(6 downto 0) := "001" & x"1";
-  constant addr_hartinfo_c     : std_ulogic_vector(6 downto 0) := "001" & x"2";
-  constant addr_abstractcs_c   : std_ulogic_vector(6 downto 0) := "001" & x"6";
-  constant addr_command_c      : std_ulogic_vector(6 downto 0) := "001" & x"7";
-  constant addr_abstractauto_c : std_ulogic_vector(6 downto 0) := "001" & x"8";
-  constant addr_nextdm_c       : std_ulogic_vector(6 downto 0) := "001" & x"d";
-  constant addr_progbuf0_c     : std_ulogic_vector(6 downto 0) := "010" & x"0";
-  constant addr_progbuf1_c     : std_ulogic_vector(6 downto 0) := "010" & x"1";
-  constant addr_sbcs_c         : std_ulogic_vector(6 downto 0) := "011" & x"8";
-  constant addr_haltsum0_c     : std_ulogic_vector(6 downto 0) := "100" & x"0";
+  constant addr_data0_c        : std_ulogic_vector(6 downto 0) := "0000100";
+  constant addr_dmcontrol_c    : std_ulogic_vector(6 downto 0) := "0010000";
+  constant addr_dmstatus_c     : std_ulogic_vector(6 downto 0) := "0010001";
+  constant addr_hartinfo_c     : std_ulogic_vector(6 downto 0) := "0010010";
+  constant addr_abstractcs_c   : std_ulogic_vector(6 downto 0) := "0010110";
+  constant addr_command_c      : std_ulogic_vector(6 downto 0) := "0010111";
+  constant addr_abstractauto_c : std_ulogic_vector(6 downto 0) := "0011000";
+  constant addr_nextdm_c       : std_ulogic_vector(6 downto 0) := "0011101";
+  constant addr_progbuf0_c     : std_ulogic_vector(6 downto 0) := "0100000";
+  constant addr_progbuf1_c     : std_ulogic_vector(6 downto 0) := "0100001";
+  constant addr_sbcs_c         : std_ulogic_vector(6 downto 0) := "0111000";
+  constant addr_haltsum0_c     : std_ulogic_vector(6 downto 0) := "1000000";
 
   -- RISC-V 32-bit instruction prototypes --
   constant instr_nop_c    : std_ulogic_vector(31 downto 0) := x"00000013"; -- nop
@@ -115,7 +83,7 @@ architecture neorv32_debug_dm_rtl of neorv32_debug_dm is
     dmcontrol_ndmreset           : std_ulogic;
     dmcontrol_dmactive           : std_ulogic;
     abstractauto_autoexecdata    : std_ulogic;
-    abstractauto_autoexecprogbuf : std_ulogic_vector(01 downto 0);
+    abstractauto_autoexecprogbuf : std_ulogic_vector(1 downto 0);
     progbuf                      : progbuf_t;
     command                      : std_ulogic_vector(31 downto 0);
     --
@@ -139,11 +107,11 @@ architecture neorv32_debug_dm_rtl of neorv32_debug_dm is
   -- **********************************************************
 
   -- DM configuration --
-  constant nscratch_c   : std_ulogic_vector(03 downto 0) := "0001"; -- number of dscratch registers in CPU (=1)
-  constant datasize_c   : std_ulogic_vector(03 downto 0) := "0001"; -- number of data registers in memory/CSR space (=1)
+  constant nscratch_c   : std_ulogic_vector(3 downto 0)  := "0001"; -- number of dscratch registers in CPU (=1)
+  constant datasize_c   : std_ulogic_vector(3 downto 0)  := "0001"; -- number of data registers in memory/CSR space (=1)
   constant dataaddr_c   : std_ulogic_vector(11 downto 0) := dm_data_base_c(11 downto 0); -- signed base address of data registers in memory/CSR space
   constant dataaccess_c : std_ulogic                     := '1';    -- 1: abstract data is memory-mapped, 0: abstract data is CSR-mapped
-  constant dm_version_c : std_ulogic_vector(03 downto 0) := cond_sel_suv_f(LEGACY_MODE, "0010", "0011"); -- version: v0.13 / v1.0
+  constant dm_version_c : std_ulogic_vector(3 downto 0)  := cond_sel_suv_f(LEGACY_MODE, "0010", "0011"); -- version: v0.13 / v1.0
 
   -- debug module controller --
   type dm_ctrl_state_t is (CMD_IDLE, CMD_CHECK, CMD_PREPARE, CMD_TRIGGER, CMD_BUSY, CMD_ERROR);
@@ -156,7 +124,7 @@ architecture neorv32_debug_dm_rtl of neorv32_debug_dm is
     -- error flags --
     illegal_state   : std_ulogic;
     illegal_cmd     : std_ulogic;
-    cmderr          : std_ulogic_vector(02 downto 0);
+    cmderr          : std_ulogic_vector(2 downto 0);
     -- hart status --
     hart_halted     : std_ulogic;
     hart_resume_req : std_ulogic;
@@ -204,8 +172,8 @@ architecture neorv32_debug_dm_rtl of neorv32_debug_dm is
     15 => x"00000073"
   );
 
-  -- access helpers --
-  signal rden, wren : std_ulogic;
+  -- CPU access helpers --
+  signal accen, rden, wren : std_ulogic;
 
   -- Debug Core Interface --
   type dci_t is record
@@ -224,8 +192,8 @@ begin
 
   -- Info -----------------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  assert not (LEGACY_MODE = true)  report "NEORV32 [OCD] on-chip debugger: DM compatible to debug spec. version 0.13" severity note;
-  assert not (LEGACY_MODE = false) report "NEORV32 [OCD] on-chip debugger: DM compatible to debug spec. version 1.0"  severity note;
+  assert not (LEGACY_MODE = true)  report "[NEORV32] OCD DM compatible to debug spec. version 0.13" severity note;
+  assert not (LEGACY_MODE = false) report "[NEORV32] OCD DM compatible to debug spec. version 1.0"  severity note;
 
 
   -- DMI Access -----------------------------------------------------------------------------
@@ -236,9 +204,17 @@ begin
 
   -- Debug Module Command Controller --------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  dm_controller: process(clk_i)
+  dm_controller: process(rstn_i, clk_i)
   begin
-    if rising_edge(clk_i) then
+    if (rstn_i = '0') then
+      dm_ctrl.state         <= CMD_IDLE;
+      dm_ctrl.ldsw_progbuf  <= (others => '0');
+      dci.execute_req       <= '0';
+      dm_ctrl.pbuf_en       <= '0';
+      dm_ctrl.illegal_cmd   <= '0';
+      dm_ctrl.illegal_state <= '0';
+      dm_ctrl.cmderr        <= (others => '0');
+    elsif rising_edge(clk_i) then
       if (dm_reg.dmcontrol_dmactive = '0') then -- DM reset / DM disabled
         dm_ctrl.state         <= CMD_IDLE;
         dm_ctrl.ldsw_progbuf  <= instr_sw_c;
@@ -247,7 +223,7 @@ begin
         --
         dm_ctrl.illegal_cmd   <= '0';
         dm_ctrl.illegal_state <= '0';
-        dm_ctrl.cmderr        <= "000";
+        dm_ctrl.cmderr        <= (others => '0');
       else -- DM active
 
         -- defaults --
@@ -440,8 +416,8 @@ begin
           dm_reg.halt_req           <= dmi_req_i.data(31); -- haltreq (-/w): write 1 to request halt; has to be cleared again by debugger
           dm_reg.resume_req         <= dmi_req_i.data(30); -- resumereq (-/w1): write 1 to request resume; auto-clears
           dm_reg.reset_ack          <= dmi_req_i.data(28); -- ackhavereset (-/w1): write 1 to ACK reset; auto-clears
-          dm_reg.dmcontrol_ndmreset <= dmi_req_i.data(01); -- ndmreset (r/w): soc reset
-          dm_reg.dmcontrol_dmactive <= dmi_req_i.data(00); -- dmactive (r/w): DM reset
+          dm_reg.dmcontrol_ndmreset <= dmi_req_i.data(1);  -- ndmreset (r/w): SoC reset when high
+          dm_reg.dmcontrol_dmactive <= dmi_req_i.data(0);  -- dmactive (r/w): DM reset when low
         end if;
 
         -- write abstract command --
@@ -454,7 +430,7 @@ begin
         -- write abstract command autoexec --
         if (dmi_req_i.addr = addr_abstractauto_c) then
           if (dm_ctrl.busy = '0') then -- idle and no errors yet
-            dm_reg.abstractauto_autoexecdata       <= dmi_req_i.data(00);
+            dm_reg.abstractauto_autoexecdata       <= dmi_req_i.data(0);
             dm_reg.abstractauto_autoexecprogbuf(0) <= dmi_req_i.data(16);
             dm_reg.abstractauto_autoexecprogbuf(1) <= dmi_req_i.data(17);
           end if;
@@ -508,7 +484,7 @@ begin
   dci.data_we <= '1' when (dmi_wren = '1') and (dmi_req_i.addr = addr_data0_c) and (dm_ctrl.busy = '0') else '0';
 
   -- CPU halt/resume request --
-  cpu_halt_req_o <= dm_reg.halt_req and dm_reg.dmcontrol_dmactive; -- single-shot
+  cpu_halt_req_o <= dm_reg.halt_req and dm_reg.dmcontrol_dmactive;
   dci.resume_req <= dm_ctrl.hart_resume_req; -- active until explicitly cleared
 
   -- SoC reset --
@@ -523,9 +499,14 @@ begin
 
   -- Debug Module Interface - Read Access ---------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  dmi_read_access: process(clk_i)
+  dmi_read_access: process(rstn_i, clk_i)
   begin
-    if rising_edge(clk_i) then
+    if (rstn_i = '0') then
+      dmi_rsp_o.ack      <= '0';
+      dmi_rsp_o.data     <= (others => '0');
+      dm_reg.rd_acc_err  <= '0';
+      dm_reg.autoexec_rd <= '0';
+    elsif rising_edge(clk_i) then
       dmi_rsp_o.ack      <= dmi_wren or dmi_rden; -- always ACK any request
       dmi_rsp_o.data     <= (others => '0'); -- default
       dm_reg.rd_acc_err  <= '0';
@@ -548,13 +529,13 @@ begin
           dmi_rsp_o.data(12)           <= dm_reg.dmcontrol_ndmreset; -- anyunavail (r/-): there is only one hart that is unavailable during reset
           dmi_rsp_o.data(11)           <= not dm_ctrl.hart_halted;   -- allrunning (r/-): there is only one hart that can be RUNNING or HALTED
           dmi_rsp_o.data(10)           <= not dm_ctrl.hart_halted;   -- anyrunning (r/-): there is only one hart that can be RUNNING or HALTED
-          dmi_rsp_o.data(09)           <= dm_ctrl.hart_halted;       -- allhalted (r/-): there is only one hart that can be RUNNING or HALTED
-          dmi_rsp_o.data(08)           <= dm_ctrl.hart_halted;       -- anyhalted (r/-): there is only one hart that can be RUNNING or HALTED
-          dmi_rsp_o.data(07)           <= '1';                       -- authenticated (r/-): authentication passed since there is no authentication
-          dmi_rsp_o.data(06)           <= '0';                       -- authbusy (r/-): always ready since there is no authentication
-          dmi_rsp_o.data(05)           <= '0';                       -- hasresethaltreq (r/-): halt-on-reset not implemented
-          dmi_rsp_o.data(04)           <= '0';                       -- confstrptrvalid (r/-): no configuration string available
-          dmi_rsp_o.data(03 downto 00) <= dm_version_c;              -- version (r/-): DM spec. version
+          dmi_rsp_o.data(9)            <= dm_ctrl.hart_halted;       -- allhalted (r/-): there is only one hart that can be RUNNING or HALTED
+          dmi_rsp_o.data(8)            <= dm_ctrl.hart_halted;       -- anyhalted (r/-): there is only one hart that can be RUNNING or HALTED
+          dmi_rsp_o.data(7)            <= '1';                       -- authenticated (r/-): authentication passed since there is no authentication
+          dmi_rsp_o.data(6)            <= '0';                       -- authbusy (r/-): always ready since there is no authentication
+          dmi_rsp_o.data(5)            <= '0';                       -- hasresethaltreq (r/-): halt-on-reset not implemented
+          dmi_rsp_o.data(4)            <= '0';                       -- confstrptrvalid (r/-): no configuration string available
+          dmi_rsp_o.data(3 downto 0)   <= dm_version_c;              -- version (r/-): DM spec. version
 
         -- debug module control --
         when addr_dmcontrol_c =>
@@ -565,12 +546,12 @@ begin
           dmi_rsp_o.data(27)           <= '0';                       -- reserved (r/-)
           dmi_rsp_o.data(26)           <= '0';                       -- hasel (r/-) - only a single hart can be selected at once
           dmi_rsp_o.data(25 downto 16) <= (others => '0');           -- hartsello (r/-) - there is only one hart
-          dmi_rsp_o.data(15 downto 06) <= (others => '0');           -- hartselhi (r/-) - there is only one hart
-          dmi_rsp_o.data(05 downto 04) <= (others => '0');           -- reserved (r/-)
-          dmi_rsp_o.data(03)           <= '0';                       -- setresethaltreq (-/w1): halt-on-reset request - halt-on-reset not implemented
-          dmi_rsp_o.data(02)           <= '0';                       -- clrresethaltreq (-/w1): halt-on-reset ack - halt-on-reset not implemented
-          dmi_rsp_o.data(01)           <= dm_reg.dmcontrol_ndmreset; -- ndmreset (r/w): soc reset
-          dmi_rsp_o.data(00)           <= dm_reg.dmcontrol_dmactive; -- dmactive (r/w): DM reset
+          dmi_rsp_o.data(15 downto 6)  <= (others => '0');           -- hartselhi (r/-) - there is only one hart
+          dmi_rsp_o.data(5 downto 4)   <= (others => '0');           -- reserved (r/-)
+          dmi_rsp_o.data(3)            <= '0';                       -- setresethaltreq (-/w1): halt-on-reset request - halt-on-reset not implemented
+          dmi_rsp_o.data(2)            <= '0';                       -- clrresethaltreq (-/w1): halt-on-reset ack - halt-on-reset not implemented
+          dmi_rsp_o.data(1)            <= dm_reg.dmcontrol_ndmreset; -- ndmreset (r/w): soc reset
+          dmi_rsp_o.data(0)            <= dm_reg.dmcontrol_dmactive; -- dmactive (r/w): DM reset
 
         -- hart info --
         when addr_hartinfo_c =>
@@ -579,7 +560,7 @@ begin
           dmi_rsp_o.data(19 downto 17) <= (others => '0');         -- reserved (r/-)
           dmi_rsp_o.data(16)           <= dataaccess_c;            -- dataaccess (r/-): 1: data registers are memory-mapped, 0: data registers are CSR-mapped
           dmi_rsp_o.data(15 downto 12) <= datasize_c;              -- datasize (r/-): number data registers in memory/CSR space
-          dmi_rsp_o.data(11 downto 00) <= dataaddr_c(11 downto 0); -- dataaddr (r/-): data registers base address (memory/CSR)
+          dmi_rsp_o.data(11 downto 0)  <= dataaddr_c(11 downto 0); -- dataaddr (r/-): data registers base address (memory/CSR)
 
         -- abstract control and status --
         when addr_abstractcs_c =>
@@ -587,23 +568,23 @@ begin
           dmi_rsp_o.data(28 downto 24) <= "00010";         -- progbufsize (r/-): number of words in program buffer = 2
           dmi_rsp_o.data(12)           <= dm_ctrl.busy;    -- busy (r/-): abstract command in progress (1) / idle (0)
           dmi_rsp_o.data(11)           <= '1';             -- relaxedpriv (r/-): PMP rules are ignored when in debug-mode
-          dmi_rsp_o.data(10 downto 08) <= dm_ctrl.cmderr;  -- cmderr (r/w1c): any error during execution?
-          dmi_rsp_o.data(07 downto 04) <= (others => '0'); -- reserved (r/-)
-          dmi_rsp_o.data(03 downto 00) <= "0001";          -- datacount (r/-): number of implemented data registers = 1
+          dmi_rsp_o.data(10 downto 8)  <= dm_ctrl.cmderr;  -- cmderr (r/w1c): any error during execution?
+          dmi_rsp_o.data(7 downto 4)   <= (others => '0'); -- reserved (r/-)
+          dmi_rsp_o.data(3 downto 0)   <= "0001";          -- datacount (r/-): number of implemented data registers = 1
 
-        -- abstract command (-/w) --
-        when addr_command_c =>
-          dmi_rsp_o.data <= (others => '0'); -- register is write-only
+--      -- abstract command (-/w) --
+--      when addr_command_c =>
+--        dmi_rsp_o.data <= (others => '0'); -- register is write-only
 
         -- abstract command autoexec (r/w) --
         when addr_abstractauto_c =>
-          dmi_rsp_o.data(00) <= dm_reg.abstractauto_autoexecdata;       -- autoexecdata(0):    read/write access to data0 triggers execution of program buffer
+          dmi_rsp_o.data(0)  <= dm_reg.abstractauto_autoexecdata;       -- autoexecdata(0):    read/write access to data0 triggers execution of program buffer
           dmi_rsp_o.data(16) <= dm_reg.abstractauto_autoexecprogbuf(0); -- autoexecprogbuf(0): read/write access to progbuf0 triggers execution of program buffer
           dmi_rsp_o.data(17) <= dm_reg.abstractauto_autoexecprogbuf(1); -- autoexecprogbuf(1): read/write access to progbuf1 triggers execution of program buffer
 
-        -- next debug module (r/-) --
-        when addr_nextdm_c =>
-          dmi_rsp_o.data <= (others => '0'); -- this is the only DM
+--      -- next debug module (r/-) --
+--      when addr_nextdm_c =>
+--        dmi_rsp_o.data <= (others => '0'); -- this is the only DM
 
         -- abstract data 0 (r/w) --
         when addr_data0_c =>
@@ -615,9 +596,9 @@ begin
         when addr_progbuf1_c =>
           if (LEGACY_MODE = true) then dmi_rsp_o.data <= dm_reg.progbuf(1); else dmi_rsp_o.data <= (others => '0'); end if; -- program buffer 1
 
-        -- system bus access control and status (r/-) --
-        when addr_sbcs_c =>
-          dmi_rsp_o.data <= (others => '0'); -- system bus access not implemented
+--      -- system bus access control and status (r/-) --
+--      when addr_sbcs_c =>
+--        dmi_rsp_o.data <= (others => '0'); -- system bus access not implemented
 
         -- halt summary 0 (r/-) --
         when addr_haltsum0_c =>
@@ -655,56 +636,43 @@ begin
   end process dmi_read_access;
 
 
-  -- **************************************************************************************************************************
-  -- CPU Bus Interface
-  -- **************************************************************************************************************************
-
-  -- Access Control ------------------------------------------------------------------------
+  -- Bus Access ----------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  rden <= cpu_debug_i and bus_req_i.re; -- allow access only when in debug mode
-  wren <= cpu_debug_i and bus_req_i.we; -- allow access only when in debug mode
-
-
-  -- Write Access ---------------------------------------------------------------------------
-  -- -------------------------------------------------------------------------------------------
-  write_access: process(rstn_i, clk_i)
+  bus_access: process(rstn_i, clk_i)
   begin
     if (rstn_i = '0') then
+      bus_rsp_o         <= rsp_terminate_c;
       dci.data_reg      <= (others => '0');
       dci.halt_ack      <= '0';
       dci.resume_ack    <= '0';
       dci.execute_ack   <= '0';
       dci.exception_ack <= '0';
     elsif rising_edge(clk_i) then
+      -- bus handshake --
+      bus_rsp_o.ack  <= accen;
+      bus_rsp_o.err  <= '0';
+      bus_rsp_o.data <= (others => '0');
+
       -- data buffer --
       if (dci.data_we = '1') then -- DM write access
         dci.data_reg <= dmi_req_i.data;
       elsif (bus_req_i.addr(7 downto 6) = dm_data_base_c(7 downto 6)) and (wren = '1') then -- CPU write access
         dci.data_reg <= bus_req_i.data;
       end if;
+
       -- control and status register CPU write access --
       dci.halt_ack      <= '0'; -- all writable flags auto-clear
       dci.resume_ack    <= '0';
       dci.execute_ack   <= '0';
       dci.exception_ack <= '0';
-      -- NOTE: only check the individual BYTE ACCESSES - not the actual write data --
       if (bus_req_i.addr(7 downto 6) = dm_sreg_base_c(7 downto 6)) and (wren = '1') then
-        dci.halt_ack      <= bus_req_i.ben(sreg_halt_ack_c/8);
+        dci.halt_ack      <= bus_req_i.ben(sreg_halt_ack_c/8); -- [NOTE] use the individual BYTE ENABLES and not the actual write data
         dci.resume_ack    <= bus_req_i.ben(sreg_resume_ack_c/8);
         dci.execute_ack   <= bus_req_i.ben(sreg_execute_ack_c/8);
         dci.exception_ack <= bus_req_i.ben(sreg_exception_ack_c/8);
       end if;
-    end if;
-  end process write_access;
 
-
-  -- Read Access ----------------------------------------------------------------------------
-  -- -------------------------------------------------------------------------------------------
-  read_access: process(clk_i)
-  begin
-    if rising_edge(clk_i) then
-      bus_rsp_o.ack  <= rden or wren;
-      bus_rsp_o.data <= (others => '0');
+      -- control and status register CPU read access --
       if (rden = '1') then -- output enable
         case bus_req_i.addr(7 downto 6) is -- module select
           when "00" => -- dm_code_base_c: code ROM
@@ -719,10 +687,12 @@ begin
         end case;
       end if;
     end if;
-  end process read_access;
+  end process bus_access;
 
-  -- no access error possible --
-  bus_rsp_o.err <= '0';
+  -- access helpers --
+  accen <= cpu_debug_i and bus_req_i.stb; -- allow access only when in debug-mode
+  rden  <= accen and (not bus_req_i.rw);
+  wren  <= accen and (    bus_req_i.rw);
 
 
 end neorv32_debug_dm_rtl;

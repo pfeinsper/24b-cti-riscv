@@ -1,50 +1,22 @@
-// #################################################################################################
-// # << NEORV32 - Bootloader >>                                                                    #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32       (c) Stephan Nolting #
-// #################################################################################################
+// ================================================================================ //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
-
-/**********************************************************************//**
+/**
  * @file bootloader.c
- * @author Stephan Nolting
  * @brief Default NEORV32 bootloader.
- **************************************************************************/
+ */
 
 #include <stdint.h>
 #include <neorv32.h>
 
 
 /**********************************************************************//**
- * @name Bootloader configuration (override via console to customize)
+ * @name Bootloader configuration (override via console to customize);
  * default values are used if not explicitly customized
  **************************************************************************/
 /**@{*/
@@ -89,7 +61,7 @@
 
 /** Time until the auto-boot sequence starts (in seconds); 0 = disabled */
 #ifndef AUTO_BOOT_TIMEOUT
-  #define AUTO_BOOT_TIMEOUT 8
+  #define AUTO_BOOT_TIMEOUT 10
 #endif
 
 /* -------- SPI configuration -------- */
@@ -244,7 +216,7 @@ volatile uint32_t getting_exe;
 /**********************************************************************//**
  * Function prototypes
  **************************************************************************/
-void     __attribute__((__interrupt__)) bootloader_trap_handler(void);
+void     __attribute__((interrupt("machine"))) bootloader_trap_handler(void);
 void     print_help(void);
 void     start_app(int boot_xip);
 void     get_exe(int src);
@@ -293,10 +265,9 @@ int main(void) {
 #endif
 
 #if (XIP_EN != 0)
-  // setup XIP: clock mode 0, bursts enabled
+  // setup XIP: clock divider 0, clock mode 0
   if (neorv32_xip_available()) {
-    neorv32_xip_setup(SPI_FLASH_CLK_PRSC, 0, 0, SPI_FLASH_CMD_READ);
-    neorv32_xip_burst_mode_enable();
+    neorv32_xip_setup(SPI_FLASH_CLK_PRSC, 0, 0, 0, SPI_FLASH_CMD_READ);
     neorv32_xip_start(SPI_FLASH_ADDR_BYTES);
   }
 #endif
@@ -425,11 +396,16 @@ int main(void) {
     }
 #if (XIP_EN != 0)
     else if (c == 'x') { // boot from SPI flash via XIP
-      start_app(1);
+      if (neorv32_xip_available()) { // XIP module really implemented?
+        start_app(1);
+      }
+      else {
+        PRINT_TEXT("Invalid CMD");
+      }
     }
 #endif
     else if (c == '?') {
-      PRINT_TEXT("by Stephan Nolting\ngithub.com/stnolting/neorv32");
+      PRINT_TEXT("github.com/stnolting/neorv32");
     }
     else { // unknown command
       PRINT_TEXT("Invalid CMD");
@@ -482,6 +458,13 @@ void start_app(int boot_xip) {
   PRINT_XNUM(app_base);
   PRINT_TEXT("...\n\n");
 
+#if (STATUS_LED_EN != 0)
+  // shut down heart beat LED
+  if (neorv32_gpio_available()) {
+    neorv32_gpio_port_set(0);
+  }
+#endif
+
   // wait for UART0 to finish transmitting
   while (neorv32_uart0_tx_busy());
 
@@ -496,9 +479,9 @@ void start_app(int boot_xip) {
 /**********************************************************************//**
  * Bootloader trap handler. Used for the MTIME tick and to capture any other traps.
  *
- * @note Since we have no runtime environment, we have to use the interrupt attribute here.
+ * @note Since we have no runtime environment we have to use the interrupt attribute here.
  **************************************************************************/
-void __attribute__((__interrupt__)) bootloader_trap_handler(void) {
+void __attribute__((interrupt("machine"))) bootloader_trap_handler(void) {
 
   register uint32_t mcause = neorv32_cpu_csr_read(CSR_MCAUSE);
 
@@ -557,9 +540,9 @@ void get_exe(int src) {
   }
 #if (SPI_EN != 0)
   else {
-    PRINT_TEXT("Loading (@");
+    PRINT_TEXT("Loading from SPI flash @");
     PRINT_XNUM(addr);
-    PRINT_TEXT(")...\n");
+    PRINT_TEXT("...\n");
 
     // flash checks
     if (((NEORV32_SYSINFO->SOC & (1<<SYSINFO_SOC_IO_SPI)) == 0) || // SPI module not implemented?
@@ -744,9 +727,9 @@ void print_hex_word(uint32_t num) {
 
 
 
-// -------------------------------------------------------------------------------------
+// ##########################################################################################################
 // SPI flash driver functions
-// -------------------------------------------------------------------------------------
+// ##########################################################################################################
 
 /**********************************************************************//**
  * Wake up flash from deep sleep state
@@ -759,6 +742,7 @@ void spi_flash_wakeup(void) {
   neorv32_spi_cs_dis();
 #endif
 }
+
 
 /**********************************************************************//**
  * Check if SPI and flash are available/working by making sure the WEL
@@ -789,6 +773,7 @@ int spi_flash_check(void) {
   return -1;
 #endif
 }
+
 
 /**********************************************************************//**
  * Read byte from SPI flash.

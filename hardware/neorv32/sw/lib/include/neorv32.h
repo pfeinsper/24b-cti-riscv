@@ -1,44 +1,17 @@
-// #################################################################################################
-// # << NEORV32: neorv32.h - Main Core Library File >>                                             #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
-// #################################################################################################
+// ================================================================================ //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
-
-/**********************************************************************//**
+/**
  * @file neorv32.h
- * @author Stephan Nolting
+ * @brief Main NEORV32 core library / driver / HAL include file.
  *
- * @brief Main NEORV32 core library include file.
- **************************************************************************/
+ * @see https://stnolting.github.io/neorv32/sw/files.html
+ */
 
 #ifndef neorv32_h
 #define neorv32_h
@@ -50,36 +23,72 @@ extern "C" {
 // Standard libraries
 #include <stdint.h>
 #include <inttypes.h>
-#include <limits.h>
-//#include <unistd.h>
+#include <unistd.h>
 #include <stdlib.h>
 
 
 /**********************************************************************//**
- * Processor clock prescaler select
+ * @name Main Address Space Sections
  **************************************************************************/
-enum NEORV32_CLOCK_PRSC_enum {
-  CLK_PRSC_2    = 0, /**< CPU_CLK (from clk_i top signal) / 2 */
-  CLK_PRSC_4    = 1, /**< CPU_CLK (from clk_i top signal) / 4 */
-  CLK_PRSC_8    = 2, /**< CPU_CLK (from clk_i top signal) / 8 */
-  CLK_PRSC_64   = 3, /**< CPU_CLK (from clk_i top signal) / 64 */
-  CLK_PRSC_128  = 4, /**< CPU_CLK (from clk_i top signal) / 128 */
-  CLK_PRSC_1024 = 5, /**< CPU_CLK (from clk_i top signal) / 1024 */
-  CLK_PRSC_2048 = 6, /**< CPU_CLK (from clk_i top signal) / 2048 */
-  CLK_PRSC_4096 = 7  /**< CPU_CLK (from clk_i top signal) / 4096 */
-};
+/**@{*/
+/** XIP-mapped memory base address */
+#define XIP_MEM_BASE_ADDRESS    (0xE0000000U)
+/** bootloader memory base address */
+#define BOOTLOADER_BASE_ADDRESS (0xFFFFC000U)
+/** peripheral/IO devices memory base address */
+#define IO_BASE_ADDRESS         (0xFFFFE000U)
+/**@}*/
+
+
+/**********************************************************************//**
+ * @name IO Address Space Map - Peripheral/IO Devices
+ **************************************************************************/
+/**@{*/
+//#define NEORV32_???_BASE   (0xFFFFE000U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFE100U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFE200U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFE300U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFE400U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFE500U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFE600U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFE700U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFE800U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFE900U) /**< reserved */
+//#define NEORV32_???_BASE   (0xFFFFEA00U) /**< reserved */
+#define NEORV32_CFS_BASE     (0xFFFFEB00U) /**< Custom Functions Subsystem (CFS) */
+#define NEORV32_SLINK_BASE   (0xFFFFEC00U) /**< Stream Link Interface (SLINK) */
+#define NEORV32_DMA_BASE     (0xFFFFED00U) /**< Direct Memory Access Controller (DMA) */
+#define NEORV32_CRC_BASE     (0xFFFFEE00U) /**< Cyclic Redundancy Check Unit (DMA) */
+#define NEORV32_XIP_BASE     (0xFFFFEF00U) /**< Execute In Place Module (XIP) */
+#define NEORV32_PWM_BASE     (0xFFFFF000U) /**< Pulse Width Modulation Controller (PWM) */
+#define NEORV32_GPTMR_BASE   (0xFFFFF100U) /**< General Purpose Timer (GPTMR) */
+#define NEORV32_ONEWIRE_BASE (0xFFFFF200U) /**< 1-Wire Interface Controller (ONEWIRE) */
+#define NEORV32_XIRQ_BASE    (0xFFFFF300U) /**< External Interrupt Controller (XIRQ) */
+#define NEORV32_MTIME_BASE   (0xFFFFF400U) /**< Machine System Timer (MTIME) */
+#define NEORV32_UART0_BASE   (0xFFFFF500U) /**< Primary Universal Asynchronous Receiver and Transmitter (UART0) */
+#define NEORV32_UART1_BASE   (0xFFFFF600U) /**< Secondary Universal Asynchronous Receiver and Transmitter (UART1) */
+#define NEORV32_SDI_BASE     (0xFFFFF700U) /**< Serial Data Interface (SDI) */
+#define NEORV32_SPI_BASE     (0xFFFFF800U) /**< Serial Peripheral Interface Controller (SPI) */
+#define NEORV32_TWI_BASE     (0xFFFFF900U) /**< Two-Wire Interface Controller (TWI) */
+#define NEORV32_TRNG_BASE    (0xFFFFFA00U) /**< True Random Number Generator (TRNG) */
+#define NEORV32_WDT_BASE     (0xFFFFFB00U) /**< Watchdog Timer (WDT) */
+#define NEORV32_GPIO_BASE    (0xFFFFFC00U) /**< General Purpose Input/Output Port Controller (GPIO) */
+#define NEORV32_NEOLED_BASE  (0xFFFFFD00U) /**< Smart LED Hardware Interface (NEOLED) */
+#define NEORV32_SYSINFO_BASE (0xFFFFFE00U) /**< System Information Memory (SYSINFO) */
+#define NEORV32_DM_BASE      (0xFFFFFF00U) /**< On-Chip Debugger - Debug Module (OCD) */
+/**@}*/
 
 
 /**********************************************************************//**
  * @name Fast Interrupt Requests (FIRQ) device aliases
  **************************************************************************/
 /**@{*/
-/** @name Watchdog Timer (WDT) */
+/** @name True-Random Number Generator (TRNG) */
 /**@{*/
-#define WDT_FIRQ_ENABLE        CSR_MIE_FIRQ0E    /**< MIE CSR bit (#NEORV32_CSR_MIE_enum) */
-#define WDT_FIRQ_PENDING       CSR_MIP_FIRQ0P    /**< MIP CSR bit (#NEORV32_CSR_MIP_enum) */
-#define WDT_RTE_ID             RTE_TRAP_FIRQ_0   /**< RTE entry code (#NEORV32_RTE_TRAP_enum) */
-#define WDT_TRAP_CODE          TRAP_CODE_FIRQ_0  /**< MCAUSE CSR trap code (#NEORV32_EXCEPTION_CODES_enum) */
+#define TRNG_FIRQ_ENABLE       CSR_MIE_FIRQ0E    /**< MIE CSR bit (#NEORV32_CSR_MIE_enum) */
+#define TRNG_FIRQ_PENDING      CSR_MIP_FIRQ0P    /**< MIP CSR bit (#NEORV32_CSR_MIP_enum) */
+#define TRNG_RTE_ID            RTE_TRAP_FIRQ_0   /**< RTE entry code (#NEORV32_RTE_TRAP_enum) */
+#define TRNG_TRAP_CODE         TRAP_CODE_FIRQ_0  /**< MCAUSE CSR trap code (#NEORV32_EXCEPTION_CODES_enum) */
 /**@}*/
 /** @name Custom Functions Subsystem (CFS) */
 /**@{*/
@@ -168,59 +177,86 @@ enum NEORV32_CLOCK_PRSC_enum {
 /**@}*/
 /** @name Stream Link Interface (SLINK) */
 /**@{*/
-#define SLINK_FIRQ_ENABLE      CSR_MIE_FIRQ14E   /**< MIE CSR bit (#NEORV32_CSR_MIE_enum) */
-#define SLINK_FIRQ_PENDING     CSR_MIP_FIRQ14P   /**< MIP CSR bit (#NEORV32_CSR_MIP_enum) */
-#define SLINK_RTE_ID           RTE_TRAP_FIRQ_14  /**< RTE entry code (#NEORV32_RTE_TRAP_enum) */
-#define SLINK_TRAP_CODE        TRAP_CODE_FIRQ_14 /**< MCAUSE CSR trap code (#NEORV32_EXCEPTION_CODES_enum) */
-/**@}*/
-/** @name True-Random Number Generator (TRNG) */
-/**@{*/
-#define TRNG_FIRQ_ENABLE       CSR_MIE_FIRQ15E   /**< MIE CSR bit (#NEORV32_CSR_MIE_enum) */
-#define TRNG_FIRQ_PENDING      CSR_MIP_FIRQ15P   /**< MIP CSR bit (#NEORV32_CSR_MIP_enum) */
-#define TRNG_RTE_ID            RTE_TRAP_FIRQ_15  /**< RTE entry code (#NEORV32_RTE_TRAP_enum) */
-#define TRNG_TRAP_CODE         TRAP_CODE_FIRQ_15 /**< MCAUSE CSR trap code (#NEORV32_EXCEPTION_CODES_enum) */
+#define SLINK_RX_FIRQ_ENABLE   CSR_MIE_FIRQ14E   /**< MIE CSR bit (#NEORV32_CSR_MIE_enum) */
+#define SLINK_RX_FIRQ_PENDING  CSR_MIP_FIRQ14P   /**< MIP CSR bit (#NEORV32_CSR_MIP_enum) */
+#define SLINK_RX_RTE_ID        RTE_TRAP_FIRQ_14  /**< RTE entry code (#NEORV32_RTE_TRAP_enum) */
+#define SLINK_RX_TRAP_CODE     TRAP_CODE_FIRQ_14 /**< MCAUSE CSR trap code (#NEORV32_EXCEPTION_CODES_enum) */
+#define SLINK_TX_FIRQ_ENABLE   CSR_MIE_FIRQ15E   /**< MIE CSR bit (#NEORV32_CSR_MIE_enum) */
+#define SLINK_TX_FIRQ_PENDING  CSR_MIP_FIRQ15P   /**< MIP CSR bit (#NEORV32_CSR_MIP_enum) */
+#define SLINK_TX_RTE_ID        RTE_TRAP_FIRQ_15  /**< RTE entry code (#NEORV32_RTE_TRAP_enum) */
+#define SLINK_TX_TRAP_CODE     TRAP_CODE_FIRQ_15 /**< MCAUSE CSR trap code (#NEORV32_EXCEPTION_CODES_enum) */
 /**@}*/
 /**@}*/
 
 
 /**********************************************************************//**
- * @name Main Address Space Sections
+ * @name Export linker script symbols
  **************************************************************************/
 /**@{*/
-/** XIP-mapped memory base address */
-#define XIP_MEM_BASE_ADDRESS    (0xE0000000U)
-/** bootloader memory base address */
-#define BOOTLOADER_BASE_ADDRESS (0xFFFFC000U)
-/** peripheral/IO devices memory base address */
-#define IO_BASE_ADDRESS         (0xFFFFE000U)
+extern char __heap_start[];               /**< heap start address */
+extern char __heap_end[];                 /**< heap end address */
+extern char __crt0_max_heap[];            /**< heap size in bytes */
+extern char __crt0_imem_begin[];          /**< instruction memory/ROM start address */
+extern char __crt0_dmem_begin[];          /**< data memory/RAM start address */
+extern char __crt0_stack_end[];           /**< last address of stack space */
+extern char __crt0_bss_start[];           /**< bss start address */
+extern char __crt0_bss_end[];             /**< bss end address */
+extern char __crt0_copy_data_dst_begin[]; /**< data start address */
+extern char __crt0_copy_data_dst_end[];   /**< data end address */
+
+// aliases
+#define neorv32_heap_begin_c ((uint32_t)&__heap_start[0])
+#define neorv32_heap_end_c   ((uint32_t)&__heap_end[0])
+#define neorv32_heap_size_c  ((uint32_t)&__crt0_max_heap[0])
+#define neorv32_imem_begin_c ((uint32_t)&__crt0_imem_begin[0])
+#define neorv32_dmem_begin_c ((uint32_t)&__crt0_dmem_begin[0])
+#define neorv32_stack_end_c  ((uint32_t)&__crt0_stack_end[0])
+#define neorv32_bss_start_c  ((uint32_t)&__crt0_bss_start[0])
+#define neorv32_bss_end_c    ((uint32_t)&__crt0_bss_end[0])
+#define neorv32_data_start_c ((uint32_t)&__crt0_copy_data_dst_begin[0])
+#define neorv32_data_end_c   ((uint32_t)&__crt0_copy_data_dst_end[0])
 /**@}*/
 
 
 /**********************************************************************//**
- * @name IO Address Space - Peripheral/IO Devices
+ * Processor clock prescaler select (relative to processor's main clock)
  **************************************************************************/
 /**@{*/
-#define NEORV32_CFS_BASE     (0xFFFFEB00U) /**< Custom Functions Subsystem (CFS) */
-#define NEORV32_SLINK_BASE   (0xFFFFEC00U) /**< Stream Link Interface (SLINK) */
-#define NEORV32_DMA_BASE     (0xFFFFED00U) /**< Direct Memory Access Controller (DMA) */
-#define NEORV32_CRC_BASE     (0xFFFFEE00U) /**< Cyclic Redundancy Check Unit (DMA) */
-#define NEORV32_XIP_BASE     (0xFFFFEF00U) /**< Execute In Place Module (XIP) */
-#define NEORV32_PWM_BASE     (0xFFFFF000U) /**< Pulse Width Modulation Controller (PWM) */
-#define NEORV32_GPTMR_BASE   (0xFFFFF100U) /**< General Purpose Timer (GPTMR) */
-#define NEORV32_ONEWIRE_BASE (0xFFFFF200U) /**< 1-Wire Interface Controller (ONEWIRE) */
-#define NEORV32_XIRQ_BASE    (0xFFFFF300U) /**< External Interrupt Controller (XIRQ) */
-#define NEORV32_MTIME_BASE   (0xFFFFF400U) /**< Machine System Timer (MTIME) */
-#define NEORV32_UART0_BASE   (0xFFFFF500U) /**< Primary Universal Asynchronous Receiver and Transmitter (UART0) */
-#define NEORV32_UART1_BASE   (0xFFFFF600U) /**< Secondary Universal Asynchronous Receiver and Transmitter (UART1) */
-#define NEORV32_SDI_BASE     (0xFFFFF700U) /**< Serial Data Interface (SDI) */
-#define NEORV32_SPI_BASE     (0xFFFFF800U) /**< Serial Peripheral Interface Controller (SPI) */
-#define NEORV32_TWI_BASE     (0xFFFFF900U) /**< Two-Wire Interface Controller (TWI) */
-#define NEORV32_TRNG_BASE    (0xFFFFFA00U) /**< True Random Number Generator (TRNG) */
-#define NEORV32_WDT_BASE     (0xFFFFFB00U) /**< Watchdog Timer (WDT) */
-#define NEORV32_GPIO_BASE    (0xFFFFFC00U) /**< General Purpose Input/Output Port Controller (GPIO) */
-#define NEORV32_NEOLED_BASE  (0xFFFFFD00U) /**< Smart LED Hardware Interface (NEOLED) */
-#define NEORV32_SYSINFO_BASE (0xFFFFFE00U) /**< System Information Memory (SYSINFO) */
-#define NEORV32_DM_BASE      (0xFFFFFF00U) /**< On-Chip Debugger - Debug Module (OCD) */
+enum NEORV32_CLOCK_PRSC_enum {
+  CLK_PRSC_2    = 0, /**< CPU_CLK / 2 */
+  CLK_PRSC_4    = 1, /**< CPU_CLK / 4 */
+  CLK_PRSC_8    = 2, /**< CPU_CLK / 8 */
+  CLK_PRSC_64   = 3, /**< CPU_CLK / 64 */
+  CLK_PRSC_128  = 4, /**< CPU_CLK / 128 */
+  CLK_PRSC_1024 = 5, /**< CPU_CLK / 1024 */
+  CLK_PRSC_2048 = 6, /**< CPU_CLK / 2048 */
+  CLK_PRSC_4096 = 7  /**< CPU_CLK / 4096 */
+};
+/**@}*/
+
+
+/**********************************************************************//**
+ * @name Subword-access helper
+ **************************************************************************/
+/**@{*/
+/** @name 64-bit */
+typedef union {
+  uint64_t uint64;
+  uint32_t uint32[sizeof(uint64_t)/sizeof(uint32_t)];
+  uint16_t uint16[sizeof(uint64_t)/sizeof(uint16_t)];
+  uint8_t  uint8[ sizeof(uint64_t)/sizeof(uint8_t)];
+} subwords64_t;
+/** @name 32-bit */
+typedef union {
+  uint32_t uint32[sizeof(uint32_t)/sizeof(uint32_t)];
+  uint16_t uint16[sizeof(uint32_t)/sizeof(uint16_t)];
+  uint8_t  uint8[ sizeof(uint32_t)/sizeof(uint8_t)];
+} subwords32_t;
+/** @name 16-bit */
+typedef union {
+  uint16_t uint16[sizeof(uint16_t)/sizeof(uint16_t)];
+  uint8_t  uint8[ sizeof(uint16_t)/sizeof(uint8_t)];
+} subwords16_t;
 /**@}*/
 
 
@@ -229,6 +265,12 @@ enum NEORV32_CLOCK_PRSC_enum {
 // ----------------------------------------------------------------------------
 // intrinsics
 #include "neorv32_intrinsics.h"
+
+// helper functions
+#include "neorv32_aux.h"
+
+// legacy compatibility layer
+#include "neorv32_legacy.h"
 
 // cpu core
 #include "neorv32_cpu.h"
@@ -242,7 +284,6 @@ enum NEORV32_CLOCK_PRSC_enum {
 // IO/peripheral devices
 #include "neorv32_cfs.h"
 #include "neorv32_crc.h"
-#include "neorv32_dm.h"
 #include "neorv32_dma.h"
 #include "neorv32_gpio.h"
 #include "neorv32_gptmr.h"
@@ -261,8 +302,6 @@ enum NEORV32_CLOCK_PRSC_enum {
 #include "neorv32_xip.h"
 #include "neorv32_xirq.h"
 
-// backwards compatibility layer
-#include "legacy.h"
 
 #ifdef __cplusplus
 }

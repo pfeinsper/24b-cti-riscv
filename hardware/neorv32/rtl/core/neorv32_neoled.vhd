@@ -1,50 +1,12 @@
--- #################################################################################################
--- # << NEORV32 - Smart LED (WS2811/WS2812) Interface (NEOLED) >>                                  #
--- # ********************************************************************************************* #
--- # Hardware interface for direct control of "smart LEDs" using an asynchronous serial data       #
--- # line. Compatible with the WS2811 and WS2812 LEDs.                                             #
--- #                                                                                               #
--- # NeoPixel-compatible, RGB (24-bit) and RGBW (32-bit) modes supported (in "parallel")           #
--- # (TM) "NeoPixel" is a trademark of Adafruit Industries.                                        #
--- #                                                                                               #
--- # The interface uses a programmable carrier frequency (800 KHz for the WS2812 LEDs)             #
--- # configurable via the control register's clock prescaler bits (ctrl_clksel*_c) and the period  #
--- # length configuration bits (ctrl_t_tot_*_c). "high-times" for sending a ZERO or a ONE bit are  #
--- # configured using the ctrl_t_0h_*_c and ctrl_t_1h_*_c bits, respectively. 32-bit transfers     #
--- # (for RGBW modules) and 24-bit transfers (for RGB modules) are supported via ctrl_mode__c.     #
--- #                                                                                               #
--- # The device features a TX buffer (FIFO) with <FIFO_DEPTH> entries with configurable interrupt. #
--- # ********************************************************************************************* #
--- # BSD 3-Clause License                                                                          #
--- #                                                                                               #
--- # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
--- #                                                                                               #
--- # Redistribution and use in source and binary forms, with or without modification, are          #
--- # permitted provided that the following conditions are met:                                     #
--- #                                                                                               #
--- # 1. Redistributions of source code must retain the above copyright notice, this list of        #
--- #    conditions and the following disclaimer.                                                   #
--- #                                                                                               #
--- # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
--- #    conditions and the following disclaimer in the documentation and/or other materials        #
--- #    provided with the distribution.                                                            #
--- #                                                                                               #
--- # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
--- #    endorse or promote products derived from this software without specific prior written      #
--- #    permission.                                                                                #
--- #                                                                                               #
--- # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
--- # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
--- # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
--- # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
--- # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
--- # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
--- # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
--- # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
--- # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
--- # ********************************************************************************************* #
--- # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
--- #################################################################################################
+-- ================================================================================ --
+-- NEORV32 SoC - Smart LED (WS2811/WS2812) Interface (NEOLED)                       --
+-- -------------------------------------------------------------------------------- --
+-- The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              --
+-- Copyright (c) NEORV32 contributors.                                              --
+-- Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  --
+-- Licensed under the BSD-3-Clause license, see LICENSE for details.                --
+-- SPDX-License-Identifier: BSD-3-Clause                                            --
+-- ================================================================================ --
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -156,17 +118,9 @@ architecture neorv32_neoled_rtl of neorv32_neoled is
 
 begin
 
-  -- Sanity Checks --------------------------------------------------------------------------
+  -- Bus Access -----------------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  assert not (is_power_of_two_f(FIFO_DEPTH) = false)
-    report "NEORV32 PROCESSOR CONFIG ERROR! NEOLED FIFO size has to be a power of two." severity error;
-
-
-  -- Host Access ----------------------------------------------------------------------------
-  -- -------------------------------------------------------------------------------------------
-
-  -- write access --
-  write_access: process(rstn_i, clk_i)
+  bus_access: process(rstn_i, clk_i)
   begin
     if (rstn_i = '0') then
       ctrl.enable   <= '0';
@@ -177,47 +131,48 @@ begin
       ctrl.t_total  <= (others => '0');
       ctrl.t0_high  <= (others => '0');
       ctrl.t1_high  <= (others => '0');
+      bus_rsp_o     <= rsp_terminate_c;
     elsif rising_edge(clk_i) then
-      if (bus_req_i.we = '1') and (bus_req_i.addr(2) = '0') then
-        ctrl.enable   <= bus_req_i.data(ctrl_en_c);
-        ctrl.mode     <= bus_req_i.data(ctrl_mode_c);
-        ctrl.strobe   <= bus_req_i.data(ctrl_strobe_c);
-        ctrl.clk_prsc <= bus_req_i.data(ctrl_clksel2_c downto ctrl_clksel0_c);
-        ctrl.irq_conf <= bus_req_i.data(ctrl_irq_conf_c);
-        ctrl.t_total  <= bus_req_i.data(ctrl_t_tot_4_c downto ctrl_t_tot_0_c);
-        ctrl.t0_high  <= bus_req_i.data(ctrl_t_0h_4_c  downto ctrl_t_0h_0_c);
-        ctrl.t1_high  <= bus_req_i.data(ctrl_t_1h_4_c  downto ctrl_t_1h_0_c);
-      end if;
-    end if;
-  end process write_access;
-
-  -- read access --
-  read_access: process(clk_i)
-  begin
-    if rising_edge(clk_i) then
-      bus_rsp_o.ack  <= bus_req_i.we or bus_req_i.re; -- access acknowledge
+      -- bus handshake --
+      bus_rsp_o.ack  <= bus_req_i.stb;
+      bus_rsp_o.err  <= '0';
       bus_rsp_o.data <= (others => '0');
-      if (bus_req_i.re = '1') then
-        bus_rsp_o.data(ctrl_en_c)                            <= ctrl.enable;
-        bus_rsp_o.data(ctrl_mode_c)                          <= ctrl.mode;
-        bus_rsp_o.data(ctrl_strobe_c)                        <= ctrl.strobe;
-        bus_rsp_o.data(ctrl_clksel2_c downto ctrl_clksel0_c) <= ctrl.clk_prsc;
-        bus_rsp_o.data(ctrl_irq_conf_c)                      <= ctrl.irq_conf or bool_to_ulogic_f(boolean(FIFO_DEPTH = 1)); -- tie to one if FIFO_DEPTH is 1
-        bus_rsp_o.data(ctrl_bufs_3_c  downto ctrl_bufs_0_c)  <= std_ulogic_vector(to_unsigned(index_size_f(FIFO_DEPTH), 4));
-        bus_rsp_o.data(ctrl_t_tot_4_c downto ctrl_t_tot_0_c) <= ctrl.t_total;
-        bus_rsp_o.data(ctrl_t_0h_4_c  downto ctrl_t_0h_0_c)  <= ctrl.t0_high;
-        bus_rsp_o.data(ctrl_t_1h_4_c  downto ctrl_t_1h_0_c)  <= ctrl.t1_high;
-        --
-        bus_rsp_o.data(ctrl_tx_empty_c)                      <= not tx_fifo.avail;
-        bus_rsp_o.data(ctrl_tx_half_c)                       <= tx_fifo.half;
-        bus_rsp_o.data(ctrl_tx_full_c)                       <= not tx_fifo.free;
-        bus_rsp_o.data(ctrl_tx_busy_c)                       <= serial.busy;
+      if (bus_req_i.stb = '1') then
+
+        -- write access --
+        if (bus_req_i.rw = '1') then
+          if (bus_req_i.addr(2) = '0') then
+            ctrl.enable   <= bus_req_i.data(ctrl_en_c);
+            ctrl.mode     <= bus_req_i.data(ctrl_mode_c);
+            ctrl.strobe   <= bus_req_i.data(ctrl_strobe_c);
+            ctrl.clk_prsc <= bus_req_i.data(ctrl_clksel2_c downto ctrl_clksel0_c);
+            ctrl.irq_conf <= bus_req_i.data(ctrl_irq_conf_c);
+            ctrl.t_total  <= bus_req_i.data(ctrl_t_tot_4_c downto ctrl_t_tot_0_c);
+            ctrl.t0_high  <= bus_req_i.data(ctrl_t_0h_4_c  downto ctrl_t_0h_0_c);
+            ctrl.t1_high  <= bus_req_i.data(ctrl_t_1h_4_c  downto ctrl_t_1h_0_c);
+          end if;
+
+        -- read access --
+        else
+          bus_rsp_o.data(ctrl_en_c)                            <= ctrl.enable;
+          bus_rsp_o.data(ctrl_mode_c)                          <= ctrl.mode;
+          bus_rsp_o.data(ctrl_strobe_c)                        <= ctrl.strobe;
+          bus_rsp_o.data(ctrl_clksel2_c downto ctrl_clksel0_c) <= ctrl.clk_prsc;
+          bus_rsp_o.data(ctrl_irq_conf_c)                      <= ctrl.irq_conf or bool_to_ulogic_f(boolean(FIFO_DEPTH = 1)); -- tie to one if FIFO_DEPTH is 1
+          bus_rsp_o.data(ctrl_bufs_3_c  downto ctrl_bufs_0_c)  <= std_ulogic_vector(to_unsigned(index_size_f(FIFO_DEPTH), 4));
+          bus_rsp_o.data(ctrl_t_tot_4_c downto ctrl_t_tot_0_c) <= ctrl.t_total;
+          bus_rsp_o.data(ctrl_t_0h_4_c  downto ctrl_t_0h_0_c)  <= ctrl.t0_high;
+          bus_rsp_o.data(ctrl_t_1h_4_c  downto ctrl_t_1h_0_c)  <= ctrl.t1_high;
+          --
+          bus_rsp_o.data(ctrl_tx_empty_c)                      <= not tx_fifo.avail;
+          bus_rsp_o.data(ctrl_tx_half_c)                       <= tx_fifo.half;
+          bus_rsp_o.data(ctrl_tx_full_c)                       <= not tx_fifo.free;
+          bus_rsp_o.data(ctrl_tx_busy_c)                       <= serial.busy;
+        end if;
+
       end if;
     end if;
-  end process read_access;
-
-  -- no access error possible --
-  bus_rsp_o.err <= '0';
+  end process bus_access;
 
   -- enable external clock generator --
   clkgen_en_o <= ctrl.enable;
@@ -230,7 +185,8 @@ begin
     FIFO_DEPTH => FIFO_DEPTH, -- number of fifo entries; has to be a power of two; min 1
     FIFO_WIDTH => 32+2,       -- size of data elements in fifo
     FIFO_RSYNC => true,       -- sync read
-    FIFO_SAFE  => true        -- safe access
+    FIFO_SAFE  => true,       -- safe access
+    FULL_RESET => false       -- no HW reset, try to infer BRAM
   )
   port map (
     -- control --
@@ -249,14 +205,16 @@ begin
   );
 
   tx_fifo.re    <= '1' when (serial.state = "100") else '0';
-  tx_fifo.we    <= '1' when (bus_req_i.we = '1') and (bus_req_i.addr(2) = '1') else '0';
+  tx_fifo.we    <= '1' when (bus_req_i.stb = '1') and (bus_req_i.rw = '1') and (bus_req_i.addr(2) = '1') else '0';
   tx_fifo.wdata <= ctrl.strobe & ctrl.mode & bus_req_i.data;
   tx_fifo.clear <= not ctrl.enable;
 
   -- IRQ generator --
-  irq_generator: process(clk_i)
+  irq_generator: process(rstn_i, clk_i)
   begin
-    if rising_edge(clk_i) then
+    if (rstn_i = '0') then
+      irq_o <= '0';
+    elsif rising_edge(clk_i) then
       irq_o <= ctrl.enable and (
                ((not ctrl.irq_conf) and (not tx_fifo.avail)) or -- fire IRQ if FIFO is empty
                ((    ctrl.irq_conf) and (not tx_fifo.half)));   -- fire IRQ if FIFO is less than half full
@@ -266,9 +224,20 @@ begin
 
   -- Serial TX Engine -----------------------------------------------------------------------
   -- -------------------------------------------------------------------------------------------
-  serial_engine: process(clk_i)
+  serial_engine: process(rstn_i, clk_i)
   begin
-    if rising_edge(clk_i) then
+    if (rstn_i = '0') then
+      serial.pulse_clk  <= '0';
+      serial.done       <= '0';
+      serial.state      <= (others => '0');
+      serial.pulse_cnt  <= (others => '0');
+      serial.strobe_cnt <= (others => '0');
+      serial.sreg       <= (others => '0');
+      serial.mode       <= '0';
+      serial.bit_cnt    <= (others => '0');
+      serial.t_high     <= (others => '0');
+      neoled_o          <= '0';
+    elsif rising_edge(clk_i) then
       -- clock generator --
       serial.pulse_clk <= clkgen_i(to_integer(unsigned(ctrl.clk_prsc)));
 

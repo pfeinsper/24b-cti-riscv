@@ -1,91 +1,41 @@
-// #################################################################################################
-// # << NEORV32: neorv32_cpu.c - CPU Core Functions HW Driver >>                                   #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2023, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
-// #################################################################################################
+// ================================================================================ //
+// The NEORV32 RISC-V Processor - https://github.com/stnolting/neorv32              //
+// Copyright (c) NEORV32 contributors.                                              //
+// Copyright (c) 2020 - 2024 Stephan Nolting. All rights reserved.                  //
+// Licensed under the BSD-3-Clause license, see LICENSE for details.                //
+// SPDX-License-Identifier: BSD-3-Clause                                            //
+// ================================================================================ //
 
-
-/**********************************************************************//**
+/**
  * @file neorv32_cpu.c
  * @brief CPU Core Functions HW driver source file.
- **************************************************************************/
+ *
+ * @see https://stnolting.github.io/neorv32/sw/files.html
+ */
 
 #include "neorv32.h"
-#include "neorv32_cpu.h"
 
 
 /**********************************************************************//**
- * Unavailable extensions warning.
+ * Unavailable extensions warnings.
  **************************************************************************/
+/**@{*/
 #if defined __riscv_d || (__riscv_flen == 64)
-  #error Double-precision floating-point extension <D/Zdinx> is NOT supported!
+  #error Double-precision floating-point extension D/Zdinx is NOT supported!
 #endif
 
 #if (__riscv_xlen > 32)
-  #error Only 32-bit <rv32> is supported!
+  #error Only XLEN=32 (rv32) is supported!
 #endif
 
 #ifdef __riscv_fdiv
-  #warning Floating-point division instruction <FDIV> is NOT supported yet!
+  #warning Floating-point division instruction FDIV is NOT supported!
 #endif
 
 #ifdef __riscv_fsqrt
-  #warning Floating-point square root instruction <FSQRT> is NOT supported yet!
+  #warning Floating-point square root instruction FSQRT is NOT supported!
 #endif
-
-
-/**********************************************************************//**
- * Enable specific interrupt channel.
- * @note This functions also tries to clear the pending flag of the interrupt.
- *
- * @param[in] irq_sel CPU interrupt select. See #NEORV32_CSR_MIE_enum.
- **************************************************************************/
-void neorv32_cpu_irq_enable(int irq_sel) {
-
-  neorv32_cpu_csr_clr(CSR_MIP, 1 << (irq_sel & 0x1f)); // clear pending
-  neorv32_cpu_csr_set(CSR_MIE, 1 << (irq_sel & 0x1f)); // enable
-}
-
-
-/**********************************************************************//**
- * Disable specific interrupt channel.
- * @note This functions also tries to clear the pending flag of the interrupt.
- *
- * @param[in] irq_sel CPU interrupt select. See #NEORV32_CSR_MIE_enum.
- **************************************************************************/
-void neorv32_cpu_irq_disable(int irq_sel) {
-
-  neorv32_cpu_csr_clr(CSR_MIE, 1 << (irq_sel & 0x1f)); // disable
-  neorv32_cpu_csr_clr(CSR_MIP, 1 << (irq_sel & 0x1f)); // clear pending
-}
+/**@}*/
 
 
 /**********************************************************************//**
@@ -95,10 +45,7 @@ void neorv32_cpu_irq_disable(int irq_sel) {
  **************************************************************************/
 uint64_t neorv32_cpu_get_cycle(void) {
 
-  union {
-    uint64_t uint64;
-    uint32_t uint32[sizeof(uint64_t)/sizeof(uint32_t)];
-  } cycles;
+  subwords64_t cycles;
 
   uint32_t tmp1, tmp2, tmp3;
   while(1) {
@@ -124,14 +71,11 @@ uint64_t neorv32_cpu_get_cycle(void) {
  **************************************************************************/
 void neorv32_cpu_set_mcycle(uint64_t value) {
 
-  union {
-    uint64_t uint64;
-    uint32_t uint32[sizeof(uint64_t)/sizeof(uint32_t)];
-  } cycles;
+  subwords64_t cycles;
 
   cycles.uint64 = value;
 
-  // prevent low-to-high word overflow while writing
+  // prevent low-to-high carry while writing
   neorv32_cpu_csr_write(CSR_MCYCLE,  0);
   neorv32_cpu_csr_write(CSR_MCYCLEH, cycles.uint32[1]);
   neorv32_cpu_csr_write(CSR_MCYCLE,  cycles.uint32[0]);
@@ -145,10 +89,7 @@ void neorv32_cpu_set_mcycle(uint64_t value) {
  **************************************************************************/
 uint64_t neorv32_cpu_get_instret(void) {
 
-  union {
-    uint64_t uint64;
-    uint32_t uint32[sizeof(uint64_t)/sizeof(uint32_t)];
-  } cycles;
+  subwords64_t cycles;
 
   uint32_t tmp1, tmp2, tmp3;
   while(1) {
@@ -174,14 +115,11 @@ uint64_t neorv32_cpu_get_instret(void) {
  **************************************************************************/
 void neorv32_cpu_set_minstret(uint64_t value) {
 
-  union {
-    uint64_t uint64;
-    uint32_t uint32[sizeof(uint64_t)/sizeof(uint32_t)];
-  } cycles;
+  subwords64_t cycles;
 
   cycles.uint64 = value;
 
-  // prevent low-to-high word overflow while writing
+  // prevent low-to-high carry while writing
   neorv32_cpu_csr_write(CSR_MINSTRET,  0);
   neorv32_cpu_csr_write(CSR_MINSTRETH, cycles.uint32[1]);
   neorv32_cpu_csr_write(CSR_MINSTRET,  cycles.uint32[0]);
@@ -199,7 +137,7 @@ void neorv32_cpu_set_minstret(uint64_t value) {
  **************************************************************************/
 void neorv32_cpu_delay_ms(uint32_t time_ms) {
 
-  uint32_t clock = NEORV32_SYSINFO->CLK; // clock ticks per second
+  uint32_t clock = neorv32_sysinfo_get_clk(); // clock ticks per second
   clock = clock / 1000; // clock ticks per ms
   uint64_t wait_cycles = ((uint64_t)clock) * ((uint64_t)time_ms);
   uint64_t tmp = 0;
@@ -254,7 +192,7 @@ uint32_t neorv32_cpu_get_clk_from_prsc(int prsc) {
   }
 
   uint32_t res = 0;
-  uint32_t clock = NEORV32_SYSINFO->CLK; // SoC main clock in Hz
+  uint32_t clock = neorv32_sysinfo_get_clk(); // SoC main clock in Hz
 
   switch(prsc & 7) {
     case CLK_PRSC_2    : res = clock/2    ; break;
@@ -283,7 +221,7 @@ uint32_t neorv32_cpu_get_clk_from_prsc(int prsc) {
 uint32_t neorv32_cpu_pmp_get_num_regions(void) {
 
   // PMP implemented at all?
-  if ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_PMP)) == 0) {
+  if ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_SMPMP)) == 0) {
     return 0;
   }
 
@@ -328,7 +266,7 @@ uint32_t neorv32_cpu_pmp_get_num_regions(void) {
 uint32_t neorv32_cpu_pmp_get_granularity(void) {
 
   // PMP implemented at all?
-  if ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_PMP)) == 0) {
+  if ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_SMPMP)) == 0) {
     return 0;
   }
 
@@ -369,8 +307,23 @@ uint32_t neorv32_cpu_pmp_get_granularity(void) {
  **************************************************************************/
 int neorv32_cpu_pmp_configure_region(int index, uint32_t addr, uint8_t config) {
 
-  if ((index > 15) || ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_PMP)) == 0)) {
-    return -1;
+  if ((index > 15) || ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_SMPMP)) == 0)) {
+    return -1; // entry not available
+  }
+
+  // get current configuration
+  uint32_t pmp_cfg = -1;
+  switch ((index >> 2) & 3) {
+    case 0: pmp_cfg = neorv32_cpu_csr_read(CSR_PMPCFG0); break;
+    case 1: pmp_cfg = neorv32_cpu_csr_read(CSR_PMPCFG1); break;
+    case 2: pmp_cfg = neorv32_cpu_csr_read(CSR_PMPCFG2); break;
+    case 3: pmp_cfg = neorv32_cpu_csr_read(CSR_PMPCFG3); break;
+    default: break;
+  }
+
+  // check lock bit
+  if ((pmp_cfg >> ((index & 3) * 8)) & (1 << PMPCFG_L)) {
+    return -2; // entry is locked
   }
 
   // set address
@@ -494,7 +447,7 @@ uint32_t neorv32_cpu_hpm_get_size(void) {
 void __attribute__((naked,noinline)) neorv32_cpu_goto_user_mode(void) {
 
   asm volatile (
-    "csrw mepc, ra     \n" // move return address to mepc so we can return using "mret". also, we can now use ra as temp register
+    "csrw mepc, ra     \n" // move return address to mepc so we can return using mret; we can now use ra as temp register
     "li   ra, 3<<11    \n" // bit mask to clear the two MPP bits
     "csrc mstatus, ra  \n" // clear MPP bits -> MPP = u-mode
     "csrr ra, mstatus  \n" // get mstatus

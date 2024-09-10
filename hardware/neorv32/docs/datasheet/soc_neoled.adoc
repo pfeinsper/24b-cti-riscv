@@ -5,13 +5,14 @@
 [cols="<3,<3,<4"]
 [frame="topbot",grid="none"]
 |=======================
-| Hardware source file(s): | neorv32_neoled.vhd | 
-| Software driver file(s): | neorv32_neoled.c |
-|                          | neorv32_neoled.h |
-| Top entity port:         | `neoled_o` | 1-bit serial data output
-| Configuration generics:  | `IO_NEOLED_EN`      | implement NEOLED controller when `true`
-|                          | `IO_NEOLED_TX_FIFO` | TX FIFO depth, has to be a power of 2, min 1
-| CPU interrupts:          | fast IRQ channel 9  | configurable NEOLED data FIFO interrupt (see <<_processor_interrupts>>)
+| Hardware source files:  | neorv32_neoled.vhd |
+| Software driver files:  | neorv32_neoled.c |
+|                         | neorv32_neoled.h |
+| Top entity ports:       | `neoled_o` | 1-bit serial data output
+| Configuration generics: | `IO_NEOLED_EN`      | implement NEOLED controller when `true`
+|                         | `IO_NEOLED_TX_FIFO` | TX FIFO depth, has to be a power of 2, min 1
+| CPU interrupts:         | fast IRQ channel 9  | configurable NEOLED data FIFO interrupt (see <<_processor_interrupts>>)
+| Access restrictions:  2+| privileged access only, non-32-bit write accesses are ignored
 |=======================
 
 
@@ -64,8 +65,8 @@ starting with LSB-first. The intensity for each R, G & B (& W) LED chip (= color
 value. The actual data bits are transferred by modifying the duty cycle of the signal (the timings for the
 WS2812 are shown below). A RESET command is "send" by pulling the data line LOW for at least 50μs.
 
-.WS2812 bit-level protocol - taken from the "Adafruit NeoPixel(TM) Überguide"
-image::neopixel.png[align=center]
+.WS2812 bit-level timing (timing does not scale)
+image::neopixel_timing.png[align=left]
 
 .WS2812 interface timing
 [cols="<2,<2,<6"]
@@ -175,8 +176,7 @@ If `NEOLED_CTRL_IRQ_CONF` is set, the module's interrupt is generated whenever t
 In this case software can write up to `IO_NEOLED_TX_FIFO`/2 new data words to `DATA` without checking the FIFO
 status flags. If `NEOLED_CTRL_IRQ_CONF` is cleared, an interrupt is generated when the TX FIFO is empty.
 
-One the NEOLED interrupt has been triggered and became pending, it has to explicitly cleared again by
-writing zero to according <<_mip>> CSR bit.
+Once the NEOLED interrupt has fired it remains pending until the actual cause of the interrupt is resolved.
 
 
 **Register Map**
