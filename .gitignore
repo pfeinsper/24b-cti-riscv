@@ -1,3 +1,2 @@
-
-/hardware/de0-nano/de0n-neorv32-sdram-qsys/hw/db
-/hardware/de0-nano/de0n-neorv32-sdram-qsys/hw/output_files
+de0-neorv32-sdram-qsys/hw/db
+de0-neorv32-sdram-qsys/hw/output_files
