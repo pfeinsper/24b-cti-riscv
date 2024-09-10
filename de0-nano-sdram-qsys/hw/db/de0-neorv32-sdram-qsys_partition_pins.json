@@ -60,6 +60,14 @@
 					"strict" : false
 				},
 				{
+					"name" : "MEXT_IRQ",
+					"strict" : false
+				},
+				{
+					"name" : "MSW_IRQ",
+					"strict" : false
+				},
+				{
 					"name" : "GPIO_i[0]",
 					"strict" : false
 				},

@@ -89,7 +89,14 @@ entity top is
       -- GPIO
       --
 		GPIO_i	    : in std_logic_vector(12 downto 0);
-		GPIO_o		 :	out std_logic_vector(2 downto 0)
+		GPIO_o		 :	out std_logic_vector(2 downto 0);
+		
+		-- CPU Interrupts
+      MTIME_IRQ   : in  std_logic;
+      MSW_IRQ     : in  std_logic;
+      MEXT_IRQ    : in  std_logic;
+
+      XIRQ        : in  std_logic_vector(31 downto 0)
    );
 end entity top;
 
@@ -361,6 +368,14 @@ architecture syn of top is
 	-- signal gpio             : std_ulogic_vector(63 downto 0);
 	signal gpio_o_signal : std_ulogic_vector(15 downto 0);
 	signal gpio_i_signal : std_ulogic_vector(15 downto 0);
+	
+	   -- XIRQ
+   signal xirq_i_signal           : std_ulogic_vector(31 downto 0);
+
+   -- CPU interrupts
+   signal mtime_irq_i_signal     : std_ulogic;
+   signal msw_irq_i_signal       : std_ulogic;
+   signal mext_irq_i_signal      : std_ulogic;
 
 begin
 
@@ -457,7 +472,16 @@ begin
          -- primary UART0 (available if IO_UART0_EN = true) --
          uart0_txd_o   => UART0_TXD,                        -- UART0 send data
          uart0_rxd_i   => UART0_RXD,                         -- UART0 receive data
-			pwm_o(3 downto 0)         => PWM                   -- pwm channels
+			pwm_o(3 downto 0)         => PWM,                   -- pwm channels
+
+         -- XIRQ (available if XIRQ_NUM_CH > 0) --
+         xirq_i     => xirq_i_signal,                            -- IRQ channels
+
+         -- CPU interrupts --
+         mtime_irq_i                  => mtime_irq_i_signal, -- machine timer interrupt, available if IO_MTIME_EN = false
+         msw_irq_i                    => msw_irq_i_signal,   -- machine software interrupt
+         mext_irq_i                   => mext_irq_i_signal   -- machine external interrupt
+		
 		);
 
 
@@ -471,6 +495,11 @@ begin
 	
 	gpio_i_signal <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
 	GPIO_o <= To_StdLogicVector( gpio_o_signal(2 downto 0) );
+	
+	-- CPU interrupts set to zero
+   mtime_irq_i_signal <= MTIME_IRQ;
+   msw_irq_i_signal   <= MSW_IRQ;
+   mext_irq_i_signal  <= MEXT_IRQ;
 
 end architecture syn;
 
