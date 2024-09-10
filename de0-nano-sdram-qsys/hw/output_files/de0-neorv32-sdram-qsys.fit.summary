@@ -1,0 +1,16 @@
+Fitter Status : Successful - Tue Sep 10 19:59:04 2024
+Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
+Revision Name : de0-neorv32-sdram-qsys
+Top-level Entity Name : top
+Family : Cyclone IV E
+Device : EP4CE22F17C6
+Timing Models : Final
+Total logic elements : 5,091 / 22,320 ( 23 % )
+    Total combinational functions : 4,731 / 22,320 ( 21 % )
+    Dedicated logic registers : 2,427 / 22,320 ( 11 % )
+Total registers : 2427
+Total pins : 73 / 154 ( 47 % )
+Total virtual pins : 0
+Total memory bits : 428,032 / 608,256 ( 70 % )
+Embedded Multiplier 9-bit elements : 7 / 132 ( 5 % )
+Total PLLs : 1 / 4 ( 25 % )

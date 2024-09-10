@@ -1,0 +1,14 @@
+Analysis & Synthesis Status : Successful - Tue Sep 10 19:58:41 2024
+Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
+Revision Name : de0-neorv32-sdram-qsys
+Top-level Entity Name : top
+Family : Cyclone IV E
+Total logic elements : 5,311
+    Total combinational functions : 4,726
+    Dedicated logic registers : 2,474
+Total registers : 2474
+Total pins : 73
+Total virtual pins : 0
+Total memory bits : 428,032
+Embedded Multiplier 9-bit elements : 7
+Total PLLs : 1
