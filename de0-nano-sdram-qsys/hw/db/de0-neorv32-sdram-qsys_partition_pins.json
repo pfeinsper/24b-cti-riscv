@@ -1,0 +1,149 @@
+{
+	"partitions" : [
+		{
+			"name" : "Top",
+			"pins" : [
+				{
+					"name" : "TDO_o",
+					"strict" : false
+				},
+				{
+					"name" : "LED[0]",
+					"strict" : false
+				},
+				{
+					"name" : "LED[1]",
+					"strict" : false
+				},
+				{
+					"name" : "LED[2]",
+					"strict" : false
+				},
+				{
+					"name" : "LED[3]",
+					"strict" : false
+				},
+				{
+					"name" : "LED[4]",
+					"strict" : false
+				},
+				{
+					"name" : "LED[5]",
+					"strict" : false
+				},
+				{
+					"name" : "LED[6]",
+					"strict" : false
+				},
+				{
+					"name" : "LED[7]",
+					"strict" : false
+				},
+				{
+					"name" : "UART0_TXD",
+					"strict" : false
+				},
+				{
+					"name" : "PWM[0]",
+					"strict" : false
+				},
+				{
+					"name" : "PWM[1]",
+					"strict" : false
+				},
+				{
+					"name" : "PWM[2]",
+					"strict" : false
+				},
+				{
+					"name" : "PWM[3]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_o[0]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_o[1]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_o[2]",
+					"strict" : false
+				},
+				{
+					"name" : "TDI_i",
+					"strict" : false
+				},
+				{
+					"name" : "KEY[0]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[0]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[1]",
+					"strict" : false
+				},
+				{
+					"name" : "MEXT_IRQ",
+					"strict" : false
+				},
+				{
+					"name" : "MSW_IRQ",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[8]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[9]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[12]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[11]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[6]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[10]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[7]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[3]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[5]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[2]",
+					"strict" : false
+				},
+				{
+					"name" : "GPIO_i[4]",
+					"strict" : false
+				},
+				{
+					"name" : "UART0_RXD",
+					"strict" : false
+				}
+			]
+		}
+	]
+}

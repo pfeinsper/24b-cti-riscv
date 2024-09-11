@@ -85,13 +85,6 @@ entity top is
       --
 		PWM          : out std_ulogic_vector(3 downto 0);
 
-      -- CPU Interrupts
-      MTIME_IRQ   : in  std_logic;
-      MSW_IRQ     : in  std_logic;
-      MEXT_IRQ    : in  std_logic;
-
-      XIRQ        : in  std_logic_vector(31 downto 0);
-
 		--
       -- GPIO
       --
@@ -463,11 +456,7 @@ begin
 			IO_GPTMR_EN                  => true,              -- implement general purpose timer (GPTMR)?
 
          -- External Interrupts Controller (XIRQ) --
-         XIRQ_NUM_CH                  => 8,                 -- number of external IRQ channels (0..32)
-         -- set to edge and rising for all channels
-         XIRQ_TRIGGER_TYPE            => (others => '1'),   -- trigger type: 0=level, 1=edge
-         XIRQ_TRIGGER_POLARITY        => (others => '1')    -- trigger polarity: 0=low-level/falling-edge, 1=high-level/rising-edge
-      
+         XIRQ_NUM_CH                  => 8                 -- number of external IRQ channels (0..32)
          
 		)
       port map (

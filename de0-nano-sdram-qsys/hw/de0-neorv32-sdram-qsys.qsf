@@ -230,17 +230,16 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[3]
 
 
 
-
 #============================================================
 # GPIO
 #============================================================
 set_location_assignment PIN_D3 -to GPIO_o[0]
 set_location_assignment PIN_C3 -to GPIO_o[1]
 set_location_assignment PIN_A2 -to GPIO_o[2]
-set_location_assignment PIN_A3 -to GPIO_o[3]
-set_location_assignment PIN_B3 -to GPIO_o[4]
-set_location_assignment PIN_B4 -to GPIO_o[5]
 
+set_location_assignment PIN_A3 -to GPIO_i[0]
+set_location_assignment PIN_B3 -to GPIO_i[1]
+set_location_assignment PIN_B4 -to GPIO_i[2]
 set_location_assignment PIN_A4 -to GPIO_i[3]
 set_location_assignment PIN_B5 -to GPIO_i[4]
 set_location_assignment PIN_A5 -to GPIO_i[5]
@@ -255,10 +254,10 @@ set_location_assignment PIN_C6 -to GPIO_i[12]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_o[0]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_o[1]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_o[2]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_o[3]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_o[4]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_o[5]
 
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_i[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_i[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_i[2]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_i[3]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_i[4]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_i[5]
@@ -273,10 +272,10 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_i[12]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_o[0]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_o[1]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_o[2]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_o[3]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_o[4]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_o[5]
 
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[1]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[2]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[3]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[4]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[5]
@@ -287,6 +286,11 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[9]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[10]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[11]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to GPIO_i[12]
+
+
+#set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[0]
+#set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[1]
+#set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[2]
 
 
 #============================================================
@@ -370,8 +374,8 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to KEY[1]
 # UART0
 #============================================================
 
-set_location_assignment PIN_N14 -to UART0_TXD
-set_location_assignment PIN_L14 -to UART0_RXD
+set_location_assignment PIN_J14 -to UART0_TXD
+set_location_assignment PIN_J13 -to UART0_RXD
 
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART0_TXD
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART0_RXD
@@ -387,4 +391,5 @@ set_global_assignment -name EDA_SIMULATION_TOOL "<None>"
 set_global_assignment -name QIP_FILE src/pll/pll_sys.qip
 set_global_assignment -name QIP_FILE src/neorv32.qip
 set_global_assignment -name VHDL_FILE src/top.vhd
+
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
