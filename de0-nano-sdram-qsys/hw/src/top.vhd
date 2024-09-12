@@ -58,7 +58,6 @@ entity top is
       --
       -- JTAG TAP
       --
-      nTRST_i     : in  std_logic;
       TCK_i       : in  std_logic;
       TDI_i       : in  std_logic;
       TDO_o       : out std_logic;
@@ -91,9 +90,9 @@ entity top is
 		PWM          : out std_ulogic_vector(3 downto 0);
 
       -- CPU Interrupts
-      MTIME_IRQ   : in  std_logic;
+      -- MTIME_IRQ   : in  std_logic;
       MSW_IRQ     : in  std_logic;
-      MEXT_IRQ    : in  std_logic;
+      -- MEXT_IRQ    : in  std_logic;
 
       XIRQ        : in  std_logic_vector(31 downto 0);
 
@@ -106,8 +105,6 @@ entity top is
       GPIO_2      : out std_logic_vector(12 downto 0);
       GPIO_2_IN   : in  std_logic_vector(2 downto 0);
 
-      Sanity_Check : out std_logic;
-      
 
       ADC_SADDR  : out std_logic;
       ADC_CS_N   : out std_logic;
@@ -393,7 +390,6 @@ architecture syn of top is
    --------------------------------------------------------
 
    signal sys_clk          : std_logic := '0';
-	signal sys_clk_n        : std_logic := '0';
    signal pll_locked       : std_logic := '0';
    signal reset            : std_logic := '0';
    signal reset_s1         : std_logic := '1';
@@ -424,8 +420,6 @@ architecture syn of top is
    signal wSPI_CLK   : std_logic;
    signal wSPI_CLK_n : std_logic;
 
-
-
 begin
 
    --
@@ -435,12 +429,14 @@ begin
       port map (
          inclk0 => CLOCK_50,
          c0     => sys_clk,
-         c1     => sys_clk_n,        
+         c1     => open,        
          locked => pll_locked
       );
 
-       -- Instantiate SPIPLL module
-   U0: SPIPLL
+   --
+   -- SPIPLL module
+   --
+   inst_spipll: SPIPLL
        port map (
            inclk0 => CLOCK_50,
            c0     => wSPI_CLK,
@@ -473,14 +469,13 @@ begin
 
    -- The deassert edge is now synchronized
    sys_rst <= reset_s3;
-
    clk_i  <= sys_clk;
    rstn_i <= not sys_rst;
 
    --
    -- ADC Controller
    --
-   U1: ADC_CTRL
+   adc_ctrl_inst: ADC_CTRL
         port map (
          -- reset
             iRST     => KEY(0),
@@ -533,9 +528,6 @@ begin
 
          -- External Interrupts Controller (XIRQ) --
          XIRQ_NUM_CH                  => 8                 -- number of external IRQ channels (0..32)
-         -- set to edge and rising for all channels
-      
-         
 		)
       port map (
          -- Global control --
@@ -561,20 +553,15 @@ begin
          xirq_i     => xirq_i_signal,                            -- IRQ channels
 
          -- CPU interrupts --
-         mtime_irq_i                  => mtime_irq_i_signal, -- machine timer interrupt, available if IO_MTIME_EN = false
+         -- mtime_irq_i                  => mtime_irq_i_signal, -- machine timer interrupt, available if IO_MTIME_EN = false
          msw_irq_i                    => msw_irq_i_signal,   -- machine software interrupt
          mext_irq_i                   => mext_irq_i_signal   -- machine external interrupt
 		);
-
-
-
-
    --------------------------------------------------------
    -- Output/Input signals
    --------------------------------------------------------
-   LED <= ADC_OUT;
-   -- LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
-   -- Sanity_Check <= Wspi_CLK;
+   --LED <= ADC_OUT;
+   LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
 
    -- ADC
    iGO_signal <= KEY(1);
@@ -584,16 +571,14 @@ begin
    -- xirq_i_signal <= To_StduLogicVector(XIRQ);
    -- xirq_i_signal(4 downto 0) <= gpio_o_signal(4 downto 0);
    -- xirq_i_signal(31 downto 5) <= (others => '0'); -- CPU interrupts set to zero
-
-   -- GPIO_pin <= To_StdLogicVector( gpio(31 downto 16) );
 	
 	gpio_i_signal <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
 	GPIO_o <= To_StdLogicVector( gpio_o_signal(2 downto 0) );
 	
 	-- CPU interrupts set to zero
-   mtime_irq_i_signal <= MTIME_IRQ;
+   -- mtime_irq_i_signal <= MTIME_IRQ;
    msw_irq_i_signal   <= MSW_IRQ;
-   mext_irq_i_signal  <= MEXT_IRQ;
+   mext_irq_i_signal  <= 'L';--MEXT_IRQ;
 
 end architecture syn;
 
