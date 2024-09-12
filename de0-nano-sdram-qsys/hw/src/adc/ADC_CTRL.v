@@ -17,7 +17,7 @@ input				iCLK;
 input				iCLK_n;
 input				iGO;
 input	[2:0]		iCH;
-output	[7:0]		oLED;
+output	[11:0]		oLED;
 
 output				oDIN;
 output				oCS_n;
@@ -31,7 +31,7 @@ reg					sclk;
 reg		[3:0]		cont;
 reg		[3:0]		m_cont;
 reg		[11:0]		adc_data;
-reg		[7:0]		led;
+reg		[11:0]		led;
 
 assign	oCS_n		=	~go_en;
 assign	oSCLK		=	(go_en)? iCLK:1;
@@ -123,7 +123,7 @@ begin
 			else if (m_cont == 15)
 				adc_data[0]		<=	iDOUT;
 			else if (m_cont == 1)
-				led	<=	adc_data[11:4];
+				led	<=	adc_data[11:0];
 		end
 	end
 end
