@@ -75,6 +75,11 @@ entity top is
       KEY         : in  std_logic_vector(1 downto 0);
 
       --
+      -- Switches
+      --
+      SW         : in  std_logic_vector(3 downto 0);
+
+      --
       -- UART
       --
       UART0_TXD   : out std_logic;
@@ -85,18 +90,29 @@ entity top is
       --
 		PWM          : out std_ulogic_vector(3 downto 0);
 
+      -- CPU Interrupts
+      MTIME_IRQ   : in  std_logic;
+      MSW_IRQ     : in  std_logic;
+      MEXT_IRQ    : in  std_logic;
+
+      XIRQ        : in  std_logic_vector(31 downto 0);
+
 		--
       -- GPIO
       --
 		GPIO_i	    : in std_logic_vector(12 downto 0);
 		GPIO_o		 :	out std_logic_vector(2 downto 0);
-		
-		-- CPU Interrupts
-      MTIME_IRQ   : in  std_logic;
-      MSW_IRQ     : in  std_logic;
-      MEXT_IRQ    : in  std_logic;
 
-      XIRQ        : in  std_logic_vector(31 downto 0)
+      GPIO_2      : out std_logic_vector(12 downto 0);
+      GPIO_2_IN   : in  std_logic_vector(2 downto 0);
+
+      Sanity_Check : out std_logic;
+      
+
+      ADC_SADDR  : out std_logic;
+      ADC_CS_N   : out std_logic;
+      ADC_SCLK   : out std_logic;
+      ADC_SDAT   : in  std_logic
    );
 end entity top;
 
@@ -131,6 +147,14 @@ architecture syn of top is
          locked : out std_logic
       );
    end component pll_sys;
+	
+	component SPIPLL is
+        port (
+            inclk0 : in  std_logic;
+            c0     : out std_logic;
+            c1     : out std_logic
+        );
+    end component;
 
    --
    -- neorv32 top
@@ -347,12 +371,29 @@ architecture syn of top is
      );
    end component neorv32_top;
 
+   
+   component ADC_CTRL is
+        port (
+            iRST    : in  std_logic;
+            iCLK    : in  std_logic;
+            iCLK_n  : in  std_logic;
+            iGO     : in  std_logic;
+            iCH     : in  std_logic_vector(2 downto 0);
+            oLED    : out std_logic_vector(7 downto 0);
+            oDIN    : out std_logic;
+            oCS_n   : out std_logic;
+            oSCLK   : out std_logic;
+            iDOUT   : in  std_logic
+        );
+   end component;
+
 
    --------------------------------------------------------
    -- Define all local signals here
    --------------------------------------------------------
 
    signal sys_clk          : std_logic := '0';
+	signal sys_clk_n        : std_logic := '0';
    signal pll_locked       : std_logic := '0';
    signal reset            : std_logic := '0';
    signal reset_s1         : std_logic := '1';
@@ -376,6 +417,15 @@ architecture syn of top is
    signal msw_irq_i_signal       : std_ulogic;
    signal mext_irq_i_signal      : std_ulogic;
 
+   signal iGO_signal : std_logic;
+   signal iCH_signal : std_logic_vector(2 downto 0);
+   signal ADC_OUT    : std_logic_vector(7 downto 0);
+
+   signal wSPI_CLK   : std_logic;
+   signal wSPI_CLK_n : std_logic;
+
+
+
 begin
 
    --
@@ -385,9 +435,17 @@ begin
       port map (
          inclk0 => CLOCK_50,
          c0     => sys_clk,
-         c1     => open,        -- Leave c1 unconnected
+         c1     => sys_clk_n,        
          locked => pll_locked
       );
+
+       -- Instantiate SPIPLL module
+   U0: SPIPLL
+       port map (
+           inclk0 => CLOCK_50,
+           c0     => wSPI_CLK,
+           c1     => wSPI_CLK_n
+       );
 
    --
    -- In general it is a bad idea to use an asynchhronous Reset signal.
@@ -418,6 +476,24 @@ begin
 
    clk_i  <= sys_clk;
    rstn_i <= not sys_rst;
+
+   --
+   -- ADC Controller
+   --
+   U1: ADC_CTRL
+        port map (
+         -- reset
+            iRST     => KEY(0),
+            iCLK     => wSPI_CLK,
+            iCLK_n   => wSPI_CLK_n,
+            iGO      => iGO_signal,
+            iCH      => iCH_signal,
+            oLED		=> ADC_OUT,
+            oDIN     => ADC_SADDR,
+            oCS_n    => ADC_CS_N,
+            oSCLK    => ADC_SCLK,
+            iDOUT    => ADC_SDAT
+        );
 
 
    --
@@ -457,6 +533,8 @@ begin
 
          -- External Interrupts Controller (XIRQ) --
          XIRQ_NUM_CH                  => 8                 -- number of external IRQ channels (0..32)
+         -- set to edge and rising for all channels
+      
          
 		)
       port map (
@@ -494,8 +572,13 @@ begin
    --------------------------------------------------------
    -- Output/Input signals
    --------------------------------------------------------
+   LED <= ADC_OUT;
+   -- LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
+   -- Sanity_Check <= Wspi_CLK;
 
-   LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
+   -- ADC
+   iGO_signal <= KEY(1);
+   iCH_signal <= SW(2 downto 0);
 
    -- Testing configurations for XIRQ
    -- xirq_i_signal <= To_StduLogicVector(XIRQ);
