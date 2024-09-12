@@ -101,7 +101,7 @@ entity top is
       -- GPIO
       --
 		GPIO_i	    : in std_logic_vector(12 downto 0);
-		GPIO_o		 :	out std_logic_vector(2 downto 0);
+		GPIO_o		 :	out std_logic_vector(12 downto 0);
 
       GPIO_2      : out std_logic_vector(12 downto 0);
       GPIO_2_IN   : in  std_logic_vector(2 downto 0);
@@ -379,7 +379,7 @@ architecture syn of top is
             iCLK_n  : in  std_logic;
             iGO     : in  std_logic;
             iCH     : in  std_logic_vector(2 downto 0);
-            oLED    : out std_logic_vector(7 downto 0);
+            oLED    : out std_logic_vector(11 downto 0);
             oDIN    : out std_logic;
             oCS_n   : out std_logic;
             oSCLK   : out std_logic;
@@ -419,7 +419,7 @@ architecture syn of top is
 
    signal iGO_signal : std_logic;
    signal iCH_signal : std_logic_vector(2 downto 0);
-   signal ADC_OUT    : std_logic_vector(7 downto 0);
+   signal ADC_OUT    : std_logic_vector(11 downto 0);
 
    signal wSPI_CLK   : std_logic;
    signal wSPI_CLK_n : std_logic;
@@ -572,8 +572,8 @@ begin
    --------------------------------------------------------
    -- Output/Input signals
    --------------------------------------------------------
-   LED <= ADC_OUT;
-   -- LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
+   -- LED <= ADC_OUT(7 downto 0);
+   LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
    -- Sanity_Check <= Wspi_CLK;
 
    -- ADC
@@ -588,7 +588,7 @@ begin
    -- GPIO_pin <= To_StdLogicVector( gpio(31 downto 16) );
 	
 	gpio_i_signal <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
-	GPIO_o <= To_StdLogicVector( gpio_o_signal(2 downto 0) );
+	GPIO_o <= To_StdLogicVector( gpio_o_signal(12 downto 0) );
 	
 	-- CPU interrupts set to zero
    mtime_irq_i_signal <= MTIME_IRQ;
