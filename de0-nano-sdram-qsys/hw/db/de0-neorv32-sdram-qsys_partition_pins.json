@@ -72,11 +72,43 @@
 					"strict" : false
 				},
 				{
+					"name" : "ADC_SADDR",
+					"strict" : false
+				},
+				{
+					"name" : "ADC_CS_N",
+					"strict" : false
+				},
+				{
+					"name" : "ADC_SCLK",
+					"strict" : false
+				},
+				{
 					"name" : "TDI_i",
 					"strict" : false
 				},
 				{
+					"name" : "SW[0]",
+					"strict" : false
+				},
+				{
+					"name" : "SW[1]",
+					"strict" : false
+				},
+				{
+					"name" : "SW[2]",
+					"strict" : false
+				},
+				{
+					"name" : "KEY[1]",
+					"strict" : false
+				},
+				{
 					"name" : "KEY[0]",
+					"strict" : false
+				},
+				{
+					"name" : "ADC_SDAT",
 					"strict" : false
 				},
 				{

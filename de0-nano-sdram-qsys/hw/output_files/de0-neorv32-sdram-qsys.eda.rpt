@@ -1,0 +1,80 @@
+EDA Netlist Writer report for de0-neorv32-sdram-qsys
+Thu Sep 12 08:37:48 2024
+Quartus Prime Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
+
+
+---------------------
+; Table of Contents ;
+---------------------
+  1. Legal Notice
+  2. EDA Netlist Writer Summary
+  3. EDA Netlist Writer Messages
+
+
+
+----------------
+; Legal Notice ;
+----------------
+Copyright (C) 2020  Intel Corporation. All rights reserved.
+Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details, at
+https://fpgasoftware.intel.com/eula.
+
+
+
++---------------------------------------------------------------+
+; EDA Netlist Writer Summary                                    ;
++---------------------------+-----------------------------------+
+; EDA Netlist Writer Status ; Failed - Thu Sep 12 08:37:48 2024 ;
+; Revision Name             ; de0-neorv32-sdram-qsys            ;
+; Top-level Entity Name     ; top                               ;
+; Family                    ; Cyclone IV E                      ;
++---------------------------+-----------------------------------+
+
+
++-----------------------------+
+; EDA Netlist Writer Messages ;
++-----------------------------+
+Info: *******************************************************************
+Info: Running Quartus Prime EDA Netlist Writer
+    Info: Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
+    Info: Copyright (C) 2020  Intel Corporation. All rights reserved.
+    Info: Your use of Intel Corporation's design tools, logic functions 
+    Info: and other software and tools, and any partner logic 
+    Info: functions, and any output files from any of the foregoing 
+    Info: (including device programming or simulation files), and any 
+    Info: associated documentation or information are expressly subject 
+    Info: to the terms and conditions of the Intel Program License 
+    Info: Subscription Agreement, the Intel Quartus Prime License Agreement,
+    Info: the Intel FPGA IP License Agreement, or other applicable license
+    Info: agreement, including, without limitation, that your use is for
+    Info: the sole purpose of programming logic devices manufactured by
+    Info: Intel and sold by Intel or its authorized distributors.  Please
+    Info: refer to the applicable agreement for further details, at
+    Info: https://fpgasoftware.intel.com/eula.
+    Info: Processing started: Thu Sep 12 08:37:48 2024
+Info: Command: quartus_eda --gen_testbench --tool=modelsim_oem --format=vhdl --write_settings_files=off de0-neorv32-sdram-qsys -c de0-neorv32-sdram-qsys --vector_source=C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/output_files/Waveform2.vwf --testbench_file=C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/simulation/qsim/output_files/Waveform2.vwf.vht
+Info (119006): Selected device EP4CE22F17C6 for design "de0-neorv32-sdram-qsys"
+Info (15535): Implemented PLL "SPIPLL:U0|altpll:altpll_component|SPIPLL_altpll:auto_generated|pll1" as Cyclone IV E PLL type File: C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/db/spipll_altpll.v Line: 44
+    Info (15099): Implementing clock multiplication of 1, clock division of 25, and phase shift of 0 degrees (0 ps) for SPIPLL:U0|altpll:altpll_component|SPIPLL_altpll:auto_generated|wire_pll1_clk[0] port File: C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/db/spipll_altpll.v Line: 44
+Info (15535): Implemented PLL "pll_sys:inst_pll_sys|altpll:altpll_component|pll_sys_altpll:auto_generated|pll1" as Cyclone IV E PLL type File: C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/db/pll_sys_altpll.v Line: 51
+    Info (15099): Implementing clock multiplication of 2, clock division of 1, and phase shift of 0 degrees (0 ps) for pll_sys:inst_pll_sys|altpll:altpll_component|pll_sys_altpll:auto_generated|wire_pll1_clk[0] port File: C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/db/pll_sys_altpll.v Line: 51
+Warning (18236): Number of processors has not been specified which may cause overloading on shared machines.  Set the global assignment NUM_PARALLEL_PROCESSORS in your QSF to an appropriate value for best performance.
+Error (199013): HDL output file name "C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/simulation/qsim/output_files/Waveform2.vwf.vht" used with --testbench_file option contains a non-existent directory path
+Error: Quartus Prime EDA Netlist Writer was unsuccessful. 1 error, 1 warning
+    Error: Peak virtual memory: 4660 megabytes
+    Error: Processing ended: Thu Sep 12 08:37:48 2024
+    Error: Elapsed time: 00:00:00
+    Error: Total CPU time (on all processors): 00:00:00
+
+

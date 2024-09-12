@@ -4,7 +4,7 @@ JedecChain;
 	DefaultMfr(6E);
 
 	P ActionCode(Cfg)
-		Device PartName(EP4CE22F17) Path("/home/victor/insper/capstone/24b-cti-riscv/de0-nano-sdram-qsys/hw/output_files/") File("de0-neorv32-sdram-qsys.sof") MfrSpec(OpMask(1));
+		Device PartName(EP4CE22F17) Path("C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/output_files/") File("de0-neorv32-sdram-qsys.sof") MfrSpec(OpMask(1));
 
 ChainEnd;
 
