@@ -94,8 +94,8 @@ int main() {
   }
 
   // Intro
-  neorv32_uart0_puts("General purpose timer (GPTMR) demo Program.\n"
-                     "Toggles GPIO.output(0) at 1Hz using the GPTMR interrupt.\n\n");
+  neorv32_uart0_puts("Basic Motor Spinning.\n"
+                     "Activates the control interruption at 100Hz using the GPTMR interrupt.\n\n");
 
 
   // clear GPIO output port
