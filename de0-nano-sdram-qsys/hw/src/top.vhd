@@ -402,8 +402,8 @@ architecture syn of top is
    signal rstn_i           : std_logic;
 	
 	-- signal gpio             : std_ulogic_vector(63 downto 0);
-	signal gpio_o_signal : std_ulogic_vector(15 downto 0);
-	signal gpio_i_signal : std_ulogic_vector(15 downto 0);
+	signal gpio_o_signal : std_ulogic_vector(32 downto 0);
+	signal gpio_i_signal : std_ulogic_vector(32 downto 0);
 
    -- XIRQ
    signal xirq_i_signal           : std_ulogic_vector(31 downto 0);
@@ -518,7 +518,7 @@ begin
          MEM_INT_DMEM_SIZE            => MEM_INT_DMEM_SIZE, -- size of processor-internal data memory in bytes
 
          -- Processor peripherals --
-         IO_GPIO_NUM                  => 16,                 -- number of GPIO input/output pairs (0..64)
+         IO_GPIO_NUM                  => 33,                 -- number of GPIO input/output pairs (0..64)
          IO_MTIME_EN                  => true,              -- implement machine system timer (MTIME)?
          IO_UART0_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART0)?
 			IO_TWI_EN                    => true,              -- implement two-wire interface (TWI)?
@@ -541,8 +541,8 @@ begin
          jtag_tms_i    => TMS_i,                            -- mode select
 
          -- GPIO (available if IO_GPIO_EN = true) --
-         gpio_o(15 downto 0) => gpio_o_signal,                     -- parallel output
-         gpio_i(15 downto 0) => gpio_i_signal,							-- parallel input                            -- parallel input
+         gpio_o(32 downto 0) => gpio_o_signal(32 downto 0),                     -- parallel output
+         gpio_i(32 downto 0) => gpio_i_signal(32 downto 0),							-- parallel input                            -- parallel input
 
          -- primary UART0 (available if IO_UART0_EN = true) --
          uart0_txd_o   => UART0_TXD,                        -- UART0 send data
@@ -560,19 +560,23 @@ begin
    --------------------------------------------------------
    -- Output/Input signals
    --------------------------------------------------------
-   --LED <= ADC_OUT;
-   LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
+   LED <= ADC_OUT(7 downto 0);
+   -- LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
 
    -- ADC
-   iGO_signal <= KEY(1);
-   iCH_signal <= SW(2 downto 0);
+   -- iGO_signal <= KEY(1);
+   -- iCH_signal <= SW(2 downto 0);
+   iGO_signal <= gpio_o_signal(32);
+   iCH_signal <= To_StdLogicVector(gpio_o_signal(31 downto 29));
+   gpio_i_signal(32 downto 21) <= to_stdulogicvector(ADC_OUT);
+
 
    -- Testing configurations for XIRQ
    -- xirq_i_signal <= To_StduLogicVector(XIRQ);
    -- xirq_i_signal(4 downto 0) <= gpio_o_signal(4 downto 0);
    -- xirq_i_signal(31 downto 5) <= (others => '0'); -- CPU interrupts set to zero
 	
-	gpio_i_signal <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
+	gpio_i_signal(15 downto 0) <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
 	GPIO_o <= To_StdLogicVector( gpio_o_signal(12 downto 0) );
 	
 	-- CPU interrupts set to zero
