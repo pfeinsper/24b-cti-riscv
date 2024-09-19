@@ -41,26 +41,15 @@ int main() {
 
   neorv32_gpio_pin_set(32, 1);
 
-  int cnt = 0;
 
   while (1) {
     // pick the value of the last 12 bits of the gpio input (32 downto 21)
-    uint8_t bit_12 = neorv32_gpio_pin_get(32);
-    uint8_t bit_11 = neorv32_gpio_pin_get(30);
-    uint8_t bit_10 = neorv32_gpio_pin_get(29);
-    uint8_t bit_9 = neorv32_gpio_pin_get(28);
-    uint8_t bit_8 = neorv32_gpio_pin_get(27);
-    uint8_t bit_7 = neorv32_gpio_pin_get(26);
-    uint8_t bit_6 = neorv32_gpio_pin_get(25);
-    uint8_t bit_5 = neorv32_gpio_pin_get(24);
-    uint8_t bit_4 = neorv32_gpio_pin_get(23);
-    uint8_t bit_3 = neorv32_gpio_pin_get(22);
-    uint8_t bit_2 = neorv32_gpio_pin_get(21);
-    uint8_t bit_1 = neorv32_gpio_pin_get(20);
-    uint8_t bit_0 = neorv32_gpio_pin_get(19);
+    uint32_t gpio_in = neorv32_gpio_port_get();
+    // ADC = 12 most significant bits of the gpio input
+    uint32_t adc = gpio_in >> 20; // 32 - 12 = 20
 
     // print the value of the last 12 bits of the gpio input
-    neorv32_uart0_printf("ADC value: %d %d %d %d %d %d %d %d %d %d %d %d\n", bit_12, bit_11, bit_10, bit_9, bit_8, bit_7, bit_6, bit_5, bit_4, bit_3, bit_2, bit_1, bit_0);
+    neorv32_uart0_printf("ADC: %u\n", adc);
 
     // wait a little
     for (volatile int i=0; i<1000000; i++) { }
