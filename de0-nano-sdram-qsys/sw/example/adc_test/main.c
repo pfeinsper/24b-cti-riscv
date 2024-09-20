@@ -39,14 +39,13 @@ int main() {
   // clear GPIO output (set all bits to 0)
   neorv32_gpio_port_set(0);
 
-  neorv32_gpio_pin_set(31, 1);
+  adc_start();
+  adc_select_chanel(0);
 
 
   while (1) {
     // pick the value of the last 12 bits of the gpio input (31 downto 20)
-    uint32_t gpio_in = neorv32_gpio_port_get();
-    // ADC = 12 most significant bits of the gpio input (31 downto 20)
-    uint32_t adc = gpio_in >> 20;
+    uint32_t adc = adc_read();
 
     // print the value of the last 12 bits of the gpio input
     neorv32_uart0_printf("ADC: %u\n", adc);
