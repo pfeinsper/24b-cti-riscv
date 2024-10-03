@@ -1,3 +1,4 @@
 de0-nano-sdram-qsys/hw/db
 de0-nano-sdram-qsys/hw/incremental_db
 de0-nano-sdram-qsys/hw/output_files
+/.venv
