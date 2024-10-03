@@ -244,6 +244,12 @@ void gptmr_firq_handler(void) {
 
     uint32_t adc = adc_read();
     neorv32_uart0_printf("ADC: %u\n", adc);
+
+    // read the gpio
+    uint32_t gpio_in = neorv32_gpio_port_get();
+    // gpio 3 downto 0
+    uint32_t gpio_out = gpio_in & 0xF; // 4 bits
+    neorv32_uart0_printf("GPIO IN: %u\n", gpio_out);
 }
 
 // Handler for the external interrupt channel 0
