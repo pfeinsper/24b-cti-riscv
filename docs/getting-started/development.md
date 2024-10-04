@@ -1,6 +1,12 @@
 # útil para o desenvolvimento.
 
-Se você quer realizar qualquer operação com software para o projeto, siga estes passos:
+## Manuais relevantes:
+
+- [Datasheet do NEORV32](https://stnolting.github.io/neorv32/)
+- [Guia do NEORV32](https://stnolting.github.io/neorv32/ug/)
+- [Manual De0-Nano](../util/DE0_Nano_User_Manual.pdf)
+
+## Como abrir e compilar código C para o RISC-V
 
 1. Abra o projeto no Visual Studio Code.
 2. Aceite a proposta de abrir o projeto no container.
