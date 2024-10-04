@@ -228,6 +228,24 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[1]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[2]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[3]
 
+#============================================================
+# XIRQ
+#============================================================
+
+set_location_assignment PIN_E6 -to XIRQ[0]
+set_location_assignment PIN_D8 -to XIRQ[1]
+set_location_assignment PIN_F8 -to XIRQ[2]
+set_location_assignment PIN_E9 -to XIRQ[3]
+
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XIRQ[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XIRQ[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XIRQ[2]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to XIRQ[3]
+
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to XIRQ[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to XIRQ[1]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to XIRQ[2]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to XIRQ[3]
 
 
 #============================================================

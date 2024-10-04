@@ -560,8 +560,8 @@ begin
    --------------------------------------------------------
    -- Output/Input signals
    --------------------------------------------------------
-   LED <= ADC_OUT(7 downto 0);
-   -- LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
+   -- LED <= ADC_OUT(7 downto 0);
+   LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
 
    -- ADC
    -- iGO_signal <= KEY(1);
@@ -572,7 +572,7 @@ begin
 
 
    -- Testing configurations for XIRQ
-   -- xirq_i_signal <= To_StduLogicVector(XIRQ);
+   xirq_i_signal <= To_StduLogicVector(XIRQ);
    -- xirq_i_signal(4 downto 0) <= gpio_o_signal(4 downto 0);
    -- xirq_i_signal(31 downto 5) <= (others => '0'); -- CPU interrupts set to zero
 	
