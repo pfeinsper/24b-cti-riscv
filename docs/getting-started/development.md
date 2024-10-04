@@ -12,7 +12,7 @@
 2. Aceite a proposta de abrir o projeto no container.
 3. Abra o terminal do Visual Studio Code.
 4. Vá para a pasta de exemplos dentro de sw e escolha um exemplo.
-5. Compile o código C com o comando `make clean all exe`.
+5. Compile o código C com o comando `make clean_all exe`.
 
 Estas etapas gerarão um arquivo binário que pode ser carregado no RISC-V.
 
