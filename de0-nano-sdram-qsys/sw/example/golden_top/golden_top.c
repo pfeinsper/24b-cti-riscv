@@ -61,14 +61,13 @@ uint8_t up = 1;
 uint8_t ch = 0;
 /**@}*/
 
-// uint8_t led_state[6] = {0, 1, 0, 1, 0, 1};
-
+// things for the motor control
 uint8_t in_seq[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 1, 0},
                         {0, 0, 1}, {0, 0, 1}, {1, 0, 0}};
 uint8_t en_seq[6][3] = {{1, 0, 1}, {0, 1, 1}, {1, 1, 0},
                         {1, 0, 1}, {0, 1, 1}, {1, 1, 0}};
-
 volatile uint32_t counter = 0;
+/**@{*/
 
 /** Maximum PWM output intensity (8-bit) */
 #define PWM_MAX 255
@@ -78,7 +77,6 @@ volatile uint32_t counter = 0;
 
 
 // Prototypes
-
 void gptmr_firq_handler(void);
 void xirq_handler_ch0(void);
 
@@ -86,7 +84,7 @@ void xirq_handler_ch0(void);
 
 
 /**********************************************************************//**
- * This program blinks an LED at GPIO.output(0) at 1Hz using the general purpose timer interrupt.
+ * This testes everything that we will use in the project, from the PWM to the GPIO, ADC, GPTMR and XIRQ.
  *
  * @note This program requires the GPTMR unit to be synthesized (and UART0 and GPIO).
  *
@@ -135,9 +133,9 @@ int main() {
   }
 
   // configure per-channel trigger type
-  neorv32_xirq_setup_trigger(0, XIRQ_TRIGGER_EDGE_RISING); // rising-edge
+  neorv32_xirq_setup_trigger(0, XIRQ_TRIGGER_EDGE_RISING); // rising-edge for channel 0
 
-  // install handler functions for XIRQ channel 0,1,2,3. note that these functions are "normal" functions!
+  // install handler functions for XIRQ channel 0. note that these functions are "normal" functions!
   // (details: these are "third-level" interrupt handlers)
   // neorv32_xirq_install() also enables the specified XIRQ channel and clears any pending interrupts
   err_cnt = 0;
@@ -210,35 +208,37 @@ void gptmr_firq_handler(void) {
 
   neorv32_gptmr_irq_ack(); // clear/ack pending FIRQ
 
+  // motor control
   neorv32_gpio_pin_set(IN1, in_seq[counter][0]);
   neorv32_gpio_pin_set(IN2, in_seq[counter][1]);
   neorv32_gpio_pin_set(IN3, in_seq[counter][2]);
   neorv32_gpio_pin_set(EN1, en_seq[counter][0]);
   neorv32_gpio_pin_set(EN2, en_seq[counter][1]);
   neorv32_gpio_pin_set(EN3, en_seq[counter][2]);
-
   counter = (counter + 1) % 6;
+  /**@}*/
 
-      // update duty cycle
-    if (up) {
-      if (pwm == PWM_MAX) {
-        up = 0; // invert direction
-      }
-      else {
-        pwm++; // can be any value to control the speed
-      }
+  // update duty cycle of PWM channels
+  if (up) {
+    if (pwm == PWM_MAX) {
+      up = 0; // invert direction
     }
     else {
-      if (pwm == 0) {
-        //ch = (ch + 1) & 3; // goto next channel
-        up = 1; // invert direction
-      }
-      else {
-        pwm--; // can be any value to control the speed
-      }
+      pwm++; // can be any value to control the speed
     }
+  }
+  else {
+    if (pwm == 0) {
+      //ch = (ch + 1) & 3; // goto next channel
+      up = 1; // invert direction
+    }
+    else {
+      pwm--; // can be any value to control the speed
+    }
+  }
 
-    neorv32_pwm_set(ch, pwm); // output new duty cycle
+    // output new duty cycle
+    neorv32_pwm_set(ch, pwm);
     //neorv32_cpu_delay_ms(5); // wait ~5ms --> this is the default way to wait, 
     //but since we are using an interrupt, we don't need to wait here.
 
@@ -252,7 +252,7 @@ void gptmr_firq_handler(void) {
     neorv32_uart0_printf("GPIO IN: %u\n", gpio_out);
 }
 
-// Handler for the external interrupt channel 0
+// Handler for the external interrupt channel 0 (where we will check the Hall sensor)
 void xirq_handler_ch0(void) {
   neorv32_uart0_printf("XIRQ interrupt from channel %i\n", 0);
 }
