@@ -22,14 +22,12 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Executar Compilação com Quartus
-        uses: docker://rodrigoanciaes/cti-24b:v1
-        with:
-          args: |
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/root/workspace \
+            -e PYTHONPATH="/root/workspace/" \
+            rodrigoanciaes/cti-24b:v1 \
             quartus_sh --flow compile /root/workspace/de0-nano-sdram-qsys/hw/de0-neorv32-sdram-qsys.qpf
-        env:
-          PYTHONPATH: "/root/workspace/"
-        volumes:
-          - ${{ github.workspace }}:/root/workspace
 
       - name: Verificar criação do arquivo .sof
         run: |
