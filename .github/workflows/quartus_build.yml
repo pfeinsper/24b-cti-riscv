@@ -3,7 +3,7 @@ name: Quartus CI/CD Pipeline
 on:
   push:
     paths:
-      - '/de0-nano-sdram-qsys/hw**'  # Substitua pelo caminho da pasta que você quer monitorar
+      - '/de0-nano-sdram-qsys/hw/**'
       - '.github/workflows/**'
   workflow_dispatch:
 
@@ -11,12 +11,10 @@ jobs:
   quartus:
     name: Quartus Build and Test
     runs-on: ubuntu-latest
-    container:
-      image: rodrigoanciaes/cti-24b:v1
-      options: --entrypoint /bin/bash -v ${{ github.workspace }}:/root/workspace
-    env:
-      PYTHONPATH: "/root/workspace/"
     steps:
+      - name: Excluir pasta /opt/hostedtoolcache para liberar espaço em disco
+        run: sudo rm -rf /opt/hostedtoolcache
+
       - name: Checkout do código
         uses: actions/checkout@v3
 
@@ -24,12 +22,18 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Executar Compilação com Quartus
-        run: |
-          quartus_sh --flow compile /root/workspace/de0-nano-sdram-qsys/hw/de0-neorv32-sdram-qsys.qpf
+        uses: docker://rodrigoanciaes/cti-24b:v1
+        with:
+          args: |
+            quartus_sh --flow compile /root/workspace/de0-nano-sdram-qsys/hw/de0-neorv32-sdram-qsys.qpf
+        env:
+          PYTHONPATH: "/root/workspace/"
+        volumes:
+          - ${{ github.workspace }}:/root/workspace
 
       - name: Verificar criação do arquivo .sof
         run: |
-          if [ -f "/root/workspace/de0-nano-sdram-qsys/hw/output_files/de0-neorv32-sdram-qsys.sof" ]; then
+          if [ -f "${{ github.workspace }}/de0-nano-sdram-qsys/hw/output_files/de0-neorv32-sdram-qsys.sof" ]; then
             echo "Compilação bem-sucedida."
           else
             echo "Erro na compilação."
