@@ -18,15 +18,16 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v3
 
-      - name: Instalar dependências Python
-        run: pip install -r requirements.txt
+      - name: Construir a Imagem Docker para o CI/CD
+        run: |
+          docker build -t quartus-image-ci:latest -f .devcontainer/Dockerfile .
 
       - name: Executar Compilação com Quartus
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/root/workspace \
             -e PYTHONPATH="/root/workspace/" \
-            rodrigoanciaes/cti-24b:v1 \
+            quartus-image-ci:latest \
             quartus_sh --flow compile /root/workspace/de0-nano-sdram-qsys/hw/de0-neorv32-sdram-qsys.qpf
 
       - name: Verificar criação do arquivo .sof
