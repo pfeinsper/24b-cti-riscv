@@ -15,8 +15,11 @@ jobs:
       - name: Excluir pasta /opt/hostedtoolcache para liberar espaço em disco
         run: sudo rm -rf /opt/hostedtoolcache
 
-      - name: Checkout do código
+      - name: Checkout do código com submódulos
         uses: actions/checkout@v3
+        with:
+          submodules: true    # Clona os submódulos
+          fetch-depth: 0      # Clona o repositório completo
 
       - name: Executar Compilação com Quartus
         run: |
