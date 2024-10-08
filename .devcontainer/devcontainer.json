@@ -1,6 +1,6 @@
 {
     "name": "24-b-cti-risc-v",
-    "image": "rodrigoanciaes/cti-24b:v1",
+    "image": "eduardosmb/quartus-image-ci:latest",
     "postCreateCommand": "pip install -r requirements.txt",
     "containerEnv": {
         "PYTHONPATH": "/root/workspace/"
