@@ -1,0 +1,63 @@
+name: Quartus CI/CD Pipeline
+
+on:
+  push:
+    paths:
+      - '/de0-nano-sdram-qsys/hw/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+jobs:
+  quartus:
+    name: Quartus Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Excluir pasta /opt/hostedtoolcache para liberar espaço em disco
+        run: sudo rm -rf /opt/hostedtoolcache
+
+      - name: Checkout do código com submódulos
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Executar Compilação com Quartus
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/root/workspace \
+            -e PYTHONPATH="/root/workspace/" \
+            eduardosmb/quartus-image-ci:latest \
+            quartus_sh --flow compile /root/workspace/de0-nano-sdram-qsys/hw/de0-neorv32-sdram-qsys.qpf
+
+      - name: Verificar criação do arquivo .sof
+        run: |
+          if [ -f "${{ github.workspace }}/de0-nano-sdram-qsys/hw/output_files/de0-neorv32-sdram-qsys.sof" ]; then
+            echo "Compilação bem-sucedida."
+          else
+            echo "Erro na compilação."
+            exit 1
+          fi
+
+      - name: Criar um Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: sof-release-${{ github.sha }}
+          release_name: Quartus SOF Release
+          draft: false
+          prerelease: false
+
+      - name: Definir o URL de Upload do Release
+        run: echo "UPLOAD_URL=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_ENV
+
+      - name: Upload do arquivo .sof para o Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ env.UPLOAD_URL }}
+          asset_path: ${{ github.workspace }}/de0-nano-sdram-qsys/hw/output_files/de0-neorv32-sdram-qsys.sof
+          asset_name: de0-neorv32-sdram-qsys.sof
+          asset_content_type: application/octet-stream

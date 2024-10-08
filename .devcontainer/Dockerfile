@@ -2,62 +2,65 @@ FROM node:20-slim AS builder
 
 WORKDIR /tmp
 
-RUN apt-get update -qq          \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends    \
-        ca-certificates         \
-        wget                    \
+RUN apt-get update -qq && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    gcc \
+    g++ \
+    clang \
+    libatomic1 \
     && npm install -g vsce
 
 # Base Image
 FROM hdlc/ghdl:yosys AS base
 
-RUN apt-get update -qq              \
-    && apt-get upgrade -y           \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends    \
-        ca-certificates             \
-        git                         \
-        libglib2.0-0                \
-        libmpc-dev                  \
-        libpython3-all-dev          \
-        libtcmalloc-minimal4        \
-        locales                     \
-        make                        \
-        npm                         \
-        python3                     \
-        python3-pip                 \
-        sudo                        \
-        tar                         \
-        wget                        \
-        xauth                       \
-        xvfb                        \
-        xxd                         \
-    && apt-get install -y --no-install-recommends    \
-        autoconf                    \
-        automake                    \
-        autotools-dev               \
-        curl                        \
-        libmpfr-dev                 \
-        libgmp-dev                  \
-        gawk                        \
-        build-essential             \
-        bison                       \
-        flex                        \
-        texinfo                     \
-        gperf                       \
-        libtool                     \
-        patchutils                  \
-        bc                          \
-        zlib1g-dev                  \
-        libexpat-dev                \
-        ninja-build                 \
-        cmake                       \
-        libslirp-dev                \
-        libusb-1.0-0-dev            \
-        libftdi1-dev                \
-        pkg-config                  \
-    && apt-get autoclean            \
-    && apt-get clean                \
-    && apt-get autoremove -y        \
+RUN apt-get update -qq && \
+    apt-get upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    libglib2.0-0 \
+    libmpc-dev \
+    libpython3-all-dev \
+    libtcmalloc-minimal4 \
+    locales \
+    make \
+    npm \
+    python3 \
+    python3-pip \
+    sudo \
+    tar \
+    wget \
+    xauth \
+    xvfb \
+    xxd \
+    autoconf \
+    automake \
+    autotools-dev \
+    curl \
+    libmpfr-dev \
+    libgmp-dev \
+    gawk \
+    build-essential \
+    bison \
+    flex \
+    texinfo \
+    gperf \
+    libtool \
+    patchutils \
+    bc \
+    zlib1g-dev \
+    libexpat-dev \
+    ninja-build \
+    cmake \
+    libslirp-dev \
+    libusb-1.0-0-dev \
+    libftdi1-dev \
+    pkg-config \
+    && apt-get autoclean \
+    && apt-get clean \
+    && apt-get autoremove -y \
     && rm -r /var/lib/apt/lists/*
 
 # Environment setup
@@ -80,36 +83,34 @@ VOLUME /build
 ARG INTEL_CDN="https://downloads.intel.com/akdlm/software/acdsinst"
 
 # Add Quartus installation files
-# ADD ${INTEL_CDN}/23.1std/991/ib_installers/cyclone-23.1std.0.991.qdz                .
-# ADD ${INTEL_CDN}/23.1std/991/ib_installers/cyclone10lp-23.1std.0.991.qdz            .
-ADD ${INTEL_CDN}/23.1std/991/ib_installers/cyclonev-23.1std.0.991.qdz               .
-# ADD ${INTEL_CDN}/23.1std/991/ib_installers/max10-23.1std.0.991.qdz                  .
+ADD ${INTEL_CDN}/23.1std/991/ib_installers/cyclone-23.1std.0.991.qdz .
+ADD ${INTEL_CDN}/23.1std/991/ib_installers/cyclonev-23.1std.0.991.qdz .
 ADD ${INTEL_CDN}/23.1std/991/ib_installers/QuartusLiteSetup-23.1std.0.991-linux.run .
 
 # Fix file permissions and install Quartus Prime Lite
-RUN chmod a+x QuartusLiteSetup-23.1std.0.991-linux.run                                                          \
-    && ./QuartusLiteSetup-23.1std.0.991-linux.run --mode unattended --accept_eula 1 --installdir /opt/intelFPGA \
-    && rm -rf /opt/intelFPGA/uninstall/                                                                         \
-    && rm -rf /tmp/*
+RUN chmod a+x QuartusLiteSetup-23.1std.0.991-linux.run && \
+    ./QuartusLiteSetup-23.1std.0.991-linux.run --mode unattended --accept_eula 1 --installdir /opt/intelFPGA && \
+    rm -rf /opt/intelFPGA/uninstall/ && \
+    rm -rf /tmp/*
 
 # RISC-V Toolchain Installation
 WORKDIR /tmp
 
 # OpenOCD Installation
-RUN git clone --branch v0.11.0 https://github.com/ntfreak/openocd.git /tmp/openocd \
-    && cd /tmp/openocd \
-    && ./bootstrap \
-    && ./configure --prefix=/usr/local \
-    && make -j$(nproc) V=1 \
-    && make install \
-    && rm -rf /tmp/openocd
+RUN git clone --branch v0.11.0 https://github.com/ntfreak/openocd.git /tmp/openocd && \
+    cd /tmp/openocd && \
+    ./bootstrap && \
+    ./configure --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /tmp/openocd
 
-RUN git clone https://github.com/riscv/riscv-gnu-toolchain \
-    && cd riscv-gnu-toolchain \
-    && ./configure --prefix=/opt/riscv --with-arch=rv32imc_zicntr_zfinx --with-abi=ilp32 \
-    && make \
-    && rm -rf /tmp/riscv-gnu-toolchain
-
+# Toolchain installation, disabling GDB and compiling with parallelism
+RUN git clone https://github.com/riscv/riscv-gnu-toolchain && \
+    cd riscv-gnu-toolchain && \
+    ./configure --prefix=/opt/riscv --with-arch=rv32imc_zicntr_zfinx --with-abi=ilp32 --disable-gdb && \
+    make -j$(nproc) && \
+    rm -rf /tmp/riscv-gnu-toolchain
 
 # Set up bash prompt
 RUN echo 'export PS1="\\n\\e[92m\\e[1m\\u@\\h\\e[0m \\e[94m\\w\\n \\e[92m\\e[1m$\\e[0m\\e[0m\\e[39m\\e[49m "' >> ~/.bashrc
