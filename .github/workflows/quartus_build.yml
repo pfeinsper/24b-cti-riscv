@@ -18,16 +18,12 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v3
 
-      - name: Construir a Imagem Docker para o CI/CD
-        run: |
-          docker build -t quartus-image-ci:latest -f .devcontainer/Dockerfile .
-
       - name: Executar Compilação com Quartus
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/root/workspace \
             -e PYTHONPATH="/root/workspace/" \
-            quartus-image-ci:latest \
+            eduardosmb/quartus-image-ci:latest \
             quartus_sh --flow compile /root/workspace/de0-nano-sdram-qsys/hw/de0-neorv32-sdram-qsys.qpf
 
       - name: Verificar criação do arquivo .sof
