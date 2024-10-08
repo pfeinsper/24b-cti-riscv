@@ -49,12 +49,15 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Definir o URL de Upload do Release
+        run: echo "UPLOAD_URL=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_ENV
+
       - name: Upload do arquivo .sof para o Release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ${{ github.workspace }}/de0-nano-sdram-qsys/hw/output_files/de0-neorv32-sdram-qsys.sof
           asset_name: de0-neorv32-sdram-qsys.sof
           asset_content_type: application/octet-stream
