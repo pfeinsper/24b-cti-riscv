@@ -18,8 +18,8 @@ jobs:
       - name: Checkout do código com submódulos
         uses: actions/checkout@v3
         with:
-          submodules: true    # Clona os submódulos
-          fetch-depth: 0      # Clona o repositório completo
+          submodules: true
+          fetch-depth: 0
 
       - name: Executar Compilação com Quartus
         run: |
@@ -37,3 +37,24 @@ jobs:
             echo "Erro na compilação."
             exit 1
           fi
+
+      - name: Criar um Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: sof-release-${{ github.sha }}
+          release_name: Quartus SOF Release
+          draft: false
+          prerelease: false
+
+      - name: Upload do arquivo .sof para o Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/de0-nano-sdram-qsys/hw/output_files/de0-neorv32-sdram-qsys.sof
+          asset_name: de0-neorv32-sdram-qsys.sof
+          asset_content_type: application/octet-stream
