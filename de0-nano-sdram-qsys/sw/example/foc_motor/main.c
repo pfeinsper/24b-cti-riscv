@@ -67,7 +67,7 @@ uint8_t in_seq[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 1, 0},
 uint8_t en_seq[6][3] = {{1, 0, 1}, {0, 1, 1}, {1, 1, 0},
                         {1, 0, 1}, {0, 1, 1}, {1, 1, 0}};
 volatile uint32_t counter = 0;
-volatile float position = 0;
+volatile float_conv_t position = 0;
 /**@{*/
 
 /** Maximum PWM output intensity (8-bit) */
@@ -80,12 +80,12 @@ volatile float position = 0;
 // Prototypes
 void gptmr_firq_handler(void);
 void xirq_handler_ch0(void);
-void align_motor_90_degrees();
+void align_motor_30_degrees();
 
 // set the previous time
 volatile uint64_t previos_time = 0;
 volatile uint64_t current_time = 0;
-volatile float time_diff = 0;
+volatile float_conv_t time_diff = 0;
 
 
 
@@ -192,10 +192,9 @@ int main() {
 
   // config ADC
   adc_start();
-  adc_select_chanel(0);
 
   // align the motor
-  align_motor_90_degrees();
+  align_motor_30_degrees();
 
   previos_time = neorv32_mtime_get_time();
 
@@ -220,6 +219,12 @@ void gptmr_firq_handler(void) {
 
   neorv32_gptmr_irq_ack(); // clear/ack pending FIRQ
 
+  // read the ADC value of the 2 channels
+  adc_select_chanel(0);
+  uint16_t adc_value_0 = adc_read();
+  adc_select_chanel(1);
+  uint16_t adc_value_1 = adc_read();
+
   neorv32_gpio_pin_set(IN1, in_seq[counter][0]);
   neorv32_gpio_pin_set(IN2, in_seq[counter][1]);
   neorv32_gpio_pin_set(IN3, in_seq[counter][2]);
@@ -240,28 +245,28 @@ void xirq_handler_ch0(void) {
   }
   // calculate the time difference
   current_time = neorv32_mtime_get_time();
-  time_diff = (current_time - previos_time) / ((float)neorv32_sysinfo_get_clk());
+  time_diff = (current_time - previos_time) / ((uint64_t)neorv32_sysinfo_get_clk());
   previos_time = current_time;
-  neorv32_uart0_printf("Time diff: %u\n", time_diff);
+ // neorv32_uart0_printf("Time diff: %u\n", time_diff);
 // print the position
-  neorv32_uart0_printf("Position: %u\n", position);
+//  neorv32_uart0_printf("Position: %u\n", position);
 
 }
 
-void align_motor_90_degrees() {
+void align_motor_30_degrees() {
   // align the motor
-    neorv32_gpio_pin_set(IN1, in_seq[1][0]);
-    neorv32_gpio_pin_set(IN2, in_seq[1][1]);
-    neorv32_gpio_pin_set(IN3, in_seq[1][2]);
-    neorv32_gpio_pin_set(EN1, en_seq[1][0]);
-    neorv32_gpio_pin_set(EN2, en_seq[1][1]);
-    neorv32_gpio_pin_set(EN3, en_seq[1][2]);
+    neorv32_gpio_pin_set(IN1, in_seq[0][0]);
+    neorv32_gpio_pin_set(IN2, in_seq[0][1]);
+    neorv32_gpio_pin_set(IN3, in_seq[0][2]);
+    neorv32_gpio_pin_set(EN1, en_seq[0][0]);
+    neorv32_gpio_pin_set(EN2, en_seq[0][1]);
+    neorv32_gpio_pin_set(EN3, en_seq[0][2]);
 
     // disable the motor
     neorv32_gpio_pin_set(EN1, 0);
     neorv32_gpio_pin_set(EN2, 0);
     neorv32_gpio_pin_set(EN3, 0);
 
-    // set position to 90 degrees
-    position = 90;
+    // set position to 30 degrees
+    position = 30;
 }
