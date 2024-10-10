@@ -40,6 +40,9 @@
  **************************************************************************/
 
 #include <neorv32.h>
+#include <float.h>
+#include <math.h>
+#include "neorv32_zfinx_extension_intrinsics.h"
 
 
 /**********************************************************************//**
@@ -67,7 +70,7 @@ uint8_t in_seq[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 1, 0},
 uint8_t en_seq[6][3] = {{1, 0, 1}, {0, 1, 1}, {1, 1, 0},
                         {1, 0, 1}, {0, 1, 1}, {1, 1, 0}};
 volatile uint32_t counter = 0;
-volatile float_conv_t position = 0;
+volatile float_conv_t position;
 /**@{*/
 
 /** Maximum PWM output intensity (8-bit) */
@@ -85,7 +88,7 @@ void align_motor_30_degrees();
 // set the previous time
 volatile uint64_t previos_time = 0;
 volatile uint64_t current_time = 0;
-volatile float_conv_t time_diff = 0;
+volatile float_conv_t time_diff;
 
 
 
@@ -98,9 +101,28 @@ volatile float_conv_t time_diff = 0;
  * @return Should not return;
  **************************************************************************/
 int main() {
+  position.float_value = 0.0;
+  time_diff.float_value = 0.0;
   
   // setup NEORV32 runtime environment (for trap handling)
   neorv32_rte_setup();
+
+    // check if Zfinx extension is implemented at all
+  if ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_ZFINX)) == 0) {
+    neorv32_uart0_puts("Error! <Zfinx> extension not synthesized!\n");
+    return 1;
+  }
+
+
+  // Disable compilation by default
+#ifndef RUN_CHECK
+  #warning Program HAS NOT BEEN COMPILED! Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.
+
+  // inform the user if you are actually executing this
+  neorv32_uart0_printf("ERROR! Program has not been compiled. Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.\n");
+
+  return 1;
+#endif
 
   // setup UART at default baud rate, no interrupts
   neorv32_uart0_setup(BAUD_RATE, 0);
@@ -239,17 +261,17 @@ void gptmr_firq_handler(void) {
 void xirq_handler_ch0(void) {
   
   // add the difference to the position
-  position += 1.8;
-  if (position >= 360) {
-    position = 0;
+  position.float_value = riscv_intrinsic_fadds(position.float_value, 1.8);
+  if (position.float_value >= 360) {
+    neorv32_uart0_printf("completed 1 revolution\n");
+    position.float_value = 0;
   }
   // calculate the time difference
   current_time = neorv32_mtime_get_time();
-  time_diff = (current_time - previos_time) / ((uint64_t)neorv32_sysinfo_get_clk());
+  time_diff.float_value = riscv_emulate_fdivs(current_time - previos_time, neorv32_sysinfo_get_clk());
   previos_time = current_time;
- // neorv32_uart0_printf("Time diff: %u\n", time_diff);
-// print the position
-//  neorv32_uart0_printf("Position: %u\n", position);
+  neorv32_uart0_printf("Time diff: %u\n", time_diff.binary_value);
+  neorv32_uart0_printf("Position: %u\n", position.binary_value);
 
 }
 
@@ -268,5 +290,5 @@ void align_motor_30_degrees() {
     neorv32_gpio_pin_set(EN3, 0);
 
     // set position to 30 degrees
-    position = 30;
+    position.float_value = 30.0;
 }
