@@ -87,7 +87,7 @@ uint8_t en_seq[6][3] = {{1, 0, 1}, {0, 1, 1}, {1, 1, 0},
                         {1, 0, 1}, {0, 1, 1}, {1, 1, 0}};
 /**@{*/
 
-const float_conv_t conversion_factor = { .float_value = 3.3 / 4096 }; // still need to be calculated!!!!!!!!
+const float_conv_t conversion_factor = { .float_value =  0.0008056640625}; // still need to be calculated!!!!!!!!
 
 /** Maximum PWM output intensity (8-bit) */
 #define PWM_MAX 255
@@ -114,7 +114,7 @@ current_ab get_current_ab() {
 current_qd get_clark_transform(current_ab cur_ab){
   current_qd res;
   res.cur_alpha.float_value = cur_ab.cur_a.float_value;
-  res.cur_beta.float_value = riscv_intrinsic_fdivs(cur_ab.cur_a.float_value, sqrt(3) + 2 * cur_ab.cur_b.float_value / sqrt(3));
+  res.cur_beta.float_value = riscv_intrinsic_fdivs(cur_ab.cur_a.float_value, sqrt(3) + riscv_intrinsic_fmuls(2, riscv_intrinsic_fdivs(cur_ab.cur_b.float_value, sqrt(3))));
   return res;
 }
 
@@ -263,7 +263,7 @@ int main() {
       current_angle.float_value = riscv_intrinsic_fadds(current_angle.float_value, 1.8);
 
       // Reset the angle if it exceeds 360 degrees
-      if (current_angle.float_value >= 360.0) {
+      if (!(riscv_intrinsic_flts(360, current_angle.float_value))) {
         current_angle.float_value = riscv_intrinsic_fsubs(current_angle.float_value, 360.0);
       }
 
