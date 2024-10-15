@@ -101,6 +101,7 @@ void gptmr_firq_handler(void);
 void xirq_handler_ch0(void);
 void align_rotor();
 void move_clockwise();
+int foc();
 
 current_ab get_current_ab() {
   current_ab res;
@@ -138,7 +139,7 @@ uint32_t slowdown = 0;
  *
  * @return Should not return;
  **************************************************************************/
-int main() {
+int foc() {
 
   // setup NEORV32 runtime environment (for trap handling)
   neorv32_rte_setup();
