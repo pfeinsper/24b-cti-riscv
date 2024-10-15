@@ -45,6 +45,16 @@
 #include <stdio.h>
 #include "neorv32_zfinx_extension_intrinsics.h"
 
+/* Standard includes. */
+#include <string.h>
+#include <unistd.h>
+
+/* Kernel includes. */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "timers.h"
+
 
 /**********************************************************************//**
  * @name User configuration
@@ -93,6 +103,25 @@ const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // thi
 #define PWM_MAX 255
 /** Number of PWM channels to modulate simultaneously */
 #define NUM_PWM_CHANNELS 4
+
+/* Priorities used by the tasks. */
+#define mainQUEUE_RECEIVE_TASK_PRIORITY         ( tskIDLE_PRIORITY + 2 )
+#define mainQUEUE_SEND_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1 )
+
+/* The rate at which data is sent to the queue.  The 500ms value is converted
+ * to ticks using the pdMS_TO_TICKS() macro. */
+#define mainQUEUE_SEND_FREQUENCY_MS             pdMS_TO_TICKS( 500 )
+
+/* The maximum number items the queue can hold.  The priority of the receiving
+ * task is above the priority of the sending task, so the receiving task will
+ * preempt the sending task and remove the queue items each time the sending task
+ * writes to the queue.  Therefore the queue will never have more than one item in
+ * it at any time, and even with a queue length of 1, the sending task will never
+ * find the queue full. */
+#define mainQUEUE_LENGTH                        ( 1 )
+
+static void vTimerCallback(TimerHandle_t xTimer);
+
 /**@}*/
 
 
@@ -130,6 +159,37 @@ current_qd get_clark_transform(current_ab cur_ab){
 }
 
 uint32_t slowdown = 0;
+
+// Create and start the timer
+void create100HzTimer(void)
+{
+  // print an warning
+  neorv32_uart0_puts("Creating timer.\n");
+    TimerHandle_t xTimer;
+    
+    // Timer period = 10 ticks (for 100Hz frequency if tick rate is 1000Hz)
+    const TickType_t xTimerPeriod = pdMS_TO_TICKS(10); // Convert 10ms to ticks
+    
+    // Create a timer with a period of 10ms (100Hz)
+    xTimer = xTimerCreate(
+        "100HzTimer",      // Timer name
+        xTimerPeriod,      // Timer period (10ms)
+        pdTRUE,            // Auto-reload timer (pdTRUE = timer will restart)
+        (void *)0,         // Timer ID (optional)
+        vTimerCallback     // Callback function to execute when the timer expires
+    );
+    
+    if (xTimer != NULL)
+    {
+        // Start the timer
+        if (xTimerStart(xTimer, 0) != pdPASS)
+        {
+            // Failed to start the timer
+        }
+    }
+    // print an warning
+    neorv32_uart0_puts("Timer created.\n");
+}
 
 
 
@@ -261,10 +321,16 @@ int foc() {
   neorv32_cpu_csr_set(CSR_MIE, 1 << GPTMR_FIRQ_ENABLE);   // enable GPTMR FIRQ channel
   neorv32_cpu_csr_set(CSR_MSTATUS, 1 << CSR_MSTATUS_MIE); // enable machine-mode interrupts
 
+  // create the timer
+  //create100HzTimer();
+
+  // print a warning
+  neorv32_uart0_puts("Starting the main loop.\n");
+
   // Main loop
   while (1) {
 
-    // update current readings
+    // TEST TO update current readings
     if (slowdown == 10000) {
       //three_phase = get_current_ab();
       //quadrature = get_clark_transform(three_phase);
@@ -352,4 +418,13 @@ void align_rotor() {
 
     // print a warning
     neorv32_uart0_puts("Motor aligned.\n");
+}
+
+// Function to be called when the timer expires
+void vTimerCallback(TimerHandle_t xTimer)
+{
+    // Code to execute at 100Hz frequency
+    // This function will be called every 10ms
+    // print a warning
+    neorv32_uart0_puts("Timer expired.\n");
 }
