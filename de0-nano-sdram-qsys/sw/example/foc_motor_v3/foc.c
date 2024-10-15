@@ -124,7 +124,8 @@ current_ab get_current_ab() {
 current_qd get_clark_transform(current_ab cur_ab){
   current_qd res;
   res.cur_alpha.float_value = cur_ab.cur_a.float_value;
-  res.cur_beta.float_value = riscv_intrinsic_fdivs(cur_ab.cur_a.float_value,riscv_intrinsic_fadds(sqrt(3) , riscv_intrinsic_fmuls(2, riscv_intrinsic_fdivs(cur_ab.cur_b.float_value, sqrt(3)))));
+  res.cur_beta.float_value = riscv_emulate_fdivs(cur_ab.cur_a.float_value,riscv_intrinsic_fadds(sqrt(3) , riscv_intrinsic_fmuls(2, riscv_emulate_fdivs(cur_ab.cur_b.float_value, sqrt(3)))));
+  // res.cur_beta.float_value = riscv_intrinsic_fdivs(cur_ab.cur_a.float_value,riscv_intrinsic_fadds(sqrt(3) , riscv_intrinsic_fmuls(2, riscv_intrinsic_fdivs(cur_ab.cur_b.float_value, sqrt(3)))));
   return res;
 }
 
