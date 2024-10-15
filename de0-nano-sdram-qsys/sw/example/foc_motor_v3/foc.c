@@ -189,6 +189,11 @@ void create100HzTimer(void)
     }
     // print an warning
     neorv32_uart0_puts("Timer created.\n");
+
+    // start the scheduler
+    //vTaskStartScheduler();
+    // print an warning
+    neorv32_uart0_puts("If the scheduler started, this warning should not be printed\n");
 }
 
 
@@ -322,7 +327,12 @@ int foc() {
   neorv32_cpu_csr_set(CSR_MSTATUS, 1 << CSR_MSTATUS_MIE); // enable machine-mode interrupts
 
   // create the timer
+  // isso obviamente não vai funcionar pq vc depois precisa inciar o scheduler
   //create100HzTimer();
+  // se o scheduler for iniciado, o timer vai ser criado e vai funcionar
+  // logo as próximas linhas serão inúteis
+
+  neorv32_uart0_puts("If the scheduler started, this warning should not be printed\n");
 
   // print a warning
   neorv32_uart0_puts("Starting the main loop.\n");
