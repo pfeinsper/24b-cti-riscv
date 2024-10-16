@@ -105,22 +105,17 @@ const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // thi
 #define NUM_PWM_CHANNELS 4
 
 /* Priorities used by the tasks. */
-#define mainQUEUE_RECEIVE_TASK_PRIORITY         ( tskIDLE_PRIORITY + 2 )
-#define mainQUEUE_SEND_TASK_PRIORITY            ( tskIDLE_PRIORITY + 1 )
+#define mainMotorTask_PRIORITY    ( tskIDLE_PRIORITY + 1 )
 
-/* The rate at which data is sent to the queue.  The 500ms value is converted
- * to ticks using the pdMS_TO_TICKS() macro. */
-#define mainQUEUE_SEND_FREQUENCY_MS             pdMS_TO_TICKS( 500 )
 
-/* The maximum number items the queue can hold.  The priority of the receiving
- * task is above the priority of the sending task, so the receiving task will
- * preempt the sending task and remove the queue items each time the sending task
- * writes to the queue.  Therefore the queue will never have more than one item in
- * it at any time, and even with a queue length of 1, the sending task will never
- * find the queue full. */
-#define mainQUEUE_LENGTH                        ( 1 )
 
-static void vTimerCallback(TimerHandle_t xTimer);
+// create timers
+static void vTimerGetCur(TimerHandle_t xTimer);
+static void vTimerMotorMove(TimerHandle_t xTimer);
+
+// config tasks
+static void prvMotorTask(void *pvParameters);
+
 
 /**@}*/
 
@@ -130,6 +125,9 @@ void gptmr_firq_handler(void);
 void xirq_handler_ch0(void);
 void align_rotor();
 void move_clockwise();
+void createCurTimer();
+void createMotorTask();
+void createMotorMoveTimer();
 int foc();
 
 current_ab get_current_ab() {
@@ -158,44 +156,6 @@ current_qd get_clark_transform(current_ab cur_ab){
   return res;
 }
 
-uint32_t slowdown = 0;
-
-// Create and start the timer
-void create100HzTimer(void)
-{
-  // print an warning
-  neorv32_uart0_puts("Creating timer.\n");
-    TimerHandle_t xTimer;
-    
-    // Timer period = 10 ticks (for 100Hz frequency if tick rate is 1000Hz)
-    const TickType_t xTimerPeriod = pdMS_TO_TICKS(10); // Convert 10ms to ticks
-    
-    // Create a timer with a period of 10ms (100Hz)
-    xTimer = xTimerCreate(
-        "100HzTimer",      // Timer name
-        xTimerPeriod,      // Timer period (10ms)
-        pdTRUE,            // Auto-reload timer (pdTRUE = timer will restart)
-        (void *)0,         // Timer ID (optional)
-        vTimerCallback     // Callback function to execute when the timer expires
-    );
-    
-    if (xTimer != NULL)
-    {
-        // Start the timer
-        if (xTimerStart(xTimer, 0) != pdPASS)
-        {
-            // Failed to start the timer
-        }
-    }
-    // print an warning
-    neorv32_uart0_puts("Timer created.\n");
-
-    // start the scheduler
-    //vTaskStartScheduler();
-    // print an warning
-    neorv32_uart0_puts("If the scheduler started, this warning should not be printed\n");
-}
-
 
 
 /**********************************************************************//**
@@ -209,35 +169,29 @@ int foc() {
 
   // setup NEORV32 runtime environment (for trap handling)
   neorv32_rte_setup();
+  // setup UART at default baud rate, no interrupts
+  neorv32_uart0_setup(BAUD_RATE, 0);
 
-    // check if Zfinx extension is implemented at all
+  // Disable compilation by default
+  #ifndef RUN_CHECK
+    #warning Program HAS NOT BEEN COMPILED! Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.
+
+    // inform the user if you are actually executing this
+    neorv32_uart0_printf("ERROR! Program has not been compiled. Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.\n");
+
+    return 1;
+  #endif
+
   if ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_ZFINX)) == 0) {
     neorv32_uart0_puts("Error! <Zfinx> extension not synthesized!\n");
     return 1;
   }
 
-
-  // Disable compilation by default
-#ifndef RUN_CHECK
-  #warning Program HAS NOT BEEN COMPILED! Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.
-
-  // inform the user if you are actually executing this
-  neorv32_uart0_printf("ERROR! Program has not been compiled. Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.\n");
-
-  return 1;
-#endif
-
-  // setup UART at default baud rate, no interrupts
-  neorv32_uart0_setup(BAUD_RATE, 0);
-
-
-  // check if GPTMR unit is implemented at all
   if (neorv32_gptmr_available() == 0) {
     neorv32_uart0_puts("ERROR! General purpose timer not implemented!\n");
     return 1;
   }
 
-  // Check if PWM unit is implemented
   if (neorv32_pwm_available() == 0) {
     if (neorv32_uart0_available()) {
       neorv32_uart0_printf("ERROR: PWM module not implemented!\n");
@@ -245,7 +199,6 @@ int foc() {
     return 1;
   }
 
-  // check if XIRQ unit is implemented at all
   if (neorv32_xirq_available() == 0) {
     neorv32_uart0_printf("XIRQ not synthesized!\n");
     return 1;
@@ -315,48 +268,99 @@ int foc() {
   // configure timer for 0.5Hz in continuous mode (with clock divisor = 8)
   neorv32_gptmr_setup(CLK_PRSC_8, neorv32_sysinfo_get_clk() / (8 * 2), 1);
 
+  // enable interrupt
+  neorv32_cpu_csr_clr(CSR_MIP, 1 << GPTMR_FIRQ_PENDING);  // make sure there is no GPTMR IRQ pending already
+  neorv32_cpu_csr_set(CSR_MIE, 1 << GPTMR_FIRQ_ENABLE);   // enable GPTMR FIRQ channel
+  neorv32_cpu_csr_set(CSR_MSTATUS, 1 << CSR_MSTATUS_MIE); // enable machine-mode interrupts
+
   // config ADC
   adc_start();
 
   // align the motor
   align_rotor();
 
-  // enable interrupt
-  neorv32_cpu_csr_clr(CSR_MIP, 1 << GPTMR_FIRQ_PENDING);  // make sure there is no GPTMR IRQ pending already
-  neorv32_cpu_csr_set(CSR_MIE, 1 << GPTMR_FIRQ_ENABLE);   // enable GPTMR FIRQ channel
-  neorv32_cpu_csr_set(CSR_MSTATUS, 1 << CSR_MSTATUS_MIE); // enable machine-mode interrupts
-
   // create the timer
-  // isso obviamente não vai funcionar pq vc depois precisa inciar o scheduler
-  //create100HzTimer();
-  // se o scheduler for iniciado, o timer vai ser criado e vai funcionar
-  // logo as próximas linhas serão inúteis
+  createCurTimer();
+
+  vTaskStartScheduler();
 
   neorv32_uart0_puts("If the scheduler started, this warning should not be printed\n");
 
-  // print a warning
-  neorv32_uart0_puts("Starting the main loop.\n");
-
   // Main loop
   while (1) {
-
-    // TEST TO update current readings
-    if (slowdown == 10000) {
-      //three_phase = get_current_ab();
-      //quadrature = get_clark_transform(three_phase);
-      slowdown = 0;
-    } else {
-      slowdown += 1;
-    }
-    //three_phase = get_current_ab();
-
-    // Move the motor based on the timer callback
-    move_clockwise();
-
-    // Encoder handling
-    encoder_handler();
   }
 
+}
+
+// Create and start the timer
+void createCurTimer(void)
+{
+  // print an warning
+  neorv32_uart0_puts("Creating timer.\n");
+    TimerHandle_t xTimer;
+    
+    // Timer period = 10 ticks (for 100Hz frequency if tick rate is 1000Hz)
+    const TickType_t xTimerPeriod = pdMS_TO_TICKS(10); // Convert 10ms to ticks
+    
+    // Create a timer with a period of 10ms (100Hz)
+    xTimer = xTimerCreate(
+        "100HzTimer",      // Timer name
+        xTimerPeriod,      // Timer period (10ms)
+        pdTRUE,            // Auto-reload timer (pdTRUE = timer will restart)
+        (void *)0,         // Timer ID (optional)
+        vTimerGetCur     // Callback function to execute when the timer expires
+    );
+    
+    if (xTimer != NULL)
+    {
+        // Start the timer
+        if (xTimerStart(xTimer, 0) != pdPASS)
+        {
+            // Failed to start the timer
+        }
+    }
+    // print an warning
+    neorv32_uart0_puts("Timer created.\n");
+}
+
+void createMotorMoveTimer(void)
+{
+  // print an warning
+  neorv32_uart0_puts("Creating motor move timer.\n");
+    TimerHandle_t xTimer;
+    
+    // Timer period = 10 ticks (for 100Hz frequency if tick rate is 1000Hz)
+    const TickType_t xTimerPeriod = pdMS_TO_TICKS(10); // Convert 10ms to ticks
+    
+    // Create a timer with a period of 10ms (100Hz)
+    xTimer = xTimerCreate(
+        "MotorMoveTimer",      // Timer name
+        xTimerPeriod,      // Timer period (10ms)
+        pdTRUE,            // Auto-reload timer (pdTRUE = timer will restart)
+        (void *)0,         // Timer ID (optional)
+        vTimerMotorMove     // Callback function to execute when the timer expires
+    );
+    
+    if (xTimer != NULL)
+    {
+        // Start the timer
+        if (xTimerStart(xTimer, 0) != pdPASS)
+        {
+            // Failed to start the timer
+        }
+    }
+    // print an warning
+    neorv32_uart0_puts("Motor move timer created.\n");
+}
+
+void createMotorTask(void)
+{
+  // print an warning
+  neorv32_uart0_puts("Creating motor task.\n");
+  // Create the task
+  xTaskCreate(prvMotorTask, "MotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
+  // print an warning
+  neorv32_uart0_puts("Motor task created.\n");
 }
 
 // Motor movement function based on the timer flag
@@ -392,7 +396,6 @@ void encoder_handler() {
       encoder_status = 0;
     }
 }
-
 
 /**********************************************************************//**
  * GPTMR FIRQ handler.
@@ -438,12 +441,33 @@ void align_rotor() {
 }
 
 // Function to be called when the timer expires
-void vTimerCallback(TimerHandle_t xTimer)
+void vTimerGetCur(TimerHandle_t xTimer)
 {
     // Code to execute at 100Hz frequency
     // This function will be called every 10ms
     // print a warning
-    neorv32_uart0_puts("Timer expired.\n");
-    //three_phase = get_current_ab();
-    //quadrature = get_clark_transform(three_phase);
+    neorv32_uart0_puts("Timer C expired.\n");
+    three_phase = get_current_ab();
+    quadrature = get_clark_transform(three_phase);
+}
+
+void vTimerMotorMove(TimerHandle_t xTimer)
+{
+  neorv32_uart0_puts("Timer M expired.\n");
+  // Set the timer flag
+  timer_status = 1;
+}
+
+void prvMotorTask(void *pvParameters)
+{
+    // print a warning
+    neorv32_uart0_puts("Motor task started.\n");
+    // Loop indefinitely
+    while (1)
+    {
+      // Move the motor based on the timer callback
+      move_clockwise();
+      // Encoder handling
+      encoder_handler();
+    }
 }
