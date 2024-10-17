@@ -259,23 +259,26 @@ current_clark get_clark_transform(current_ab cur_ab){
 
 current_park get_park_transform(current_clark cur_clark) {
   current_park res;
-  res.cur_d.float_value = cos(current_angle.float_value) * cur_clark.cur_alpha.float_value +
-              sin(current_angle.float_value) * cur_clark.cur_beta.float_value;
-  res.cur_q.float_value = -sin(current_angle.float_value) * cur_clark.cur_alpha.float_value +
-              cos(current_angle.float_value) * cur_clark.cur_beta.float_value;
+
+  res.cur_d.float_value = riscv_intrinsic_fadds(riscv_intrinsic_fmuls(cos(current_angle.float_value), cur_clark.cur_alpha.float_value),
+              riscv_intrinsic_fmuls(sin(current_angle.float_value), cur_clark.cur_beta.float_value));
+  res.cur_q.float_value = riscv_intrinsic_fadds(riscv_intrinsic_fmuls(-sin(current_angle.float_value), cur_clark.cur_alpha.float_value),
+              riscv_intrinsic_fmuls(cos(current_angle.float_value), cur_clark.cur_beta.float_value));
   return res;
 }
 
 voltage_pi update_control(current_park cur_park) {
   voltage_pi res;
-  id_error.float_value = id_ref.float_value - cur_park.cur_d.float_value;
-  iq_error.float_value = iq_ref.float_value - cur_park.cur_q.float_value;
+  id_error.float_value = riscv_intrinsic_fsubs(id_ref.float_value, cur_park.cur_d.float_value);
+  iq_error.float_value = riscv_intrinsic_fsubs(iq_ref.float_value, cur_park.cur_q.float_value);
 
-  id_integrator.float_value += id_error.float_value;
-  iq_integrator.float_value += iq_error.float_value;
+  id_integrator.float_value = riscv_intrinsic_fadds(id_integrator.float_value, id_error.float_value);
+  iq_integrator.float_value = riscv_intrinsic_fadds(iq_integrator.float_value, iq_error.float_value);
 
-  res.v_d.float_value = kp.float_value * id_error.float_value + ki.float_value * id_integrator.float_value;
-  res.v_q.float_value = kp.float_value * iq_error.float_value + ki.float_value * iq_integrator.float_value;
+  res.v_d.float_value = riscv_intrinsic_fadds(riscv_intrinsic_fmuls(kp.float_value, id_error.float_value),
+              riscv_intrinsic_fmuls(ki.float_value, id_integrator.float_value));
+  res.v_q.float_value = riscv_intrinsic_fadds(riscv_intrinsic_fmuls(kp.float_value, iq_error.float_value),
+              riscv_intrinsic_fmuls(ki.float_value, iq_integrator.float_value));
 
   // clamp id integrator
   if (id_integrator.float_value > integrator_max.float_value) {
