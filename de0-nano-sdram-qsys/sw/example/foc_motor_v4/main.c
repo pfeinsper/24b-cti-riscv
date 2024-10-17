@@ -40,6 +40,11 @@
 #define UART_BAUD_RATE (19200)         // transmission speed
 #define UART_HW_HANDLE (NEORV32_UART0) // use UART0 (primary UART)
 
+/** Maximum PWM output intensity (8-bit) */
+#define PWM_MAX 255
+/** Number of PWM channels to modulate simultaneously */
+#define NUM_PWM_CHANNELS 4
+
 /* External definitions */
 extern void foc(void);                       // actual show-case application
 extern void freertos_risc_v_trap_handler(void); // FreeRTOS core
@@ -94,6 +99,19 @@ static void prvSetupHardware(void) {
   neorv32_cpu_csr_write(CSR_MTVEC, (uint32_t)&freertos_risc_v_trap_handler);
 
   // ----------------------------------------------------------
+  // Check compiled configuration
+  // ----------------------------------------------------------
+
+  // check if program has been compiled
+  #ifndef RUN_CHECK
+    #warning Program HAS NOT BEEN COMPILED! Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.
+
+    // inform the user if you are actually executing this
+    neorv32_uart0_printf("ERROR! Program has not been compiled. Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.\n");
+    return;
+  #endif
+
+  // ----------------------------------------------------------
   // Peripheral setup
   // ----------------------------------------------------------
 
@@ -102,6 +120,28 @@ static void prvSetupHardware(void) {
 
   // setup UART0 at default baud rate, no interrupts
   neorv32_uart_setup(UART_HW_HANDLE, UART_BAUD_RATE, 0);
+
+  // ----------------------------------------------------------
+  // Configure PWM
+  // ----------------------------------------------------------
+  int num_pwm_channels = neorv32_pmw_get_num_channels();
+
+  // Intro
+  neorv32_uart0_puts("The FOC code.\n"
+                     "That is it.\n\n");
+
+  // Check number of PWM channels
+  if (neorv32_uart0_available()) {
+    neorv32_uart0_printf("Implemented PWM channels: %i\n\n", num_pwm_channels);
+  }
+
+  // Deactivate all PWM channels initially
+  for (int i = 0; i < num_pwm_channels; i++) {
+    neorv32_pwm_set(i, 0);
+  }
+
+  // Configure and enable PWM
+  neorv32_pwm_setup(CLK_PRSC_64);
 
   // ----------------------------------------------------------
   // Configuration checks
@@ -136,6 +176,16 @@ static void prvSetupHardware(void) {
                         (uint32_t)configCPU_CLOCK_HZ, neorv32_clk_hz);
   }
 
+  if ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_ZFINX)) == 0) {
+    neorv32_uart0_puts("WARNING! <Zfinx> extension not synthesized!\n");
+  }
+
+  if (neorv32_pwm_available() == 0) {
+    if (neorv32_uart0_available()) {
+      neorv32_uart0_printf("WARNING! PWM module not implemented!\n");
+    }
+  }
+
   // ----------------------------------------------------------
   // Configure general-purpose timer (GPTMR) tick
   // ----------------------------------------------------------
@@ -152,6 +202,7 @@ static void prvSetupHardware(void) {
 }
 
 
+
 /******************************************************************************
  * Handle NEORV32-/application-specific interrupts.
  ******************************************************************************/
@@ -162,7 +213,12 @@ void freertos_risc_v_application_interrupt_handler(void) {
 
   if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
     neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
-    neorv32_uart_printf(UART_HW_HANDLE, "GPTMR IRQ Tick\n");
+    //neorv32_uart_printf(UART_HW_HANDLE, "GPTMR IRQ Tick\n");
+  }
+  if (mcause == XIRQ_TRAP_CODE) { // is XIRQ interrupt
+    //neorv32_xirq_irq_ack(); // clear XIRQ interrupt
+    //NEORV32_XIRQ->ESC = 0; // acknowledge the current XIRQ interrupt
+    neorv32_uart_printf(UART_HW_HANDLE, "XIRQ IRQ\n");
   }
   else { // undefined interrupt cause
     neorv32_uart_printf(UART_HW_HANDLE, "\n<NEORV32-IRQ> Unexpected IRQ! cause=0x%x </NEORV32-IRQ>\n", mcause); // debug output

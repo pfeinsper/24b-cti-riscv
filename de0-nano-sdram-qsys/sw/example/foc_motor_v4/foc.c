@@ -60,8 +60,7 @@
  * @name User configuration
  **************************************************************************/
 /**@{*/
-/** UART BAUD rate */
-#define BAUD_RATE 19200
+// config gpio pins
 #define IN1 0
 #define IN2 1
 #define IN3 2
@@ -70,7 +69,8 @@
 #define EN3 5
 
 // config pwm values
-volatile uint8_t timer_status = 0;
+volatile uint8_t update_motor = 0;
+volatile uint8_t read_current = 0;
 volatile uint8_t encoder_status = 0;
 volatile uint8_t step_index = 0;
 /**@}*/
@@ -99,11 +99,6 @@ uint8_t en_seq[6][3] = {{1, 0, 1}, {0, 1, 1}, {1, 1, 0},
 
 const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // this is not the right way to calculate the conversion factor but works for now
 
-/** Maximum PWM output intensity (8-bit) */
-#define PWM_MAX 255
-/** Number of PWM channels to modulate simultaneously */
-#define NUM_PWM_CHANNELS 4
-
 /* Priorities used by the tasks. */
 #define mainMotorTask_PRIORITY    ( tskIDLE_PRIORITY + 1 )
 
@@ -121,13 +116,15 @@ static void prvMotorTask(void *pvParameters);
 
 
 // Prototypes
-void gptmr_firq_handler(void);
+void setup_xirq(void);
 void xirq_handler_ch0(void);
 void align_rotor();
 void move_clockwise();
+void read_and_convert_current();
 void createCurTimer();
 void createMotorTask();
 void createMotorMoveTimer();
+void createTimers();
 int foc();
 
 current_ab get_current_ab() {
@@ -167,111 +164,8 @@ current_qd get_clark_transform(current_ab cur_ab){
  **************************************************************************/
 int foc() {
 
-  // setup NEORV32 runtime environment (for trap handling)
-  neorv32_rte_setup();
-  // setup UART at default baud rate, no interrupts
-  neorv32_uart0_setup(BAUD_RATE, 0);
-
-  // Disable compilation by default
-  #ifndef RUN_CHECK
-    #warning Program HAS NOT BEEN COMPILED! Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.
-
-    // inform the user if you are actually executing this
-    neorv32_uart0_printf("ERROR! Program has not been compiled. Use >>make USER_FLAGS+=-DRUN_CHECK clean_all exe<< to compile it.\n");
-
-    return 1;
-  #endif
-
-  if ((neorv32_cpu_csr_read(CSR_MXISA) & (1<<CSR_MXISA_ZFINX)) == 0) {
-    neorv32_uart0_puts("Error! <Zfinx> extension not synthesized!\n");
-    return 1;
-  }
-
-  if (neorv32_gptmr_available() == 0) {
-    neorv32_uart0_puts("ERROR! General purpose timer not implemented!\n");
-    return 1;
-  }
-
-  if (neorv32_pwm_available() == 0) {
-    if (neorv32_uart0_available()) {
-      neorv32_uart0_printf("ERROR: PWM module not implemented!\n");
-    }
-    return 1;
-  }
-
-  if (neorv32_xirq_available() == 0) {
-    neorv32_uart0_printf("XIRQ not synthesized!\n");
-    return 1;
-  }
-
-  int err_cnt = 0;
-
-  // initialize XIRQ controller
-  // this will disable all XIRQ channels and will also clear any pending external interrupts
-  // (details: this will register the XIRQ's second-level interrupt handler in the NEORV32 RTE)
-  err_cnt = neorv32_xirq_setup();
-
-  // check if setup went fine
-  if (err_cnt) {
-    neorv32_uart0_printf("Error during XIRQ setup!\n");
-    return 1;
-  }
-
-  // configure per-channel trigger type
-  neorv32_xirq_setup_trigger(0, XIRQ_TRIGGER_EDGE_RISING); // rising-edge for channel 0
-
-  // install handler functions for XIRQ channel 0. note that these functions are "normal" functions!
-  // (details: these are "third-level" interrupt handlers)
-  // neorv32_xirq_install() also enables the specified XIRQ channel and clears any pending interrupts
-  err_cnt = 0;
-  err_cnt += neorv32_xirq_install(0, xirq_handler_ch0); // handler function for channel 0
-
-  // check if installation went fine
-  if (err_cnt) {
-    neorv32_uart0_printf("Error during XIRQ install!\n");
-    return 1;
-  }
-
-  // enable XIRQ channels
-  neorv32_xirq_channel_enable(0);
-
-  // allow XIRQ to trigger CPU interrupt
-  neorv32_xirq_global_enable();
-
-  int num_pwm_channels = neorv32_pmw_get_num_channels();
-
-  // Intro
-  neorv32_uart0_puts("The FOC code.\n"
-                     "That is it.\n\n");
-
-  // Check number of PWM channels
-  if (neorv32_uart0_available()) {
-    neorv32_uart0_printf("Implemented PWM channels: %i\n\n", num_pwm_channels);
-  }
-
-  // Deactivate all PWM channels initially
-  for (int i = 0; i < num_pwm_channels; i++) {
-    neorv32_pwm_set(i, 0);
-  }
-
-  // Configure and enable PWM
-  neorv32_pwm_setup(CLK_PRSC_64);
-
-
-  // clear GPIO output port
-  neorv32_gpio_port_set(0);
-
-
-  // install GPTMR interrupt handler
-  neorv32_rte_handler_install(GPTMR_RTE_ID, gptmr_firq_handler);
-
-  // configure timer for 0.5Hz in continuous mode (with clock divisor = 8)
-  neorv32_gptmr_setup(CLK_PRSC_8, neorv32_sysinfo_get_clk() / (8 * 2), 1);
-
-  // enable interrupt
-  neorv32_cpu_csr_clr(CSR_MIP, 1 << GPTMR_FIRQ_PENDING);  // make sure there is no GPTMR IRQ pending already
-  neorv32_cpu_csr_set(CSR_MIE, 1 << GPTMR_FIRQ_ENABLE);   // enable GPTMR FIRQ channel
-  neorv32_cpu_csr_set(CSR_MSTATUS, 1 << CSR_MSTATUS_MIE); // enable machine-mode interrupts
+  // config XIRQ
+  setup_xirq();
 
   // config ADC
   adc_start();
@@ -279,9 +173,13 @@ int foc() {
   // align the motor
   align_rotor();
 
-  // create the timer
-  createCurTimer();
+  // create the motor task
+  createMotorTask();
 
+  // create the timers
+  createTimers();
+
+  // Start the FreeRTOS scheduler
   vTaskStartScheduler();
 
   neorv32_uart0_puts("If the scheduler started, this warning should not be printed\n");
@@ -292,66 +190,50 @@ int foc() {
 
 }
 
-// Create and start the timer
-void createCurTimer(void)
+void createTimers(void)
 {
-  // print an warning
-  neorv32_uart0_puts("Creating timer.\n");
-    TimerHandle_t xTimer;
-    
-    // Timer period = 10 ticks (for 100Hz frequency if tick rate is 1000Hz)
-    const TickType_t xTimerPeriod = pdMS_TO_TICKS(10); // Convert 10ms to ticks
-    
-    // Create a timer with a period of 10ms (100Hz)
-    xTimer = xTimerCreate(
-        "100HzTimer",      // Timer name
-        xTimerPeriod,      // Timer period (10ms)
-        pdTRUE,            // Auto-reload timer (pdTRUE = timer will restart)
-        (void *)0,         // Timer ID (optional)
-        vTimerGetCur     // Callback function to execute when the timer expires
+    // Create both timers
+    TimerHandle_t xCurTimer, xMotorMoveTimer;
+
+    // Create CurTimer
+    neorv32_uart0_puts("Creating Cur timer.\n");
+    const TickType_t xCurTimerPeriod = pdMS_TO_TICKS(100); // 100Hz
+    xCurTimer = xTimerCreate(
+        "CurTimer",          // Timer name
+        xCurTimerPeriod,     // Timer period (10ms)
+        pdTRUE,              // Auto-reload timer
+        (void *)0,           // Timer ID
+        vTimerGetCur         // Callback function for CurTimer
     );
-    
-    if (xTimer != NULL)
+
+    if (xCurTimer != NULL)
     {
-        // Start the timer
-        if (xTimerStart(xTimer, 0) != pdPASS)
+        if (xTimerStart(xCurTimer, 0) != pdPASS)
         {
-            // Failed to start the timer
+            neorv32_uart0_puts("Failed to start Cur timer.\n");
         }
     }
-    // print an warning
-    neorv32_uart0_puts("Timer created.\n");
+
+    // Create MotorMoveTimer
+    neorv32_uart0_puts("Creating motor move timer.\n");
+    const TickType_t xMotorMoveTimerPeriod = pdMS_TO_TICKS(200); // 50Hz
+    xMotorMoveTimer = xTimerCreate(
+        "MotorMoveTimer",       // Timer name
+        xMotorMoveTimerPeriod,  // Timer period (50ms)
+        pdTRUE,                 // Auto-reload timer
+        (void *)0,              // Timer ID
+        vTimerMotorMove         // Callback function for MotorMoveTimer
+    );
+
+    if (xMotorMoveTimer != NULL)
+    {
+        if (xTimerStart(xMotorMoveTimer, 0) != pdPASS)
+        {
+            neorv32_uart0_puts("Failed to start MotorMove timer.\n");
+        }
+    }
 }
 
-void createMotorMoveTimer(void)
-{
-  // print an warning
-  neorv32_uart0_puts("Creating motor move timer.\n");
-    TimerHandle_t xTimer;
-    
-    // Timer period = 10 ticks (for 100Hz frequency if tick rate is 1000Hz)
-    const TickType_t xTimerPeriod = pdMS_TO_TICKS(10); // Convert 10ms to ticks
-    
-    // Create a timer with a period of 10ms (100Hz)
-    xTimer = xTimerCreate(
-        "MotorMoveTimer",      // Timer name
-        xTimerPeriod,      // Timer period (10ms)
-        pdTRUE,            // Auto-reload timer (pdTRUE = timer will restart)
-        (void *)0,         // Timer ID (optional)
-        vTimerMotorMove     // Callback function to execute when the timer expires
-    );
-    
-    if (xTimer != NULL)
-    {
-        // Start the timer
-        if (xTimerStart(xTimer, 0) != pdPASS)
-        {
-            // Failed to start the timer
-        }
-    }
-    // print an warning
-    neorv32_uart0_puts("Motor move timer created.\n");
-}
 
 void createMotorTask(void)
 {
@@ -365,7 +247,7 @@ void createMotorTask(void)
 
 // Motor movement function based on the timer flag
 void move_clockwise() {
-  if (timer_status) {
+  if (update_motor) {
     // Set motor pins based on the current step
     neorv32_gpio_pin_set(IN1, in_seq[step_index][0]);
     neorv32_gpio_pin_set(IN2, in_seq[step_index][1]);
@@ -378,7 +260,7 @@ void move_clockwise() {
     step_index = (step_index + 1) % 6;
 
     // Reset the timer flag
-    timer_status = 0;
+    update_motor = 0;
   }
 }
 
@@ -397,16 +279,14 @@ void encoder_handler() {
     }
 }
 
-/**********************************************************************//**
- * GPTMR FIRQ handler.
- *
- * @warning This function has to be of type "void xyz(void)" and must not use any interrupt attributes!
- **************************************************************************/
-void gptmr_firq_handler(void) {
-  neorv32_gptmr_irq_ack(); // clear/ack pending FIRQ
-  timer_status = 1;
-  // print a warning
-  //neorv32_uart0_puts("Timer status updated.\n");
+void read_and_convert_current() {
+  if (read_current) {
+    // Get the current values
+    three_phase = get_current_ab();
+    quadrature = get_clark_transform(three_phase);
+    // Reset the flag
+    read_current = 0;
+  }
 }
 
 // Handler for the external interrupt channel 0 (where we will check the Hall sensor)
@@ -446,16 +326,15 @@ void vTimerGetCur(TimerHandle_t xTimer)
     // Code to execute at 100Hz frequency
     // This function will be called every 10ms
     // print a warning
-    neorv32_uart0_puts("Timer C expired.\n");
-    three_phase = get_current_ab();
-    quadrature = get_clark_transform(three_phase);
+    //neorv32_uart0_puts("Timer C expired.\n");
+    read_current = 1;
 }
 
 void vTimerMotorMove(TimerHandle_t xTimer)
 {
-  neorv32_uart0_puts("Timer M expired.\n");
+  // neorv32_uart0_puts("Timer M expired.\n");
   // Set the timer flag
-  timer_status = 1;
+  update_motor = 1;
 }
 
 void prvMotorTask(void *pvParameters)
@@ -469,5 +348,50 @@ void prvMotorTask(void *pvParameters)
       move_clockwise();
       // Encoder handling
       encoder_handler();
+      // Read and convert the current
+      //read_and_convert_current();
     }
+}
+
+
+
+
+
+void setup_xirq(void) {
+
+  if (neorv32_xirq_available() == 0) {
+    neorv32_uart0_printf("XIRQ not synthesized!\n");
+  }
+
+  int err_cnt = 0;
+
+  // initialize XIRQ controller
+  // this will disable all XIRQ channels and will also clear any pending external interrupts
+  // (details: this will register the XIRQ's second-level interrupt handler in the NEORV32 RTE)
+  err_cnt = neorv32_xirq_setup();
+
+  // check if setup went fine
+  if (err_cnt) {
+    neorv32_uart0_printf("Error during XIRQ setup!\n");
+  }
+
+  // configure per-channel trigger type
+  neorv32_xirq_setup_trigger(0, XIRQ_TRIGGER_EDGE_RISING); // rising-edge for channel 0
+
+  // install handler functions for XIRQ channel 0. note that these functions are "normal" functions!
+  // (details: these are "third-level" interrupt handlers)
+  // neorv32_xirq_install() also enables the specified XIRQ channel and clears any pending interrupts
+  err_cnt = 0;
+  err_cnt += neorv32_xirq_install(0, xirq_handler_ch0); // handler function for channel 0
+
+  // check if installation went fine
+  if (err_cnt) {
+    neorv32_uart0_printf("Error during XIRQ install!\n");
+  }
+
+  // enable XIRQ channels
+  neorv32_xirq_channel_enable(0);
+
+  // allow XIRQ to trigger CPU interrupt
+  neorv32_xirq_global_enable();
 }
