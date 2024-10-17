@@ -129,6 +129,7 @@ static void vTimerCallback(TimerHandle_t xTimer);
 void gptmr_firq_handler(void);
 void xirq_handler_ch0(void);
 void align_rotor();
+void encoder_handler();
 void move_clockwise();
 int foc();
 
