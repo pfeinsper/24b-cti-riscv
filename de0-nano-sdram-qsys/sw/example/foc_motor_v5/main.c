@@ -57,7 +57,6 @@ void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName);
 void vApplicationTickHook(void);
 
 /* Platform-specific prototypes */
-void vToggleLED(void);
 void vSendString(const char * pcString);
 static void prvSetupHardware(void);
 
@@ -240,16 +239,6 @@ void freertos_risc_v_application_exception_handler(void) {
   // debug output
   neorv32_uart_printf(UART_HW_HANDLE, "\n<NEORV32-EXC> mcause = 0x%x @ mepc = 0x%x </NEORV32-EXC>\n", mcause,mepc); // debug output
 }
-
-
-/******************************************************************************
- * Toggle GPIO.out(0) pin.
- ******************************************************************************/
-void vToggleLED(void) {
-
-	neorv32_gpio_pin_toggle(0);
-}
-
 
 /******************************************************************************
  * Send a plain string via UART0.

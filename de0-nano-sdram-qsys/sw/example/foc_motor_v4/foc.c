@@ -165,7 +165,7 @@ current_qd get_clark_transform(current_ab cur_ab){
 int foc() {
 
   // config XIRQ
-  setup_xirq();
+  //setup_xirq();
 
   // config ADC
   adc_start();

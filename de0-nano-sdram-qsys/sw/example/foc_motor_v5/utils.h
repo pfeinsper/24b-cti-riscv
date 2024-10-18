@@ -2,21 +2,6 @@
 #define UTILS_H
 
 #include "consts.h"
-#include <neorv32.h>
-#include <float.h>
-#include <math.h>
-#include <stdio.h>
-#include "neorv32_zfinx_extension_intrinsics.h"
-
-/* Standard includes. */
-#include <string.h>
-#include <unistd.h>
-
-/* Kernel includes. */
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
-#include "timers.h"
 
 
 typedef struct {
