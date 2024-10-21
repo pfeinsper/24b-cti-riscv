@@ -88,7 +88,7 @@ typedef union
  * @param[in] tmp Source operand.
  * @return Result.
  **************************************************************************/
-float subnormal_flush(float tmp) {
+static inline float subnormal_flush(float tmp) {
 
   float res = tmp;
 
@@ -521,7 +521,7 @@ inline float __attribute__ ((always_inline)) riscv_intrinsic_fnmadds(float rs1, 
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fadds(float rs1, float rs2) {
+static inline float riscv_emulate_fadds(float rs1, float rs2) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -544,7 +544,7 @@ float __attribute__ ((noinline)) riscv_emulate_fadds(float rs1, float rs2) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fsubs(float rs1, float rs2) {
+static inline float riscv_emulate_fsubs(float rs1, float rs2) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -567,7 +567,7 @@ float __attribute__ ((noinline)) riscv_emulate_fsubs(float rs1, float rs2) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fmuls(float rs1, float rs2) {
+static inline float riscv_emulate_fmuls(float rs1, float rs2) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -584,7 +584,7 @@ float __attribute__ ((noinline)) riscv_emulate_fmuls(float rs1, float rs2) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fmins(float rs1, float rs2) {
+static inline float riscv_emulate_fmins(float rs1, float rs2) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -625,7 +625,7 @@ float __attribute__ ((noinline)) riscv_emulate_fmins(float rs1, float rs2) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fmaxs(float rs1, float rs2) {
+static inline float riscv_emulate_fmaxs(float rs1, float rs2) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -666,7 +666,7 @@ float __attribute__ ((noinline)) riscv_emulate_fmaxs(float rs1, float rs2) {
  * @param[in] rs1 Source operand 1.
  * @return Result.
  **************************************************************************/
-uint32_t __attribute__ ((noinline)) riscv_emulate_fcvt_wus(float rs1) {
+static inline uint32_t riscv_emulate_fcvt_wus(float rs1) {
 
   float opa = subnormal_flush(rs1);
 
@@ -680,7 +680,7 @@ uint32_t __attribute__ ((noinline)) riscv_emulate_fcvt_wus(float rs1) {
  * @param[in] rs1 Source operand 1.
  * @return Result.
  **************************************************************************/
-int32_t __attribute__ ((noinline)) riscv_emulate_fcvt_ws(float rs1) {
+static inline int32_t riscv_emulate_fcvt_ws(float rs1) {
 
   float opa = subnormal_flush(rs1);
 
@@ -694,7 +694,7 @@ int32_t __attribute__ ((noinline)) riscv_emulate_fcvt_ws(float rs1) {
  * @param[in] rs1 Source operand 1.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fcvt_swu(uint32_t rs1) {
+static inline float riscv_emulate_fcvt_swu(uint32_t rs1) {
 
   return (float)rs1;
 }
@@ -706,7 +706,7 @@ float __attribute__ ((noinline)) riscv_emulate_fcvt_swu(uint32_t rs1) {
  * @param[in] rs1 Source operand 1.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fcvt_sw(int32_t rs1) {
+static inline float riscv_emulate_fcvt_sw(int32_t rs1) {
 
   return (float)rs1;
 }
@@ -719,7 +719,7 @@ float __attribute__ ((noinline)) riscv_emulate_fcvt_sw(int32_t rs1) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-uint32_t __attribute__ ((noinline)) riscv_emulate_feqs(float rs1, float rs2) {
+static inline uint32_t riscv_emulate_feqs(float rs1, float rs2) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -747,7 +747,7 @@ uint32_t __attribute__ ((noinline)) riscv_emulate_feqs(float rs1, float rs2) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-uint32_t __attribute__ ((noinline)) riscv_emulate_flts(float rs1, float rs2) {
+static inline uint32_t riscv_emulate_flts(float rs1, float rs2) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -772,7 +772,7 @@ uint32_t __attribute__ ((noinline)) riscv_emulate_flts(float rs1, float rs2) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-uint32_t __attribute__ ((noinline)) riscv_emulate_fles(float rs1, float rs2) {
+static inline uint32_t riscv_emulate_fles(float rs1, float rs2) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -797,7 +797,7 @@ uint32_t __attribute__ ((noinline)) riscv_emulate_fles(float rs1, float rs2) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fsgnjs(float rs1, float rs2) {
+static inline float riscv_emulate_fsgnjs(float rs1, float rs2) {
 
   float opa = rs1;
   float opb = rs2;
@@ -834,7 +834,7 @@ float __attribute__ ((noinline)) riscv_emulate_fsgnjs(float rs1, float rs2) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fsgnjns(float rs1, float rs2) {
+static inline float riscv_emulate_fsgnjns(float rs1, float rs2) {
 
   float opa = rs1;
   float opb = rs2;
@@ -871,7 +871,7 @@ float __attribute__ ((noinline)) riscv_emulate_fsgnjns(float rs1, float rs2) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fsgnjxs(float rs1, float rs2) {
+static inline float riscv_emulate_fsgnjxs(float rs1, float rs2) {
 
   float opa = rs1;
   float opb = rs2;
@@ -907,7 +907,7 @@ float __attribute__ ((noinline)) riscv_emulate_fsgnjxs(float rs1, float rs2) {
  * @param[in] rs1 Source operand 1.
  * @return Result.
  **************************************************************************/
-uint32_t __attribute__ ((noinline)) riscv_emulate_fclasss(float rs1) {
+static inline uint32_t riscv_emulate_fclasss(float rs1) {
 
   float opa = rs1;
 
@@ -979,7 +979,7 @@ uint32_t __attribute__ ((noinline)) riscv_emulate_fclasss(float rs1) {
  * @param[in] rs2 Source operand 2.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fdivs(float rs1, float rs2) {
+static inline float riscv_emulate_fdivs(float rs1, float rs2) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -995,7 +995,7 @@ float __attribute__ ((noinline)) riscv_emulate_fdivs(float rs1, float rs2) {
  * @param[in] rs1 Source operand 1.
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fsqrts(float rs1) {
+static inline float riscv_emulate_fsqrts(float rs1) {
 
   float opa = subnormal_flush(rs1);
 
@@ -1014,7 +1014,7 @@ float __attribute__ ((noinline)) riscv_emulate_fsqrts(float rs1) {
  * @param[in] rs3 Source operand 3
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fmadds(float rs1, float rs2, float rs3) {
+static inline float riscv_emulate_fmadds(float rs1, float rs2, float rs3) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -1033,7 +1033,7 @@ float __attribute__ ((noinline)) riscv_emulate_fmadds(float rs1, float rs2, floa
  * @param[in] rs3 Source operand 3
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fmsubs(float rs1, float rs2, float rs3) {
+static inline float riscv_emulate_fmsubs(float rs1, float rs2, float rs3) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -1052,7 +1052,7 @@ float __attribute__ ((noinline)) riscv_emulate_fmsubs(float rs1, float rs2, floa
  * @param[in] rs3 Source operand 3
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fnmsubs(float rs1, float rs2, float rs3) {
+static inline float riscv_emulate_fnmsubs(float rs1, float rs2, float rs3) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
@@ -1071,7 +1071,7 @@ float __attribute__ ((noinline)) riscv_emulate_fnmsubs(float rs1, float rs2, flo
  * @param[in] rs3 Source operand 3
  * @return Result.
  **************************************************************************/
-float __attribute__ ((noinline)) riscv_emulate_fnmadds(float rs1, float rs2, float rs3) {
+static inline float riscv_emulate_fnmadds(float rs1, float rs2, float rs3) {
 
   float opa = subnormal_flush(rs1);
   float opb = subnormal_flush(rs2);
