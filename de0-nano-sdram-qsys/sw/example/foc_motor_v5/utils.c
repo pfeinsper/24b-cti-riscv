@@ -74,7 +74,7 @@ void prvMotorTask(void *pvParameters)
       // Encoder handling
       encoder_handler();
       // Read and convert the current
-      //read_and_convert_current();
+      read_and_convert_current();
     }
 }
 
@@ -281,28 +281,36 @@ voltage_pi update_control(current_park cur_park) {
               riscv_intrinsic_fmuls(ki.float_value, iq_integrator.float_value));
 
   // clamp id integrator
-  if (id_integrator.float_value > integrator_max.float_value) {
+  if (!riscv_intrinsic_flts(id_integrator.float_value, integrator_max.float_value)) {
     id_integrator.float_value = integrator_max.float_value;
-  } else if (id_integrator.float_value < -integrator_max.float_value) {
+  } else if (riscv_intrinsic_flts(id_integrator.float_value, -integrator_max.float_value)) {
     id_integrator.float_value = -integrator_max.float_value;
   }
 
+
   // clamp iq integrator
-  if (iq_integrator.float_value > integrator_max.float_value) {
-    iq_integrator.float_value = integrator_max.float_value;
-  } else if (iq_integrator.float_value < -integrator_max.float_value) {
-    iq_integrator.float_value = -integrator_max.float_value;
+  if (!riscv_intrinsic_flts(iq_integrator.float_value, integrator_max.float_value)) {
+      iq_integrator.float_value = integrator_max.float_value;
+  } else if (riscv_intrinsic_flts(iq_integrator.float_value, -integrator_max.float_value)) {
+      iq_integrator.float_value = -integrator_max.float_value;
   }
+
 
   return res;
 }
 
 voltage_clark get_inverse_park_transform(current_park cur_park) {
   voltage_clark res;
-  res.v_alpha.float_value =
-      cos(current_angle.float_value) * cur_park.cur_d.float_value - sin(current_angle.float_value) * cur_park.cur_q.float_value;
-  res.v_beta.float_value =
-      sin(current_angle.float_value) * cur_park.cur_d.float_value + cos(current_angle.float_value) * cur_park.cur_q.float_value;
+  res.v_alpha.float_value = riscv_emulate_fsubs(
+    riscv_emulate_fmuls(cos(current_angle.float_value), cur_park.cur_d.float_value),
+    riscv_emulate_fmuls(sin(current_angle.float_value), cur_park.cur_q.float_value)
+);
+
+res.v_beta.float_value = riscv_emulate_fadds(
+    riscv_emulate_fmuls(sin(current_angle.float_value), cur_park.cur_d.float_value),
+    riscv_emulate_fmuls(cos(current_angle.float_value), cur_park.cur_q.float_value)
+);
+
   return res;
 }
 
@@ -316,58 +324,179 @@ space_vector get_space_vector(voltage_clark cur_clark) {
   float_conv_t duty_a, duty_b, duty_c;
 
   // Step 1: Calculate V_ref and theta_ref (in radians)
-  v_ref.float_value = sqrt(cur_clark.v_alpha.float_value * cur_clark.v_alpha.float_value +
-                     cur_clark.v_beta.float_value * cur_clark.v_beta.float_value);                   
+  v_ref.float_value = riscv_emulate_fsqrts(
+      riscv_emulate_fadds(
+          riscv_emulate_fmuls(cur_clark.v_alpha.float_value, cur_clark.v_alpha.float_value),
+          riscv_emulate_fmuls(cur_clark.v_beta.float_value, cur_clark.v_beta.float_value)
+      )
+  );                 
   theta_ref.float_value = atan2(cur_clark.v_beta.float_value, cur_clark.v_alpha.float_value);
 
   // Step 2: Determine the sector (radians divided by pi/3, which is 60 degrees)
-  uint8_t sector = (uint8_t)(floor(theta_ref.float_value / (M_PI / 3))) + 1;
+  //uint8_t sector = (uint8_t)(floor(theta_ref.float_value / (M_PI / 3))) + 1;
+  uint8_t sector = (uint8_t)(floor(
+    riscv_emulate_fdivs(theta_ref.float_value, (float)(M_PI / 3))
+  )) + 1;
   if (sector > 6) {
     sector = 6; // Sector must be between 1 and 6
   }
 
   // Step 3: Calculate switching times T1, T2, t0.float_value based on the sector
   ts.float_value = 1.0 / PWM_FREQ; // PWM period (1 MHz frequency as you specified)
-  angle_in_sector.float_value =
-      theta_ref.float_value - (sector - 1) * (M_PI / 3); // Relative angle within sector
+  //angle_in_sector.float_value =
+      //theta_ref.float_value - (sector - 1) * (M_PI / 3); // Relative angle within sector
+  angle_in_sector.float_value = riscv_emulate_fsubs(
+    theta_ref.float_value,
+    riscv_emulate_fmuls(
+        (float)(sector - 1),
+        (float)(M_PI / 3)
+    )
+  );
 
-  t1.float_value  = ts.float_value * (v_ref.float_value * sin((M_PI / 3) - angle_in_sector.float_value)) /
-             MOTOR_VOLTAGE; // Time for first active vector
-  t2.float_value = ts.float_value * (v_ref.float_value * sin(angle_in_sector.float_value)) /
-             MOTOR_VOLTAGE;  // Time for second active vector
-  t0.float_value  = ts.float_value - (t1.float_value  + t2.float_value); // Zero vector time (remaining time)
+t1.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fmuls(
+        ts.float_value,
+        riscv_emulate_fmuls(
+            v_ref.float_value,
+            sin((M_PI / 3) - angle_in_sector.float_value)
+        )
+    ),
+    MOTOR_VOLTAGE
+  ); // Time for first active vector
+t2.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fmuls(
+        ts.float_value,
+        riscv_emulate_fmuls(
+            v_ref.float_value,
+            sin(angle_in_sector.float_value)
+        )
+    ),
+    MOTOR_VOLTAGE
+  ); // Time for second active vector
+  
+  t0.float_value = riscv_emulate_fsubs(
+    ts.float_value,
+    riscv_emulate_fadds(t1.float_value, t2.float_value)
+  ); // Zero vector time (remaining time)
 
   // Step 4: Calculate duty cycles for phases A, B, C
   switch (sector) {
   case 1:
-    duty_a.float_value = (t1.float_value + t2.float_value + t0.float_value / 2) / ts.float_value;
-    duty_b.float_value = (t2.float_value + t0.float_value / 2) / ts.float_value;
-    duty_c.float_value = t0.float_value / (2 * ts.float_value);
+    duty_a.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        riscv_emulate_fadds(t1.float_value, t2.float_value),
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
+    duty_b.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        t2.float_value,
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
+    duty_c.float_value = riscv_emulate_fdivs(
+    t0.float_value,
+    riscv_emulate_fmuls(2, ts.float_value)
+  );
     break;
   case 2:
-    duty_a.float_value = (t2.float_value + t0.float_value / 2) / ts.float_value;
-    duty_b.float_value = (t1.float_value  + t2.float_value + t0.float_value / 2) / ts.float_value;
-    duty_c.float_value = t0.float_value / (2 * ts.float_value);
+    duty_a.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        t2.float_value,
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
+    duty_b.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        riscv_emulate_fadds(t1.float_value, t2.float_value),
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
+    duty_c.float_value = riscv_emulate_fdivs(
+    t0.float_value,
+    riscv_emulate_fmuls(2, ts.float_value)
+  );
     break;
   case 3:
-    duty_a.float_value = t0.float_value / (2 * ts.float_value);
-    duty_b.float_value = (t1.float_value + t2.float_value + t0.float_value / 2) / ts.float_value;
-    duty_c.float_value = (t2.float_value + t0.float_value / 2) / ts.float_value;
+    duty_a.float_value = riscv_emulate_fdivs(
+    t0.float_value,
+    riscv_emulate_fmuls(2, ts.float_value)
+  );
+    duty_b.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        riscv_emulate_fadds(t1.float_value, t2.float_value),
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
+    duty_c.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        t2.float_value,
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
     break;
   case 4:
-    duty_a.float_value = t0.float_value / (2 * ts.float_value);
-    duty_b.float_value = t0.float_value / (2 * ts.float_value);
-    duty_c.float_value = (t1.float_value + t2.float_value + t0.float_value / 2) / ts.float_value;
+    duty_a.float_value = riscv_emulate_fdivs(
+    t0.float_value,
+    riscv_emulate_fmuls(2, ts.float_value)
+  );
+    duty_b.float_value = riscv_emulate_fdivs(
+    t0.float_value,
+    riscv_emulate_fmuls(2, ts.float_value)
+  );
+    duty_c.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        riscv_emulate_fadds(t1.float_value, t2.float_value),
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
     break;
   case 5:
-    duty_a.float_value = (t2.float_value + t0.float_value / 2) / ts.float_value;
-    duty_b.float_value = t0.float_value / (2 * ts.float_value);
-    duty_c.float_value = (t1.float_value + t2.float_value + t0.float_value / 2) / ts.float_value;
+    duty_a.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        t2.float_value,
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
+    duty_b.float_value = riscv_emulate_fdivs(
+    t0.float_value,
+    riscv_emulate_fmuls(2, ts.float_value)
+  );
+    duty_c.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        riscv_emulate_fadds(t1.float_value, t2.float_value),
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
     break;
   case 6:
-    duty_a.float_value = (t1.float_value + t2.float_value + t0.float_value / 2) / ts.float_value;
-    duty_b.float_value = t0.float_value / (2 * ts.float_value);
-    duty_c.float_value = (t2.float_value + t0.float_value / 2) / ts.float_value;
+    duty_a.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        riscv_emulate_fadds(t1.float_value, t2.float_value),
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
+    duty_b.float_value = riscv_emulate_fdivs(
+    t0.float_value,
+    riscv_emulate_fmuls(2, ts.float_value)
+  );
+    duty_c.float_value = riscv_emulate_fdivs(
+    riscv_emulate_fadds(
+        t2.float_value,
+        riscv_emulate_fdivs(t0.float_value, 2)
+    ),
+    ts.float_value
+  );
     break;
   default:
     duty_a.float_value = 0;
