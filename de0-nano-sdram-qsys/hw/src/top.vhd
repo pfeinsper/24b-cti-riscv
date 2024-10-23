@@ -105,7 +105,7 @@ entity top is
       GPIO_2      : out std_logic_vector(12 downto 0);
       GPIO_2_IN   : in  std_logic_vector(2 downto 0);
 
-      HALL_GPIO_i   : in std_logic_vector(7 downto 0);
+      HALL_GPIO_i   : in std_logic;
 
 
       ADC_SADDR  : out std_logic;
@@ -447,7 +447,7 @@ begin
          clk => sys_clk,
          signal_in => HALL_GPIO_i,
          counter_out => counter_out
-      )
+      );
 
    --
    -- PLL

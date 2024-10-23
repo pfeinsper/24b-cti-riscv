@@ -42,7 +42,7 @@ set_global_assignment -name FAMILY "Cyclone IV E"
 set_global_assignment -name TOP_LEVEL_ENTITY top
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 15.0.2
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "11:00:21  NOVEMBER 20, 2021"
-set_global_assignment -name LAST_QUARTUS_VERSION "20.1.0 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "23.1std.0 Lite Edition"
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
 set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 6
@@ -451,6 +451,7 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ADC_SDAT
 
 set_global_assignment -name EDA_SIMULATION_TOOL "<None>"
 
+set_global_assignment -name VHDL_FILE src/edge_counter/edge_counter.vhd
 set_global_assignment -name QIP_FILE src/spipll/SPIPLL.qip
 set_global_assignment -name VERILOG_FILE src/adc/ADC_CTRL.v
 set_global_assignment -name QIP_FILE src/pll/pll_sys.qip
