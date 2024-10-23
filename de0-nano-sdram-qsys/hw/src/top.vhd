@@ -105,6 +105,8 @@ entity top is
       GPIO_2      : out std_logic_vector(12 downto 0);
       GPIO_2_IN   : in  std_logic_vector(2 downto 0);
 
+      HALL_GPIO_i   : in std_logic_vector(7 downto 0);
+
 
       ADC_SADDR  : out std_logic;
       ADC_CS_N   : out std_logic;
@@ -132,6 +134,18 @@ architecture syn of top is
    --------------------------------------------------------
    -- Define all components which are included here
    --------------------------------------------------------
+
+   --
+   -- Edge Counter
+   --
+   component edge_counter
+      port (
+         rst         : in std_logic;
+         clk         : in std_logic;
+         signal_in   : in std_logic;
+         counter_out : out std_logic_vector(7 downto 0)
+      );
+   end component edge_counter;
 
    --
    -- PLL
@@ -420,7 +434,20 @@ architecture syn of top is
    signal wSPI_CLK   : std_logic;
    signal wSPI_CLK_n : std_logic;
 
+   signal counter_out : std_logic_vector(7 downto 0); 
+
 begin
+
+   --
+   -- Edge Counter
+   --
+   inst_edge_counter : edge_counter
+      port map (
+         rst => reset,
+         clk => sys_clk,
+         signal_in => HALL_GPIO_i,
+         counter_out => counter_out
+      )
 
    --
    -- PLL
