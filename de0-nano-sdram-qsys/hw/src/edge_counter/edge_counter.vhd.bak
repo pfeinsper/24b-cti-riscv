@@ -18,7 +18,7 @@ architecture Behavioral of edge_counter is
     signal stable_signal : std_logic := '0'; -- Sinal estabilizado (depois do debouncing)
     signal counter : std_logic_vector(7 downto 0) := (others => '0');  -- Registrador do contador
     signal debounce_counter : integer := 0;  -- Temporizador para debouncing
-    constant debounce_limit : integer := 6000;  -- Limite de ciclos de clock para estabilizar (ajustável)
+    constant debounce_limit : integer := 100000;  -- Limite de ciclos de clock para estabilizar (ajustável)
 
 begin
 
