@@ -18,7 +18,7 @@ architecture Behavioral of edge_counter is
     signal stable_signal : std_logic := '0'; -- Sinal estabilizado (depois do debouncing)
     signal counter : std_logic_vector(7 downto 0) := (others => '0');  -- Registrador do contador
     signal debounce_counter : integer := 0;  -- Temporizador para debouncing
-    constant debounce_limit : integer := 100000;  -- Limite de ciclos de clock para estabilizar (ajustável)
+    constant debounce_limit : integer := 3;  -- Limite de ciclos de clock para estabilizar (ajustável)
 
 begin
 
@@ -29,8 +29,8 @@ begin
             -- Resetar temporizador e sinal estabilizado
             debounce_counter <= 0;
             stable_signal <= '0';
-        
-        elsif rising_edge(clk) then
+
+        elsif falling_edge(clk) then
             -- Verificar se o sinal mudou de valor
             if signal_in /= prev_signal then
                 -- Resetar o contador de debouncing quando o sinal oscilar
@@ -44,10 +44,11 @@ begin
                     stable_signal <= signal_in;
                 end if;
             end if;
-            
+
             -- Atualizar o valor do sinal anterior
             prev_signal <= signal_in;
         end if;
+
     end process;
 
     -- Processo para contar bordas de descida do sinal estabilizado
@@ -56,7 +57,7 @@ begin
         if rst = '1' then
             -- Resetar o contador e o sinal anterior estabilizado
             counter <= (others => '0');
-        elsif rising_edge(clk) then
+        elsif falling_edge(clk) then
             -- Detectar borda de descida no sinal estabilizado
             if stable_signal = '0' and prev_stable_signal = '1' then
                 counter <= counter + 1;

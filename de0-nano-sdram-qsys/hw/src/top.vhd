@@ -50,7 +50,8 @@ use neorv32.neorv32_package.all;
 
 entity top is
    port (
-		counter_out : out std_logic_vector(7 downto 0); 
+		counter_out : out std_logic_vector(7 downto 0);
+		sys_clk_port: out std_logic;
       --
       -- Input clock
       --
@@ -88,7 +89,7 @@ entity top is
 		--
 		-- PWM   
       --
-		PWM          : out std_ulogic_vector(3 downto 0);
+		PWM          : out std_logic_vector(3 downto 0);
 
       -- CPU Interrupts
       -- MTIME_IRQ   : in  std_logic;
@@ -434,6 +435,8 @@ architecture syn of top is
 
    signal wSPI_CLK   : std_logic;
    signal wSPI_CLK_n : std_logic;
+	
+	signal PWM_u : std_ulogic_vector(3 downto 0);
 
    -- signal counter_out : std_logic_vector(7 downto 0); 
 
@@ -575,7 +578,7 @@ begin
          -- primary UART0 (available if IO_UART0_EN = true) --
          uart0_txd_o   => UART0_TXD,                        -- UART0 send data
          uart0_rxd_i   => UART0_RXD,                         -- UART0 receive data
-			pwm_o(3 downto 0)         => PWM,                   -- pwm channels
+			pwm_o(3 downto 0)         => PWM_u,                   -- pwm channels
 
          -- XIRQ (available if XIRQ_NUM_CH > 0) --
          xirq_i     => xirq_i_signal,                            -- IRQ channels
@@ -611,7 +614,10 @@ begin
    -- mtime_irq_i_signal <= MTIME_IRQ;
    msw_irq_i_signal   <= MSW_IRQ;
    mext_irq_i_signal  <= 'L';--MEXT_IRQ;
-
+	
+	PWM <= std_logic_vector(PWM_u);
+	sys_clk_port <= sys_clk;
+	
 end architecture syn;
 
 -- *** EOF ***
