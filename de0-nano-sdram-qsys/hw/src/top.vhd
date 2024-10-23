@@ -50,6 +50,7 @@ use neorv32.neorv32_package.all;
 
 entity top is
    port (
+		counter_out : out std_logic_vector(7 downto 0); 
       --
       -- Input clock
       --
@@ -434,7 +435,7 @@ architecture syn of top is
    signal wSPI_CLK   : std_logic;
    signal wSPI_CLK_n : std_logic;
 
-   signal counter_out : std_logic_vector(7 downto 0); 
+   -- signal counter_out : std_logic_vector(7 downto 0); 
 
 begin
 
