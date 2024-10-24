@@ -349,7 +349,7 @@ void prvMotorTask(void *pvParameters)
       // Encoder handling
       encoder_handler();
       // Read and convert the current
-      //read_and_convert_current();
+      read_and_convert_current();
     }
 }
 
