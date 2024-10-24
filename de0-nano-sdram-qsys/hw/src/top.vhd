@@ -105,13 +105,15 @@ entity top is
       GPIO_2      : out std_logic_vector(12 downto 0);
       GPIO_2_IN   : in  std_logic_vector(2 downto 0);
 
-      HALL_GPIO_i   : in std_logic;
 
 
       ADC_SADDR  : out std_logic;
       ADC_CS_N   : out std_logic;
       ADC_SCLK   : out std_logic;
-      ADC_SDAT   : in  std_logic
+      ADC_SDAT   : in  std_logic;
+
+      -- HALL input signal
+      HALL_i   : in std_logic
    );
 end entity top;
 
@@ -143,7 +145,7 @@ architecture syn of top is
          rst         : in std_logic;
          clk         : in std_logic;
          signal_in   : in std_logic;
-         counter_out : out std_logic_vector(7 downto 0)
+         counter_out : out std_logic_vector(31 downto 0)
       );
    end component edge_counter;
 
@@ -279,6 +281,8 @@ architecture syn of top is
        IO_SLINK_RX_FIFO             : natural range 1 to 2**15       := 1;           -- RX fifo depth, has to be a power of two, min 1
        IO_SLINK_TX_FIFO             : natural range 1 to 2**15       := 1;           -- TX fifo depth, has to be a power of two, min 1
        IO_CRC_EN                    : boolean                        := false        -- implement cyclic redundancy check unit (CRC)?
+       
+       SIGCOUNT_DEBOUNCE_LIMIT      : natural                        := 500000
      );
      port (
        -- Global control --
@@ -439,17 +443,6 @@ architecture syn of top is
 begin
 
    --
-   -- Edge Counter
-   --
-   inst_edge_counter : edge_counter
-      port map (
-         rst => reset,
-         clk => sys_clk,
-         signal_in => HALL_GPIO_i,
-         counter_out => counter_out
-      );
-
-   --
    -- PLL
    --
    inst_pll_sys : pll_sys
@@ -555,7 +548,9 @@ begin
 
          -- External Interrupts Controller (XIRQ) --
          XIRQ_NUM_CH                  => 8                 -- number of external IRQ channels (0..32)
-		)
+         
+         SIGCOUNT_DEBOUNCE_LIMIT               => 60000
+      )
       port map (
          -- Global control --
          clk_i         => clk_i,                            -- global clock, rising edge
@@ -582,8 +577,12 @@ begin
          -- CPU interrupts --
          -- mtime_irq_i                  => mtime_irq_i_signal, -- machine timer interrupt, available if IO_MTIME_EN = false
          msw_irq_i                    => msw_irq_i_signal,   -- machine software interrupt
-         mext_irq_i                   => mext_irq_i_signal   -- machine external interrupt
+         mext_irq_i                   => mext_irq_i_signal,  -- machine external interrupt
+
+         -- HALL
+         hall_signal_i                => HALL_i
 		);
+
    --------------------------------------------------------
    -- Output/Input signals
    --------------------------------------------------------
