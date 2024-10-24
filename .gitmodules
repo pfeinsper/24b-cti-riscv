@@ -4,3 +4,6 @@
 [submodule "FreeRTOS-Kernel"]
 	path = submodules/FreeRTOS-Kernel
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+[submodule "submodules/neorv32-insper"]
+	path = submodules/neorv32-insper
+	url = https://github.com/victorlga/neorv32-insper.git
