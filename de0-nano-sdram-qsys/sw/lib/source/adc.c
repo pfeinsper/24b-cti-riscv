@@ -15,7 +15,9 @@ void adc_start(void) {
 
 void adc_select_chanel(uint32_t chanel) {
     // set 3 bits of the gpio output (30 downto 28) to the chanel
-    neorv32_gpio_port_set(chanel << 28);
+    neorv32_gpio_pin_set(30, (chanel >> 2) & 1);
+    neorv32_gpio_pin_set(29, (chanel >> 1) & 1);
+    neorv32_gpio_pin_set(28, chanel & 1);
     return;
 }
 
