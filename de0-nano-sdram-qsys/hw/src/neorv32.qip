@@ -44,3 +44,4 @@ set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) "../../../
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) "../../../submodules/neorv32/rtl/core/neorv32_xbus.vhd"] -library neorv32
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) "../../../submodules/neorv32/rtl/core/neorv32_xip.vhd"] -library neorv32
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) "../../../submodules/neorv32/rtl/core/neorv32_xirq.vhd"] -library neorv32
+set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) "../../../submodules/neorv32/rtl/core/neorv32_sigcount.vhd"] -library neorv32
