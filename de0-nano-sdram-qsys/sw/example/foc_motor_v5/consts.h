@@ -27,7 +27,7 @@
 
 // PWM frequency
 #define PWM_FREQ 1e6
-#define PWM_RES 4096
+#define PWM_RES 255
 
 // motor voltage
 #define MOTOR_VOLTAGE 12
@@ -40,6 +40,7 @@ extern const float_conv_t conversion_factor;
 
 extern volatile uint8_t update_motor;
 extern volatile uint8_t read_current;
+extern volatile uint8_t init_control;
 extern volatile uint8_t encoder_status;
 extern volatile uint8_t step_index;
 

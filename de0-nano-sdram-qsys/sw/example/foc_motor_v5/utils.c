@@ -25,6 +25,12 @@ void vTimerMotorMove(TimerHandle_t xTimer)
   update_motor = 1;
 }
 
+void vTimerInitControl(TimerHandle_t xTimer)
+{
+  // neorv32_uart0_puts("Timer I expired.\n");
+  init_control = 1;
+}
+
 // Handler for the external interrupt channel 0 (where we will check the Hall sensor)
 void xirq_handler_ch0(void) {
   encoder_status = 1;
@@ -69,21 +75,21 @@ void prvMotorTask(void *pvParameters)
     // Loop indefinitely
     while (1)
     {
-      // Move the motor based on the timer callback
-      move_clockwise();
-      // Encoder handling
-      encoder_handler();
       // Read and convert the current
       read_and_convert_current();
+      // Encoder handling
+      encoder_handler();
+      // Move the motor based on the timer callback
+      move_clockwise();
     }
 }
 
 
 void align_rotor() {
   // align the motor
-    neorv32_gpio_pin_set(IN1, in_seq[5][0]);
-    neorv32_gpio_pin_set(IN2, in_seq[5][1]);
-    neorv32_gpio_pin_set(IN3, in_seq[5][2]);
+    neorv32_pwm_set(IN1, in_seq[5][0]*PWM_RES);
+    neorv32_pwm_set(IN2, in_seq[5][1]*PWM_RES);
+    neorv32_pwm_set(IN3, in_seq[5][2]*PWM_RES);
     neorv32_gpio_pin_set(EN1, en_seq[5][0]);
     neorv32_gpio_pin_set(EN2, en_seq[5][1]);
     neorv32_gpio_pin_set(EN3, en_seq[5][2]);
@@ -106,11 +112,30 @@ void align_rotor() {
 
 // Motor movement function based on the timer flag
 void move_clockwise() {
-  if (update_motor) {
+  if (update_motor && !init_control) {
     // Set motor pins based on the current step
     neorv32_gpio_pin_set(IN1, in_seq[step_index][0]);
     neorv32_gpio_pin_set(IN2, in_seq[step_index][1]);
     neorv32_gpio_pin_set(IN3, in_seq[step_index][2]);
+    neorv32_gpio_pin_set(EN1, en_seq[step_index][0]);
+    neorv32_gpio_pin_set(EN2, en_seq[step_index][1]);
+    neorv32_gpio_pin_set(EN3, en_seq[step_index][2]);
+
+    // Increment and wrap around the step index
+    step_index = (step_index + 1) % 6;
+
+    // Reset the timer flag
+    update_motor = 0;
+  }
+}
+
+// move clockwise with pwm instead of gpio
+void move_clockwise_pwm() {
+  if (update_motor && !init_control) {
+    // Set motor pins based on the current step
+    neorv32_pwm_set(IN1, in_seq[step_index][0]*PWM_RES);
+    neorv32_pwm_set(IN2, in_seq[step_index][1]*PWM_RES);
+    neorv32_pwm_set(IN3, in_seq[step_index][2]*PWM_RES);
     neorv32_gpio_pin_set(EN1, en_seq[step_index][0]);
     neorv32_gpio_pin_set(EN2, en_seq[step_index][1]);
     neorv32_gpio_pin_set(EN3, en_seq[step_index][2]);
@@ -166,6 +191,26 @@ void createTimers(void)
             neorv32_uart0_puts("Failed to start MotorMove timer.\n");
         }
     }
+
+    // Create a timer that only triggers once, caled init control
+    neorv32_uart0_puts("Creating init control timer.\n");
+    const TickType_t xInitControlTimerPeriod = pdMS_TO_TICKS(1000); // 1Hz
+    TimerHandle_t xInitControlTimer = xTimerCreate(
+        "InitControlTimer",       // Timer name
+        xInitControlTimerPeriod,  // Timer period (1s)
+        pdFALSE,                  // Auto-reload timer
+        (void *)0,                // Timer ID
+        vTimerInitControl         // Callback function for InitControlTimer
+    );
+
+    if (xInitControlTimer != NULL)
+    {
+        if (xTimerStart(xInitControlTimer, 0) != pdPASS)
+        {
+            neorv32_uart0_puts("Failed to start InitControl timer.\n");
+        }
+    }
+
 }
 
 void createMotorTask(void)
@@ -516,4 +561,23 @@ t2.float_value = riscv_emulate_fdivs(
 void motor_control(space_vector duty_cycle, pwm_config_space_vector pwm_a,
                    pwm_config_space_vector pwm_b,
                    pwm_config_space_vector pwm_c) {
+  // Set the duty cycle for each phase
+  if (update_motor && init_control){
+    uint8_t converted_duty_a = (uint8_t)(riscv_intrinsic_fmuls(PWM_RES, duty_cycle.duty_a.float_value));
+    uint8_t converted_duty_b = (uint8_t)(riscv_intrinsic_fmuls(PWM_RES, duty_cycle.duty_b.float_value));
+    uint8_t converted_duty_c = (uint8_t)(riscv_intrinsic_fmuls(PWM_RES, duty_cycle.duty_c.float_value));
+    neorv32_pwm_set(0, converted_duty_a);
+    neorv32_pwm_set(1, converted_duty_b);
+    neorv32_pwm_set(2, converted_duty_c);
+
+    // Enable the motor phase if the duty cycle is greater than 0
+    neorv32_gpio_pin_set(EN1, converted_duty_a > 0);
+    neorv32_gpio_pin_set(EN2, converted_duty_b > 0);
+    neorv32_gpio_pin_set(EN3, converted_duty_c > 0);
+  }
+  else {
+    // print a warning
+    neorv32_uart0_puts("Motor control disabled.\n");
+  }
+  
 }
