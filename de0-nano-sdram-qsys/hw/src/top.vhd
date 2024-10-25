@@ -280,7 +280,7 @@ architecture syn of top is
        IO_SLINK_EN                  : boolean                        := false;       -- implement stream link interface (SLINK)?
        IO_SLINK_RX_FIFO             : natural range 1 to 2**15       := 1;           -- RX fifo depth, has to be a power of two, min 1
        IO_SLINK_TX_FIFO             : natural range 1 to 2**15       := 1;           -- TX fifo depth, has to be a power of two, min 1
-       IO_CRC_EN                    : boolean                        := false        -- implement cyclic redundancy check unit (CRC)?
+       IO_CRC_EN                    : boolean                        := false;        -- implement cyclic redundancy check unit (CRC)?
        
        SIGCOUNT_DEBOUNCE_LIMIT      : natural                        := 500000
      );
@@ -382,7 +382,9 @@ architecture syn of top is
        -- CPU interrupts --
        mtime_irq_i    : in  std_ulogic := 'L'; -- machine timer interrupt, available if IO_MTIME_EN = false
        msw_irq_i      : in  std_ulogic := 'L'; -- machine software interrupt
-       mext_irq_i     : in  std_ulogic := 'L'  -- machine external interrupt
+       mext_irq_i     : in  std_ulogic := 'L';  -- machine external interrupt
+		 
+		 hall_signal_i	 : in  std_ulogic
      );
    end component neorv32_top;
 
@@ -547,7 +549,7 @@ begin
 			IO_GPTMR_EN                  => true,              -- implement general purpose timer (GPTMR)?
 
          -- External Interrupts Controller (XIRQ) --
-         XIRQ_NUM_CH                  => 8                 -- number of external IRQ channels (0..32)
+         XIRQ_NUM_CH                  => 8,                 -- number of external IRQ channels (0..32)
          
          SIGCOUNT_DEBOUNCE_LIMIT               => 60000
       )
