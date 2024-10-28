@@ -455,7 +455,6 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to HALL_i
 
 set_global_assignment -name EDA_SIMULATION_TOOL "<None>"
 
-set_global_assignment -name VHDL_FILE src/edge_counter/edge_counter.vhd
 set_global_assignment -name QIP_FILE src/spipll/SPIPLL.qip
 set_global_assignment -name VERILOG_FILE src/adc/ADC_CTRL.v
 set_global_assignment -name QIP_FILE src/pll/pll_sys.qip
