@@ -8,7 +8,7 @@ entity edge_counter is
         clk : in std_logic;         -- Clock do sistema
         rst : in std_logic;         -- Sinal de reset
         signal_in : in std_logic;   -- Sinal de entrada digital (com bouncing)
-        counter_out : out std_logic_vector(7 downto 0)  -- Valor do contador
+        counter : out std_logic_vector(11 downto 0)  -- Valor do contador
     );
 end edge_counter;
 
@@ -16,7 +16,7 @@ architecture Behavioral of edge_counter is
     signal prev_signal : std_logic := '0';   -- Sinal anterior para detectar borda
     signal prev_stable_signal : std_logic := '0'; -- Sinal estabilizado (depois do debouncing) anterior
     signal stable_signal : std_logic := '0'; -- Sinal estabilizado (depois do debouncing)
-    signal counter : std_logic_vector(7 downto 0) := (others => '0');  -- Registrador do contador
+    signal internal_counter : std_logic_vector(11 downto 0) := (others => '0');  -- Registrador do contador
     signal debounce_counter : integer := 0;  -- Temporizador para debouncing
     constant debounce_limit : integer := 3;  -- Limite de ciclos de clock para estabilizar (ajustável)
 
@@ -56,11 +56,11 @@ begin
     begin
         if rst = '1' then
             -- Resetar o contador e o sinal anterior estabilizado
-            counter <= (others => '0');
+            internal_counter <= (others => '0');
         elsif falling_edge(clk) then
             -- Detectar borda de descida no sinal estabilizado
             if stable_signal = '0' and prev_stable_signal = '1' then
-                counter <= counter + 1;
+                internal_counter <= internal_counter + 1;
             end if;
 
             -- Atualizar o valor do sinal estabilizado anterior
@@ -69,6 +69,6 @@ begin
     end process;
 
     -- Conectar o valor do contador à saída
-    counter_out <= counter;
+    counter <= internal_counter;
 
 end Behavioral;

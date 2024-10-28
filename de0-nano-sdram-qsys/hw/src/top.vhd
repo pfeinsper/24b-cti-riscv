@@ -50,7 +50,8 @@ use neorv32.neorv32_package.all;
 
 entity top is
    port (
-		counter_out : out std_logic_vector(7 downto 0);
+	
+		counter : out std_logic_vector(11 downto 0);
 		sys_clk_port: out std_logic;
       --
       -- Input clock
@@ -145,7 +146,7 @@ architecture syn of top is
          rst         : in std_logic;
          clk         : in std_logic;
          signal_in   : in std_logic;
-         counter_out : out std_logic_vector(7 downto 0)
+         counter : out std_logic_vector(11 downto 0)
       );
    end component edge_counter;
 
@@ -283,6 +284,7 @@ architecture syn of top is
        IO_CRC_EN                    : boolean                        := false        -- implement cyclic redundancy check unit (CRC)?
      );
      port (
+	  
        -- Global control --
        clk_i          : in  std_ulogic; -- global clock, rising edge
        rstn_i         : in  std_ulogic; -- global reset, low-active, async
@@ -380,7 +382,9 @@ architecture syn of top is
        -- CPU interrupts --
        mtime_irq_i    : in  std_ulogic := 'L'; -- machine timer interrupt, available if IO_MTIME_EN = false
        msw_irq_i      : in  std_ulogic := 'L'; -- machine software interrupt
-       mext_irq_i     : in  std_ulogic := 'L'  -- machine external interrupt
+       mext_irq_i     : in  std_ulogic := 'L'; -- machine external interrupt
+		 
+		 counter        : in std_logic_vector(11 downto 0)
      );
    end component neorv32_top;
 
@@ -437,8 +441,10 @@ architecture syn of top is
    signal wSPI_CLK_n : std_logic;
 	
 	signal PWM_u : std_ulogic_vector(3 downto 0);
-
-   -- signal counter_out : std_logic_vector(7 downto 0); 
+	
+	
+	signal signal_couter : std_logic_vector(11 downto 0);
+ 
 
 begin
 
@@ -450,8 +456,10 @@ begin
          rst => reset,
          clk => sys_clk,
          signal_in => HALL_GPIO_i,
-         counter_out => counter_out
+         counter => signal_couter
       );
+		
+		counter <= signal_couter;
 
    --
    -- PLL
@@ -586,7 +594,10 @@ begin
          -- CPU interrupts --
          -- mtime_irq_i                  => mtime_irq_i_signal, -- machine timer interrupt, available if IO_MTIME_EN = false
          msw_irq_i                    => msw_irq_i_signal,   -- machine software interrupt
-         mext_irq_i                   => mext_irq_i_signal   -- machine external interrupt
+         mext_irq_i                   => mext_irq_i_signal,   -- machine external interrupt
+			
+			
+			counter => signal_couter
 		);
    --------------------------------------------------------
    -- Output/Input signals
