@@ -446,6 +446,10 @@ set_location_assignment PIN_A9 -to ADC_SDAT
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ADC_SDAT
 
 #============================================================
+# HALL
+#============================================================
+set_location_assignment PIN_B12 -to HALL_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to HALL_i
 
 
 
