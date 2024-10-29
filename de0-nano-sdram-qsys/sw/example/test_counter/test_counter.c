@@ -61,6 +61,10 @@ void gptmr_firq_handler(void) {
 
   neorv32_gptmr_irq_ack(); // clear/ack pending FIRQ
 
+  counter = neorv32_counter_get();
+
+  neorv32_uart0_printf("Counter: %i\n", counter);
+
   // motor control
   neorv32_gpio_pin_set(IN1, in_seq[counter_led][0]);
   neorv32_gpio_pin_set(IN2, in_seq[counter_led][1]);
@@ -69,9 +73,5 @@ void gptmr_firq_handler(void) {
   neorv32_gpio_pin_set(EN2, en_seq[counter_led][1]);
   neorv32_gpio_pin_set(EN3, en_seq[counter_led][2]);
   counter_led = (counter_led + 1) % 6;
-
-  counter = neorv32_counter_get();
-
-  neorv32_uart0_printf("Counter: %i\n", counter);
 
 }
