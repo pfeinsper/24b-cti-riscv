@@ -68,7 +68,7 @@ void gptmr_firq_handler(void) {
   neorv32_gpio_pin_set(IN3, in_seq[counter_led][2]);
 
   if (in_seq[counter_led][0] == 1) {
-    neorv32_uart0_printf("the counter should change now\n");
+    neorv32_uart0_printf("the counter should change after the next print\n");
   }
 
   counter_led = (counter_led + 1) % 3;
