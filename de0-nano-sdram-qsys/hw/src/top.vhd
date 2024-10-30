@@ -50,6 +50,9 @@ use neorv32.neorv32_package.all;
 
 entity top is
    port (
+	
+		counter : out std_logic_vector(11 downto 0);
+		sys_clk_port: out std_logic;
       --
       -- Input clock
       --
@@ -87,7 +90,7 @@ entity top is
 		--
 		-- PWM   
       --
-		PWM          : out std_ulogic_vector(3 downto 0);
+		PWM          : out std_logic_vector(3 downto 0);
 
       -- CPU Interrupts
       -- MTIME_IRQ   : in  std_logic;
@@ -105,7 +108,7 @@ entity top is
       GPIO_2      : out std_logic_vector(12 downto 0);
       GPIO_2_IN   : in  std_logic_vector(2 downto 0);
 
-      HALL_GPIO_i   : in std_logic;
+      HALL_i   : in std_logic;
 
 
       ADC_SADDR  : out std_logic;
@@ -143,7 +146,7 @@ architecture syn of top is
          rst         : in std_logic;
          clk         : in std_logic;
          signal_in   : in std_logic;
-         counter_out : out std_logic_vector(7 downto 0)
+         counter : out std_logic_vector(11 downto 0)
       );
    end component edge_counter;
 
@@ -281,6 +284,7 @@ architecture syn of top is
        IO_CRC_EN                    : boolean                        := false        -- implement cyclic redundancy check unit (CRC)?
      );
      port (
+	  
        -- Global control --
        clk_i          : in  std_ulogic; -- global clock, rising edge
        rstn_i         : in  std_ulogic; -- global reset, low-active, async
@@ -378,7 +382,9 @@ architecture syn of top is
        -- CPU interrupts --
        mtime_irq_i    : in  std_ulogic := 'L'; -- machine timer interrupt, available if IO_MTIME_EN = false
        msw_irq_i      : in  std_ulogic := 'L'; -- machine software interrupt
-       mext_irq_i     : in  std_ulogic := 'L'  -- machine external interrupt
+       mext_irq_i     : in  std_ulogic := 'L'; -- machine external interrupt
+		 
+		 counter        : in std_logic_vector(11 downto 0)
      );
    end component neorv32_top;
 
@@ -433,8 +439,12 @@ architecture syn of top is
 
    signal wSPI_CLK   : std_logic;
    signal wSPI_CLK_n : std_logic;
-
-   signal counter_out : std_logic_vector(7 downto 0); 
+	
+	signal PWM_u : std_ulogic_vector(3 downto 0);
+	
+	
+	signal signal_couter : std_logic_vector(11 downto 0);
+ 
 
 begin
 
@@ -445,9 +455,11 @@ begin
       port map (
          rst => reset,
          clk => sys_clk,
-         signal_in => HALL_GPIO_i,
-         counter_out => counter_out
+         signal_in => HALL_i,
+         counter => signal_couter
       );
+		
+		counter <= signal_couter;
 
    --
    -- PLL
@@ -574,7 +586,7 @@ begin
          -- primary UART0 (available if IO_UART0_EN = true) --
          uart0_txd_o   => UART0_TXD,                        -- UART0 send data
          uart0_rxd_i   => UART0_RXD,                         -- UART0 receive data
-			pwm_o(3 downto 0)         => PWM,                   -- pwm channels
+			pwm_o(3 downto 0)         => PWM_u,                   -- pwm channels
 
          -- XIRQ (available if XIRQ_NUM_CH > 0) --
          xirq_i     => xirq_i_signal,                            -- IRQ channels
@@ -582,7 +594,10 @@ begin
          -- CPU interrupts --
          -- mtime_irq_i                  => mtime_irq_i_signal, -- machine timer interrupt, available if IO_MTIME_EN = false
          msw_irq_i                    => msw_irq_i_signal,   -- machine software interrupt
-         mext_irq_i                   => mext_irq_i_signal   -- machine external interrupt
+         mext_irq_i                   => mext_irq_i_signal,   -- machine external interrupt
+			
+			
+			counter => signal_couter
 		);
    --------------------------------------------------------
    -- Output/Input signals
@@ -610,7 +625,10 @@ begin
    -- mtime_irq_i_signal <= MTIME_IRQ;
    msw_irq_i_signal   <= MSW_IRQ;
    mext_irq_i_signal  <= 'L';--MEXT_IRQ;
-
+	
+	PWM <= std_logic_vector(PWM_u);
+	sys_clk_port <= sys_clk;
+	
 end architecture syn;
 
 -- *** EOF ***

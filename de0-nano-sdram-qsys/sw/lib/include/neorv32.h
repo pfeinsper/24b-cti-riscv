@@ -76,7 +76,10 @@ extern "C" {
 #define NEORV32_NEOLED_BASE  (0xFFFFFD00U) /**< Smart LED Hardware Interface (NEOLED) */
 #define NEORV32_SYSINFO_BASE (0xFFFFFE00U) /**< System Information Memory (SYSINFO) */
 #define NEORV32_DM_BASE      (0xFFFFFF00U) /**< On-Chip Debugger - Debug Module (OCD) */
+
+#define NEORV32_COUNTER_BASE (0xFFFFE000U) /**< Hal counter (COUNTER) */
 /**@}*/
+
 
 
 /**********************************************************************//**
@@ -303,6 +306,8 @@ typedef union {
 #include "neorv32_xirq.h"
 
 #include "adc.h"
+
+#include "neorv32_counter.h"
 
 
 #ifdef __cplusplus

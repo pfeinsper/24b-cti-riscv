@@ -1,0 +1,105 @@
+m255
+K4
+z2
+!s11e vcom 2020.1 2020.02, Feb 28 2020
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dC:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/simulation/qsim
+Etop
+Z1 w1730139923
+Z2 DPx10 cycloneive 20 cycloneive_atom_pack 0 22 76OUjOFMM1Jzd<9936DA;3
+Z3 DPx10 cycloneive 21 cycloneive_components 0 22 dANj__M<MaN@;H9Tkm=iP1
+Z4 DPx4 ieee 16 vital_primitives 0 22 G>kiXP8Q9dRClKfK1Zn7j1
+Z5 DPx6 altera 11 dffeas_pack 0 22 H5F:RRfLz82T3`4>@b7mS3
+Z6 DPx4 ieee 12 vital_timing 0 22 J>EBealN09f8GzldA[z2>3
+Z7 DPx3 std 6 textio 0 22 zE1`LPoLg^DX3Oz^4Fj1K3
+Z8 DPx4 ieee 14 std_logic_1164 0 22 cVAk:aDinOX8^VGI1ekP<3
+Z9 DPx6 altera 28 altera_primitives_components 0 22 VSD=32;3391kSOd?PDZYj3
+!i122 34
+R0
+Z10 8de0-neorv32-sdram-qsys.vho
+Z11 Fde0-neorv32-sdram-qsys.vho
+l0
+L37 1
+V7H9Z>6KGHCUa37dg1Q:n_1
+!s100 LS:<Ll1]9PZP]go<9SzL30
+Z12 OV;C;2020.1;71
+32
+!s110 1730139924
+!i10b 1
+Z13 !s108 1730139924.000000
+Z14 !s90 -work|work|de0-neorv32-sdram-qsys.vho|
+Z15 !s107 de0-neorv32-sdram-qsys.vho|
+!i113 1
+Z16 o-work work
+Z17 tExplicit 1 CvgOpt 0
+Astructure
+R2
+R3
+R4
+R5
+R6
+R7
+R8
+R9
+DEx4 work 3 top 0 22 7H9Z>6KGHCUa37dg1Q:n_1
+!i122 34
+l7327
+L187 155498
+VF[SPKFE5E^PhN314OC<543
+!s100 FXdEQ[=oIjGL;HVZCiI2;2
+R12
+32
+!s110 1730139925
+!i10b 1
+R13
+R14
+R15
+!i113 1
+R16
+R17
+Etop_vhd_vec_tst
+Z18 w1730139921
+R7
+R8
+!i122 35
+R0
+Z19 8Waveform.vwf.vht
+Z20 FWaveform.vwf.vht
+l0
+L32 1
+Vc7ORh82j0fL3dGC4eFm4k2
+!s100 <P>A;@11]XQbG;eP>UZgE0
+R12
+32
+Z21 !s110 1730139926
+!i10b 1
+Z22 !s108 1730139926.000000
+Z23 !s90 -work|work|Waveform.vwf.vht|
+Z24 !s107 Waveform.vwf.vht|
+!i113 1
+R16
+R17
+Atop_arch
+R7
+R8
+Z25 DEx4 work 15 top_vhd_vec_tst 0 22 c7ORh82j0fL3dGC4eFm4k2
+!i122 35
+l85
+L34 112
+VG=S082_gDQVD7D^UI^f;<3
+!s100 egK?4@E^bTAHjhPl^lfJO1
+R12
+32
+R21
+!i10b 1
+R22
+R23
+R24
+!i113 1
+R16
+R17
