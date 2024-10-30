@@ -15,10 +15,7 @@
 #define EN3 5
 
 // things for the motor control
-uint8_t in_seq[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 1, 0},
-                        {0, 0, 1}, {0, 0, 1}, {1, 0, 0}};
-uint8_t en_seq[6][3] = {{1, 0, 1}, {0, 1, 1}, {1, 1, 0},
-                        {1, 0, 1}, {0, 1, 1}, {1, 1, 0}};
+uint8_t in_seq[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 volatile uint32_t counter_led = 0;
 volatile uint32_t counter = 0;
 
@@ -66,12 +63,14 @@ void gptmr_firq_handler(void) {
   neorv32_uart0_printf("Counter: %i\n", counter);
 
   // motor control
-  neorv32_gpio_pin_set(IN1, in_seq[counter_led][0]);
+  neorv32_gpio_pin_set(IN1, in_seq[counter_led][0]); // we are looking at this one to test the counter
   neorv32_gpio_pin_set(IN2, in_seq[counter_led][1]);
   neorv32_gpio_pin_set(IN3, in_seq[counter_led][2]);
-  neorv32_gpio_pin_set(EN1, en_seq[counter_led][0]);
-  neorv32_gpio_pin_set(EN2, en_seq[counter_led][1]);
-  neorv32_gpio_pin_set(EN3, en_seq[counter_led][2]);
-  counter_led = (counter_led + 1) % 6;
+
+  if (in_seq[counter_led][0] == 1) {
+    neorv32_uart0_printf("the counter should change now\n");
+  }
+
+  counter_led = (counter_led + 1) % 3;
 
 }
