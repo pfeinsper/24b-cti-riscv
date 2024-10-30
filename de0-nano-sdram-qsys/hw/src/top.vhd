@@ -108,7 +108,7 @@ entity top is
       GPIO_2      : out std_logic_vector(12 downto 0);
       GPIO_2_IN   : in  std_logic_vector(2 downto 0);
 
-      HALL_GPIO_i   : in std_logic;
+      HALL_i   : in std_logic;
 
 
       ADC_SADDR  : out std_logic;
@@ -455,7 +455,7 @@ begin
       port map (
          rst => reset,
          clk => sys_clk,
-         signal_in => HALL_GPIO_i,
+         signal_in => HALL_i,
          counter => signal_couter
       );
 		
