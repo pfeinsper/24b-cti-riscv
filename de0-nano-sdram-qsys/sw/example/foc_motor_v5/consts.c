@@ -5,6 +5,7 @@ const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // thi
 
 volatile uint8_t update_motor = 0;
 volatile uint8_t read_current = 0;
+volatile uint8_t init_control = 0;
 volatile uint8_t encoder_status = 0;
 volatile uint8_t step_index = 0;
 
@@ -18,7 +19,7 @@ uint8_t en_seq[6][3] = {{1, 0, 1}, {0, 1, 1}, {1, 1, 0},
 
 
 float_conv_t id_ref = { .float_value = 0.0 };
-float_conv_t iq_ref = { .float_value = 0.25 };
+float_conv_t iq_ref = { .float_value = 0.5 };
 
 float_conv_t kp = { .float_value = 0.05 };
 float_conv_t ki = { .float_value = 200.0 };

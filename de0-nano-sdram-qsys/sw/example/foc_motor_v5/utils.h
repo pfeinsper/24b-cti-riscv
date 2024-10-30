@@ -51,6 +51,7 @@ typedef struct {
 // timers
 void vTimerGetCur(TimerHandle_t xTimer);
 void vTimerMotorMove(TimerHandle_t xTimer);
+void vTimerInitControl(TimerHandle_t xTimer);
 
 // tasks
 void prvMotorTask(void *pvParameters);
@@ -62,10 +63,10 @@ void setup_xirq(void);
 void xirq_handler_ch0(void);
 void align_rotor();
 void move_clockwise();
+void move_clockwise_pwm();
 void read_and_convert_current();
 void createCurTimer();
 void createMotorTask();
-void createMotorMoveTimer();
 void createTimers();
 current_ab get_current_ab();
 current_clark get_clark_transform(current_ab cur_ab);

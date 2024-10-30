@@ -1,13 +1,17 @@
 /*<simulation_settings>
+
 <ftestbench_cmd>quartus_eda --gen_testbench --tool=modelsim_oem --format=vhdl --write_settings_files=off de0-neorv32-sdram-qsys -c de0-neorv32-sdram-qsys --vector_source="C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/Waveform.vwf" --testbench_file="C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/simulation/qsim/Waveform.vwf.vht"</ftestbench_cmd>
 <ttestbench_cmd>quartus_eda --gen_testbench --tool=modelsim_oem --format=vhdl --write_settings_files=off de0-neorv32-sdram-qsys -c de0-neorv32-sdram-qsys --vector_source="C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/Waveform.vwf" --testbench_file="C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/simulation/qsim/Waveform.vwf.vht"</ttestbench_cmd>
 <fnetlist_cmd>quartus_eda --write_settings_files=off --simulation --functional=on --flatten_buses=off --tool=modelsim_oem --format=vhdl --output_directory="C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/simulation/qsim/" de0-neorv32-sdram-qsys -c de0-neorv32-sdram-qsys</fnetlist_cmd>
 <tnetlist_cmd>quartus_eda --write_settings_files=off --simulation --functional=off --flatten_buses=off --timescale=1ps --tool=modelsim_oem --format=vhdl --output_directory="C:/Users/rodri/Documents/Rodrigo/Insper/OitavoSemestre/24b-cti-riscv/de0-nano-sdram-qsys/hw/simulation/qsim/" de0-neorv32-sdram-qsys -c de0-neorv32-sdram-qsys</tnetlist_cmd>
+
 <modelsim_script>onerror {exit -code 1}
 vlib work
 vcom -work work de0-neorv32-sdram-qsys.vho
 vcom -work work Waveform.vwf.vht
+
 vsim -c -t 1ps -L cycloneive -L altera -L altera_mf -L 220model -L sgate -L altera_lnsim work.top_vhd_vec_tst
+
 vcd file -direction de0-neorv32-sdram-qsys.msim.vcd
 vcd add -internal top_vhd_vec_tst/*
 vcd add -internal top_vhd_vec_tst/i1/*
@@ -42,6 +46,7 @@ run -all
 quit -f
 
 
+
 </modelsim_script_timing>
 <hdl_lang>vhdl</hdl_lang>
 </simulation_settings>*/
@@ -52,7 +57,9 @@ the Block Editor! File corruption is VERY likely to occur.
 */
 
 /*
+
 Copyright (C) 2020  Intel Corporation. All rights reserved.
+
 Your use of Intel Corporation's design tools, logic functions 
 and other software and tools, and any partner logic 
 functions, and any output files from any of the foregoing 
@@ -120,6 +127,7 @@ SIGNAL("counter")
 	PARENT = "";
 }
 
+
 SIGNAL("counter[11]")
 {
 	VALUE_TYPE = NINE_LEVEL_BIT;
@@ -137,10 +145,12 @@ SIGNAL("counter[10]")
 	WIDTH = 1;
 	LSB_INDEX = -1;
 	DIRECTION = OUTPUT;
+
 	PARENT = "counter";
 }
 
 SIGNAL("counter[9]")
+
 {
 	VALUE_TYPE = NINE_LEVEL_BIT;
 	SIGNAL_TYPE = SINGLE_BIT;
@@ -157,10 +167,12 @@ SIGNAL("counter[8]")
 	WIDTH = 1;
 	LSB_INDEX = -1;
 	DIRECTION = OUTPUT;
+
 	PARENT = "counter";
 }
 
 SIGNAL("counter[7]")
+
 {
 	VALUE_TYPE = NINE_LEVEL_BIT;
 	SIGNAL_TYPE = SINGLE_BIT;
@@ -171,16 +183,19 @@ SIGNAL("counter[7]")
 }
 
 SIGNAL("counter[6]")
+
 {
 	VALUE_TYPE = NINE_LEVEL_BIT;
 	SIGNAL_TYPE = SINGLE_BIT;
 	WIDTH = 1;
 	LSB_INDEX = -1;
 	DIRECTION = OUTPUT;
+
 	PARENT = "counter";
 }
 
 SIGNAL("counter[5]")
+
 {
 	VALUE_TYPE = NINE_LEVEL_BIT;
 	SIGNAL_TYPE = SINGLE_BIT;
@@ -191,6 +206,7 @@ SIGNAL("counter[5]")
 }
 
 SIGNAL("counter[4]")
+
 {
 	VALUE_TYPE = NINE_LEVEL_BIT;
 	SIGNAL_TYPE = SINGLE_BIT;
@@ -274,6 +290,7 @@ TRANSITION_LIST("KEY[0]")
 }
 
 TRANSITION_LIST("sys_clk_port")
+
 {
 	NODE
 	{
@@ -283,6 +300,7 @@ TRANSITION_LIST("sys_clk_port")
 }
 
 TRANSITION_LIST("counter[11]")
+
 {
 	NODE
 	{
@@ -290,8 +308,10 @@ TRANSITION_LIST("counter[11]")
 		LEVEL X FOR 1000.0;
 	}
 }
+
 
 TRANSITION_LIST("counter[10]")
+
 {
 	NODE
 	{
@@ -300,7 +320,9 @@ TRANSITION_LIST("counter[10]")
 	}
 }
 
+
 TRANSITION_LIST("counter[9]")
+
 {
 	NODE
 	{
@@ -310,6 +332,7 @@ TRANSITION_LIST("counter[9]")
 }
 
 TRANSITION_LIST("counter[8]")
+
 {
 	NODE
 	{
@@ -319,6 +342,7 @@ TRANSITION_LIST("counter[8]")
 }
 
 TRANSITION_LIST("counter[7]")
+
 {
 	NODE
 	{
@@ -326,8 +350,10 @@ TRANSITION_LIST("counter[7]")
 		LEVEL X FOR 1000.0;
 	}
 }
+
 
 TRANSITION_LIST("counter[6]")
+
 {
 	NODE
 	{
@@ -336,7 +362,9 @@ TRANSITION_LIST("counter[6]")
 	}
 }
 
+
 TRANSITION_LIST("counter[5]")
+
 {
 	NODE
 	{
@@ -344,6 +372,7 @@ TRANSITION_LIST("counter[5]")
 		LEVEL X FOR 1000.0;
 	}
 }
+
 
 TRANSITION_LIST("counter[4]")
 {
@@ -391,35 +420,42 @@ TRANSITION_LIST("counter[0]")
 }
 
 TRANSITION_LIST("HALL_i")
+
 {
 	NODE
 	{
 		REPEAT = 1;
 		NODE
 		{
+
 			REPEAT = 10;
 			LEVEL 0 FOR 50.0;
 			LEVEL 1 FOR 50.0;
 		}
+
 	}
 }
 
 DISPLAY_LINE
 {
+
 	CHANNEL = "CLOCK_50";
 	EXPAND_STATUS = COLLAPSED;
 	RADIX = Binary;
 	TREE_INDEX = 0;
 	TREE_LEVEL = 0;
+
 }
 
 DISPLAY_LINE
 {
+
 	CHANNEL = "KEY[0]";
 	EXPAND_STATUS = COLLAPSED;
 	RADIX = Binary;
 	TREE_INDEX = 1;
 	TREE_LEVEL = 0;
+
 }
 
 DISPLAY_LINE
@@ -444,6 +480,7 @@ DISPLAY_LINE
 DISPLAY_LINE
 {
 	CHANNEL = "counter[11]";
+
 	EXPAND_STATUS = COLLAPSED;
 	RADIX = Unsigned;
 	TREE_INDEX = 4;
