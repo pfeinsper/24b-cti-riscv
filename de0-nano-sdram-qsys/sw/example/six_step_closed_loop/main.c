@@ -40,8 +40,6 @@
 #define UART_BAUD_RATE (19200)         // transmission speed
 #define UART_HW_HANDLE (NEORV32_UART0) // use UART0 (primary UART)
 
-/** Maximum PWM output intensity (8-bit) */
-#define PWM_MAX 255
 /** Number of PWM channels to modulate simultaneously */
 #define NUM_PWM_CHANNELS 4
 
@@ -141,7 +139,7 @@ static void prvSetupHardware(void) {
   }
 
   // Configure and enable PWM
-  neorv32_pwm_setup(CLK_PRSC_64);
+  neorv32_pwm_setup(CLK_PRSC_2);
 
   // ----------------------------------------------------------
   // Configuration checks

@@ -68,9 +68,12 @@
 #define EN2 4
 #define EN3 5
 
+/** Maximum PWM output intensity (8-bit) */
+#define PWM_RES 255
+
 // config pwm values
 volatile uint8_t update_motor = 0;
-volatile uint8_t read_current = 0;
+volatile uint8_t update_constants = 0;
 volatile uint8_t encoder_status = 0;
 volatile uint8_t step_index = 0;
 /**@}*/
@@ -105,14 +108,19 @@ const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // thi
 
 
 // create timers
-static void vTimerGetCur(TimerHandle_t xTimer);
+static void vTimerUpdateConstants(TimerHandle_t xTimer);
 static void vTimerMotorMove(TimerHandle_t xTimer);
 
 // config tasks
 static void prvMotorTask(void *pvParameters);
+static void vOpenLoopMotorTask(void *pvParameters);
 
 uint32_t last_count = 0;
 volatile uint32_t encoder_count = 0;
+
+volatile uint32_t update_constants_time = 1000; // in ms
+volatile uint32_t motor_move_time = 5; // in ms
+volatile uint32_t speed = 0;
 
 
 /**@}*/
@@ -121,9 +129,11 @@ volatile uint32_t encoder_count = 0;
 // Prototypes
 void align_rotor();
 void move_clockwise();
+void move_clockwise_pwm();
 void read_and_convert_current();
 void createCurTimer();
-void createMotorTask();
+void createprvMotorTask();
+void createOpenLoopMotorTask();
 void createMotorMoveTimer();
 void createTimers();
 int six_step();
@@ -172,7 +182,8 @@ int six_step() {
   align_rotor();
 
   // create the motor task
-  createMotorTask();
+  //createprvMotorTask();
+  createOpenLoopMotorTask();
 
   // create the timers
   createTimers();
@@ -195,13 +206,13 @@ void createTimers(void)
 
     // Create CurTimer
     neorv32_uart0_puts("Creating Cur timer.\n");
-    const TickType_t xCurTimerPeriod = pdMS_TO_TICKS(100); // 100Hz
+    const TickType_t xCurTimerPeriod = pdMS_TO_TICKS(update_constants_time);
     xCurTimer = xTimerCreate(
         "CurTimer",          // Timer name
         xCurTimerPeriod,     // Timer period (10ms)
         pdTRUE,              // Auto-reload timer
         (void *)0,           // Timer ID
-        vTimerGetCur         // Callback function for CurTimer
+        vTimerUpdateConstants         // Callback function for CurTimer
     );
 
     if (xCurTimer != NULL)
@@ -214,7 +225,7 @@ void createTimers(void)
 
     // Create MotorMoveTimer
     neorv32_uart0_puts("Creating motor move timer.\n");
-    const TickType_t xMotorMoveTimerPeriod = pdMS_TO_TICKS(200); // 50Hz
+    const TickType_t xMotorMoveTimerPeriod = pdMS_TO_TICKS(motor_move_time);
     xMotorMoveTimer = xTimerCreate(
         "MotorMoveTimer",       // Timer name
         xMotorMoveTimerPeriod,  // Timer period (50ms)
@@ -233,7 +244,7 @@ void createTimers(void)
 }
 
 
-void createMotorTask(void)
+void createprvMotorTask(void)
 {
   // print an warning
   neorv32_uart0_puts("Creating motor task.\n");
@@ -243,34 +254,14 @@ void createMotorTask(void)
   neorv32_uart0_puts("Motor task created.\n");
 }
 
-// Motor movement function based on the timer flag
-void move_clockwise() {
-  if (update_motor) {
-    // Set motor pins based on the current step
-    neorv32_gpio_pin_set(IN1, in_seq[step_index][0]);
-    neorv32_gpio_pin_set(IN2, in_seq[step_index][1]);
-    neorv32_gpio_pin_set(IN3, in_seq[step_index][2]);
-    neorv32_gpio_pin_set(EN1, en_seq[step_index][0]);
-    neorv32_gpio_pin_set(EN2, en_seq[step_index][1]);
-    neorv32_gpio_pin_set(EN3, en_seq[step_index][2]);
-
-    // Increment and wrap around the step index
-    step_index = (step_index + 1) % 6;
-
-    // Reset the timer flag
-    update_motor = 0;
-  }
-}
-
-
-void read_and_convert_current() {
-  if (read_current) {
-    // Get the current values
-    three_phase = get_current_ab();
-    quadrature = get_clark_transform(three_phase);
-    // Reset the flag
-    read_current = 0;
-  }
+void createOpenLoopMotorTask(void)
+{
+  // print an warning
+  neorv32_uart0_puts("Creating open loop motor task.\n");
+  // Create the task
+  xTaskCreate(vOpenLoopMotorTask, "OpenLoopMotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
+  // print an warning
+  neorv32_uart0_puts("Open loop motor task created.\n");
 }
 
 void align_rotor() {
@@ -300,20 +291,36 @@ void align_rotor() {
 }
 
 // Function to be called when the timer expires
-void vTimerGetCur(TimerHandle_t xTimer)
+void vTimerUpdateConstants(TimerHandle_t xTimer)
 {
-    // Code to execute at 100Hz frequency
-    // This function will be called every 10ms
-    // print a warning
-    //neorv32_uart0_puts("Timer C expired.\n");
-    read_current = 1;
+  update_constants = 1;
 }
 
 void vTimerMotorMove(TimerHandle_t xTimer)
 {
-  // neorv32_uart0_puts("Timer M expired.\n");
-  // Set the timer flag
   update_motor = 1;
+}
+
+void vOpenLoopMotorTask(void *pvParameters)
+{
+    // print a warning
+    neorv32_uart0_puts("Open loop motor task started.\n");
+    // Loop indefinitely
+    while (1)
+    {
+      if (update_constants){
+        update_angle();
+        update_constants = 0;
+      }
+      if (speed > 100) { // still need to figure out the right value
+        // create the motor move task
+        createprvMotorTask();
+        // delete the open loop motor task
+        vTaskDelete(NULL);
+      }
+      move_clockwise();
+      //move_clockwise_pwm();
+    }
 }
 
 void prvMotorTask(void *pvParameters)
@@ -323,27 +330,76 @@ void prvMotorTask(void *pvParameters)
     // Loop indefinitely
     while (1)
     {
-      // Move the motor based on the timer callback
+      if (update_constants){
+        update_angle();
+        read_and_convert_current();
+        update_constants = 0;
+      }
       move_clockwise();
-      // Encoder handling
-      update_angle();
-      // Read and convert the current
-      read_and_convert_current();
+      //move_clockwise_pwm();
     }
 }
 
+// Motor movement function based on the timer flag
+void move_clockwise() {
+  if (update_motor) {
+    // Set motor pins based on the current step
+    neorv32_gpio_pin_set(IN1, in_seq[step_index][0]);
+    neorv32_gpio_pin_set(IN2, in_seq[step_index][1]);
+    neorv32_gpio_pin_set(IN3, in_seq[step_index][2]);
+    neorv32_gpio_pin_set(EN1, en_seq[step_index][0]);
+    neorv32_gpio_pin_set(EN2, en_seq[step_index][1]);
+    neorv32_gpio_pin_set(EN3, en_seq[step_index][2]);
+
+    // Increment and wrap around the step index
+    step_index = (step_index + 1) % 6;
+
+    // Reset the timer flag
+    update_motor = 0;
+  }
+}
+
+// move clockwise with pwm instead of gpio
+void move_clockwise_pwm() {
+  if (update_motor) {
+    // Set motor pins based on the current step
+    neorv32_pwm_set(IN1, in_seq[step_index][0]*PWM_RES);
+    neorv32_pwm_set(IN2, in_seq[step_index][1]*PWM_RES);
+    neorv32_pwm_set(IN3, in_seq[step_index][2]*PWM_RES);
+    neorv32_gpio_pin_set(EN1, en_seq[step_index][0]);
+    neorv32_gpio_pin_set(EN2, en_seq[step_index][1]);
+    neorv32_gpio_pin_set(EN3, en_seq[step_index][2]);
+
+    // Increment and wrap around the step index
+    step_index = (step_index + 1) % 6;
+
+    // Reset the timer flag
+    update_motor = 0;
+  }
+}
+
+
+void read_and_convert_current() {
+    // Get the current values
+    three_phase = get_current_ab();
+    quadrature = get_clark_transform(three_phase);
+}
 
 void update_angle() {
 
-
   encoder_count = neorv32_counter_get();
   //each tick is 1.8 degrees
-  current_angle.float_value = riscv_intrinsic_fadds(current_angle.float_value, riscv_intrinsic_fmuls(1.8, riscv_intrinsic_fsubs(encoder_count, last_count)));
+  uint32_t diff = encoder_count - last_count;
+  current_angle.float_value = riscv_intrinsic_fadds(current_angle.float_value, riscv_intrinsic_fmuls(1.8, diff));
   last_count = encoder_count;
   if (!(riscv_intrinsic_flts(360, current_angle.float_value))) {
     current_angle.float_value = riscv_intrinsic_fsubs(current_angle.float_value, 360.0);
   }
-
-  //neorv32_uart0_printf("Current angle: %u\n", current_angle.binary_value);
+  // calculate speed
+  // speed = diff * 1.8 / time_between_measurements
+  float_conv_t time_in_seconds = { .float_value = riscv_emulate_fdivs(update_constants_time, 1000) };
+  speed = riscv_intrinsic_fmuls(1.8, riscv_emulate_fdivs(diff, time_in_seconds.float_value)); // in degrees per second
+  // print the speed  
+  neorv32_uart0_printf("Speed: %u\n", speed);
 
 }
