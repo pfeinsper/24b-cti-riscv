@@ -105,6 +105,13 @@ const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // thi
 /* Priorities used by the tasks. */
 #define mainMotorTask_PRIORITY    ( tskIDLE_PRIORITY + 1 )
 
+/* The rate at which data is sent to the queue.  The 500ms value is converted
+ * to ticks using the pdMS_TO_TICKS() macro. */
+#define mainQUEUE_SEND_FREQUENCY_MS             pdMS_TO_TICKS( 500 )
+
+/* The maximum number items the queue can hold.*/
+#define mainQUEUE_LENGTH                        ( 2 )
+
 
 
 // create timers
@@ -114,14 +121,18 @@ static void vTimerMotorMove(TimerHandle_t xTimer);
 // config tasks
 static void prvMotorTask(void *pvParameters);
 static void vOpenLoopMotorTask(void *pvParameters);
+static void vListemUARTTask(void *pvParameters);
+
+// config queue
+static QueueHandle_t xQueue = NULL;
 
 uint32_t last_count = 0;
 volatile uint32_t encoder_count = 0;
 
 volatile uint32_t update_constants_time = 1000; // in ms
 volatile uint32_t motor_move_time = 5; // in ms
-volatile uint32_t speed = 0;
-
+volatile float_conv_t motor_speed = {.float_value = 0.0};
+volatile uint8_t voltage_divider = 1;
 
 /**@}*/
 
@@ -130,14 +141,13 @@ volatile uint32_t speed = 0;
 void align_rotor();
 void move_clockwise();
 void move_clockwise_pwm();
-void read_and_convert_current();
-void createCurTimer();
+void createInitialTasks();
 void createprvMotorTask();
 void createOpenLoopMotorTask();
-void createMotorMoveTimer();
 void createTimers();
 int six_step();
 void update_angle();
+void PID_control();
 
 current_ab get_current_ab() {
   current_ab res;
@@ -181,9 +191,12 @@ int six_step() {
   // align the motor
   align_rotor();
 
+  // create queue
+  xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( float ) );
+
   // create the motor task
   //createprvMotorTask();
-  createOpenLoopMotorTask();
+  createInitialTasks();
 
   // create the timers
   createTimers();
@@ -243,25 +256,24 @@ void createTimers(void)
     }
 }
 
-
-void createprvMotorTask(void)
+void createInitialTasks(void)
 {
-  // print an warning
-  neorv32_uart0_puts("Creating motor task.\n");
-  // Create the task
-  xTaskCreate(prvMotorTask, "MotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
-  // print an warning
-  neorv32_uart0_puts("Motor task created.\n");
-}
-
-void createOpenLoopMotorTask(void)
-{
-  // print an warning
-  neorv32_uart0_puts("Creating open loop motor task.\n");
   // Create the task
   xTaskCreate(vOpenLoopMotorTask, "OpenLoopMotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
   // print an warning
   neorv32_uart0_puts("Open loop motor task created.\n");
+  // Create the task
+  xTaskCreate(vListemUARTTask, "UARTTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
+  // print an warning
+  neorv32_uart0_puts("UART task created.\n");
+}
+
+void createprvMotorTask(void)
+{
+  // Create the task
+  xTaskCreate(prvMotorTask, "MotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
+  // print an warning
+  neorv32_uart0_puts("Motor task created.\n");
 }
 
 void align_rotor() {
@@ -312,7 +324,7 @@ void vOpenLoopMotorTask(void *pvParameters)
         update_angle();
         update_constants = 0;
       }
-      if (speed > 100) { // still need to figure out the right value
+      if (!(riscv_intrinsic_flts(100, motor_speed.float_value))) { // if the speed is greater than 100 degrees per second
         // create the motor move task
         createprvMotorTask();
         // delete the open loop motor task
@@ -332,11 +344,31 @@ void prvMotorTask(void *pvParameters)
     {
       if (update_constants){
         update_angle();
-        read_and_convert_current();
+        PID_control();
         update_constants = 0;
       }
       move_clockwise();
       //move_clockwise_pwm();
+    }
+}
+
+void vListemUARTTask(void *pvParameters)
+{
+    // print a warning
+    neorv32_uart0_puts("UART task started.\n");
+    // Loop indefinitely
+    while (1)
+    {
+      // scan for the uart input
+      char buffer[32];
+      int length = neorv32_uart_scan(NEORV32_UART0, buffer, 32, 0);
+      // save the value of the new target speed to a variable
+      float_conv_t target_speed = { .float_value = atof(buffer) };
+      float_conv_t error = { .float_value = riscv_intrinsic_fsubs(target_speed.float_value, motor_speed.float_value) };
+      // send the error to the queue
+      xQueueSend(xQueue, &error.float_value, 0);
+      // delay for 10 ms
+      neorv32_cpu_delay_ms(10);
     }
 }
 
@@ -363,9 +395,9 @@ void move_clockwise() {
 void move_clockwise_pwm() {
   if (update_motor) {
     // Set motor pins based on the current step
-    neorv32_pwm_set(IN1, in_seq[step_index][0]*PWM_RES);
-    neorv32_pwm_set(IN2, in_seq[step_index][1]*PWM_RES);
-    neorv32_pwm_set(IN3, in_seq[step_index][2]*PWM_RES);
+    neorv32_pwm_set(IN1, in_seq[step_index][0]*PWM_RES/voltage_divider);
+    neorv32_pwm_set(IN2, in_seq[step_index][1]*PWM_RES/voltage_divider);
+    neorv32_pwm_set(IN3, in_seq[step_index][2]*PWM_RES/voltage_divider);
     neorv32_gpio_pin_set(EN1, en_seq[step_index][0]);
     neorv32_gpio_pin_set(EN2, en_seq[step_index][1]);
     neorv32_gpio_pin_set(EN3, en_seq[step_index][2]);
@@ -379,12 +411,6 @@ void move_clockwise_pwm() {
 }
 
 
-void read_and_convert_current() {
-    // Get the current values
-    three_phase = get_current_ab();
-    quadrature = get_clark_transform(three_phase);
-}
-
 void update_angle() {
 
   encoder_count = neorv32_counter_get();
@@ -392,14 +418,22 @@ void update_angle() {
   uint32_t diff = encoder_count - last_count;
   current_angle.float_value = riscv_intrinsic_fadds(current_angle.float_value, riscv_intrinsic_fmuls(1.8, diff));
   last_count = encoder_count;
-  if (!(riscv_intrinsic_flts(360, current_angle.float_value))) {
+  if (!(riscv_intrinsic_flts(360, current_angle.float_value))) { // if the angle is greater than 360 degrees
     current_angle.float_value = riscv_intrinsic_fsubs(current_angle.float_value, 360.0);
   }
   // calculate speed
   // speed = diff * 1.8 / time_between_measurements
   float_conv_t time_in_seconds = { .float_value = riscv_emulate_fdivs(update_constants_time, 1000) };
-  speed = riscv_intrinsic_fmuls(1.8, riscv_emulate_fdivs(diff, time_in_seconds.float_value)); // in degrees per second
+  motor_speed.float_value = riscv_intrinsic_fmuls(1.8, riscv_emulate_fdivs(diff, time_in_seconds.float_value)); // in degrees per second
   // print the speed  
-  neorv32_uart0_printf("Speed: %u\n", speed);
+  neorv32_uart0_printf("Speed: %u\n", motor_speed.binary_value);
 
+}
+
+void PID_control() {
+  float_conv_t error;
+  if (xQueueReceive(xQueue, &error.float_value, 0) == pdTRUE) {
+    // print the error
+    neorv32_uart0_printf("Error: %u\n", error.binary_value);
+  }
 }

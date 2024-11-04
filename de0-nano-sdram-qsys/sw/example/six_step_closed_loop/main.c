@@ -211,7 +211,7 @@ void freertos_risc_v_application_interrupt_handler(void) {
 
   if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
     neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
-    neorv32_uart_printf(UART_HW_HANDLE, "GPTMR IRQ Tick\n");
+    //neorv32_uart_printf(UART_HW_HANDLE, "GPTMR IRQ Tick\n");
   }
   else if (mcause == XIRQ_TRAP_CODE) { // is XIRQ interrupt
     //neorv32_xirq_irq_ack(); // clear XIRQ interrupt
