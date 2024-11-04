@@ -78,19 +78,6 @@ volatile uint8_t encoder_status = 0;
 volatile uint8_t step_index = 0;
 /**@}*/
 
-typedef struct {
-  float_conv_t cur_a;
-  float_conv_t cur_b;
-} current_ab;
-
-typedef struct {
-  float_conv_t cur_alpha;
-  float_conv_t cur_beta;
-} current_qd;
-
-current_ab three_phase;
-current_qd quadrature;
-
 volatile float_conv_t current_angle = { .float_value = 0.0 };
 
 // things for the motor control
@@ -110,7 +97,7 @@ const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // thi
 #define mainQUEUE_SEND_FREQUENCY_MS             pdMS_TO_TICKS( 500 )
 
 /* The maximum number items the queue can hold.*/
-#define mainQUEUE_LENGTH                        ( 2 )
+#define mainQUEUE_LENGTH                        ( 1 )
 
 
 
@@ -148,32 +135,6 @@ void createTimers();
 int six_step();
 void update_angle();
 void PID_control();
-
-current_ab get_current_ab() {
-  current_ab res;
-  adc_select_chanel(0);
-  // wait  for stabilization
-  for (volatile int i=0; i<75; i++) { }
-  res.cur_a.float_value = riscv_intrinsic_fmuls(adc_read(), conversion_factor.float_value);
-  //uint32_t test = riscv_intrinsic_fmuls(adc_read(), conversion_factor.float_value);
-  adc_select_chanel(1);
-  // wait  for stabilization
-  for (volatile int i=0; i<75; i++) { }
-  res.cur_b.float_value = riscv_intrinsic_fmuls(adc_read(), conversion_factor.float_value);
-  // print the value of the last 12 bits of the gpio input
-  //neorv32_uart0_printf("ADC 0: %u\n", test);
-  //neorv32_uart0_printf("Current A: %u\n", res.cur_a.float_value);
-  //neorv32_uart0_printf("Current B: %u\n", res.cur_b.float_value);
-  return res;
-}
-
-current_qd get_clark_transform(current_ab cur_ab){
-  current_qd res;
-  res.cur_alpha.float_value = cur_ab.cur_a.float_value;
-  res.cur_beta.float_value = riscv_emulate_fdivs(cur_ab.cur_a.float_value,riscv_intrinsic_fadds(sqrt(3) , riscv_intrinsic_fmuls(2, riscv_emulate_fdivs(cur_ab.cur_b.float_value, sqrt(3)))));
-  // res.cur_beta.float_value = riscv_intrinsic_fdivs(cur_ab.cur_a.float_value,riscv_intrinsic_fadds(sqrt(3) , riscv_intrinsic_fmuls(2, riscv_intrinsic_fdivs(cur_ab.cur_b.float_value, sqrt(3)))));
-  return res;
-}
 
 
 
@@ -361,7 +322,7 @@ void vListemUARTTask(void *pvParameters)
     {
       // scan for the uart input
       char buffer[32];
-      int length = neorv32_uart_scan(NEORV32_UART0, buffer, 32, 0);
+      neorv32_uart_scan(NEORV32_UART0, buffer, 32, 0);
       // save the value of the new target speed to a variable
       float_conv_t target_speed = { .float_value = atof(buffer) };
       float_conv_t error = { .float_value = riscv_intrinsic_fsubs(target_speed.float_value, motor_speed.float_value) };
