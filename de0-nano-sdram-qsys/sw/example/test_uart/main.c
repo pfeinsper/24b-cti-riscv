@@ -109,7 +109,10 @@ void gptmr_firq_handler(void) {
 
   neorv32_gptmr_irq_ack(); // clear/ack pending FIRQ
   // scan for UART input
-  int c = neorv32_uart_getc();
+  //char c = neorv32_uart_getc(NEORV32_UART0);
+  // receive an entire string with scanf
+  char buffer[32];
+  int length = neorv32_uart_scan(NEORV32_UART0, buffer, 32, 0);
   // print the char
-  neorv32_uart0_printf("Received value: %i\n", c);
+  neorv32_uart0_printf("Received value: %s\n", buffer);
 }
