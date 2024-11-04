@@ -383,7 +383,7 @@ void update_angle() {
     current_angle.float_value = riscv_intrinsic_fsubs(current_angle.float_value, 360.0);
   }
   // findout the sector (0-5) -> uint8_t sector = (uint8_t)floor(current_angle/60);
-  sector = (uint8_t)floorf(current_angle.float_value/60);
+  sector = (uint8_t)floorf(riscv_emulate_fdivs(current_angle.float_value, 60.0));
   neorv32_uart0_printf("sector: %u\n", sector);
   // calculate speed
   // speed = diff * 1.8 / time_between_measurements
