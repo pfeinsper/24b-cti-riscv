@@ -74,7 +74,6 @@
 // config pwm values
 volatile uint8_t update_motor = 0;
 volatile uint8_t update_constants = 0;
-volatile uint8_t encoder_status = 0;
 volatile uint8_t step_index = 0;
 /**@}*/
 
@@ -120,6 +119,7 @@ volatile uint32_t update_constants_time = 1000; // in ms
 volatile uint32_t motor_move_time = 5; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
 volatile uint8_t voltage_divider = 1;
+volatile uint8_t sector = 0;
 
 /**@}*/
 
@@ -382,6 +382,9 @@ void update_angle() {
   if (!(riscv_intrinsic_flts(360, current_angle.float_value))) { // if the angle is greater than 360 degrees
     current_angle.float_value = riscv_intrinsic_fsubs(current_angle.float_value, 360.0);
   }
+  // findout the sector (0-5) -> uint8_t sector = (uint8_t)floor(current_angle/60);
+  sector = (uint8_t)floorf(current_angle.float_value/60);
+  neorv32_uart0_printf("sector: %u\n", sector);
   // calculate speed
   // speed = diff * 1.8 / time_between_measurements
   float_conv_t time_in_seconds = { .float_value = riscv_emulate_fdivs(update_constants_time, 1000) };
