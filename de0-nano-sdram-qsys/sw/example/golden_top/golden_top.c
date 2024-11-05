@@ -79,6 +79,7 @@ volatile uint32_t counter = 0;
 // Prototypes
 void gptmr_firq_handler(void);
 void xirq_handler_ch0(void);
+void mtime_irq_handler(void);
 
 
 
@@ -179,13 +180,18 @@ int main() {
 
   // install GPTMR interrupt handler
   neorv32_rte_handler_install(GPTMR_RTE_ID, gptmr_firq_handler);
+    // install MTIME interrupt handler to RTE
+  neorv32_rte_handler_install(RTE_TRAP_MTI, mtime_irq_handler);
+
+  // configure MTIME timer's first interrupt to trigger after 1 second starting from now
+  neorv32_mtime_set_timecmp(neorv32_mtime_get_time() + neorv32_sysinfo_get_clk());
 
   // configure timer for 0.5Hz in continuous mode (with clock divisor = 8)
   neorv32_gptmr_setup(CLK_PRSC_8, neorv32_sysinfo_get_clk() / (8 * 2), 1);
 
   // enable interrupt
   neorv32_cpu_csr_clr(CSR_MIP, 1 << GPTMR_FIRQ_PENDING);  // make sure there is no GPTMR IRQ pending already
-  neorv32_cpu_csr_set(CSR_MIE, 1 << GPTMR_FIRQ_ENABLE);   // enable GPTMR FIRQ channel
+  neorv32_cpu_csr_set(CSR_MIE, (1 << CSR_MIE_MTIE) | (1 << CSR_MIE_FIRQ12E));   // enable GPTMR FIRQ channel and mtime channel
   neorv32_cpu_csr_set(CSR_MSTATUS, 1 << CSR_MSTATUS_MIE); // enable machine-mode interrupts
 
   // config ADC
@@ -255,4 +261,18 @@ void gptmr_firq_handler(void) {
 // Handler for the external interrupt channel 0 (where we will check the Hall sensor)
 void xirq_handler_ch0(void) {
   neorv32_uart0_printf("XIRQ interrupt from channel %i\n", 0);
+}
+
+/**********************************************************************//**
+ * MTIME IRQ handler.
+ *
+ * @warning This function has to be of type "void xyz(void)" and must not use any interrupt attributes!
+ **************************************************************************/
+void mtime_irq_handler(void) {
+
+  // configure MTIME timer's next interrupt to trigger after 1 second starting from now
+  neorv32_mtime_set_timecmp(neorv32_mtime_get_timecmp() + neorv32_sysinfo_get_clk());
+
+  // send a message to the UART
+  neorv32_uart0_puts("MTIME interrupt\n");
 }
