@@ -74,7 +74,7 @@ static QueueHandle_t xQueue = NULL;
 uint32_t last_count = 0;
 volatile uint32_t encoder_count = 0;
 
-volatile uint32_t update_constants_time = 1000; // in ms
+volatile uint32_t update_constants_time = 1; // in ms
 volatile uint32_t motor_move_time = 5; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
 volatile uint8_t voltage_divider = 1;
@@ -89,7 +89,6 @@ void move_clockwise();
 void move_clockwise_pwm();
 void createInitialTasks();
 void createprvMotorTask();
-void createOpenLoopMotorTask();
 void createTimers();
 int six_step();
 void update_angle();
@@ -287,8 +286,8 @@ void vListemUARTTask(void *pvParameters)
       float_conv_t error = { .float_value = riscv_intrinsic_fsubs(target_speed.float_value, motor_speed.float_value) };
       // send the error to the queue
       xQueueSend(xQueue, &error.float_value, 0);
-      // delay for 10 ms
-      neorv32_cpu_delay_ms(10);
+      // make the task sleep for 1 second
+      vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 
@@ -341,7 +340,7 @@ void update_angle() {
   if (!(riscv_intrinsic_flts(360, current_angle.float_value))) { // if the angle is greater than 360 degrees
     current_angle.float_value = riscv_intrinsic_fsubs(current_angle.float_value, 360.0);
   }
-  // findout the sector (0-5) -> uint8_t sector = (uint8_t)floor(current_angle/60);
+  // find out the sector (0-5) -> uint8_t sector = (uint8_t)floor(current_angle/60);
   sector = (uint8_t)floorf(riscv_emulate_fdivs(current_angle.float_value, 60.0));
   neorv32_uart0_printf("sector: %u\n", sector);
   // calculate speed
