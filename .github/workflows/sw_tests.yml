@@ -1,0 +1,110 @@
+name: Build and Test Makefiles
+
+on:
+  push:
+    paths:
+      - 'de0-nano-sdram-qsys/sw/example/**'
+      - '.github/workflows/sw_tests.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Software Tests
+    runs-on: ubuntu-latest
+    container:
+      image: "eduardosmb/software-image:v2"
+    steps:
+      - name: Checkout do código com submódulos
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+
+      - name: Build com Makefile (adc_test)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/adc_test
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do adc_test"; exit 1; }
+          echo "Build do adc_test concluído com sucesso."
+
+      - name: Build com Makefile (basic_motor)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/basic_motor
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do basic_motor"; exit 1; }
+          echo "Build do basic_motor concluído com sucesso."
+
+      - name: Build com Makefile (demo_pwm_tunado)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/demo_pwm_tunado
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do demo_pwm_tunado"; exit 1; }
+          echo "Build do demo_pwm_tunado concluído com sucesso."
+
+      - name: Build com Makefile (demo_read_blink_led)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/demo_read_blink_led
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do demo_read_blink_led"; exit 1; }
+          echo "Build do demo_read_blink_led concluído com sucesso."
+
+      - name: Build com Makefile (foc_motor_v1)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/foc_motor_v1
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do foc_motor_v1"; exit 1; }
+          echo "Build do foc_motor_v1 concluído com sucesso."
+
+      - name: Build com Makefile (foc_motor_v2)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/foc_motor_v2
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do foc_motor_v2"; exit 1; }
+          echo "Build do foc_motor_v2 concluído com sucesso."
+
+      - name: Build com Makefile (foc_motor_v3)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/foc_motor_v3
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do foc_motor_v3"; exit 1; }
+          echo "Build do foc_motor_v3 concluído com sucesso."
+
+      - name: Build com Makefile (foc_motor_v4)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/foc_motor_v4
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do foc_motor_v4"; exit 1; }
+          echo "Build do foc_motor_v4 concluído com sucesso."
+
+      - name: Build com Makefile (foc_motor_v5)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/foc_motor_v5
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do foc_motor_v5"; exit 1; }
+          echo "Build do foc_motor_v5 concluído com sucesso."
+
+      - name: Build com Makefile (golden_top)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/golden_top
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do golden_top"; exit 1; }
+          echo "Build do golden_top concluído com sucesso."
+
+      - name: Build com Makefile (six_step_closed_loop)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/six_step_closed_loop
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do six_step_closed_loop"; exit 1; }
+          echo "Build do six_step_closed_loop concluído com sucesso."
+
+      - name: Build com Makefile (six_step_cl_no_rtos)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/six_step_cl_no_rtos
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do six_step_cl_no_rtos"; exit 1; }
+          echo "Build do six_step_cl_no_rtos concluído com sucesso."
+
+      - name: Build com Makefile (test_counter)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/test_counter
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do test_counter"; exit 1; }
+          echo "Build do test_counter concluído com sucesso."
+
+      - name: Build com Makefile (test_rtos)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/test_rtos
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do test_rtos"; exit 1; }
+          echo "Build do test_rtos concluído com sucesso."
+
+      - name: Build com Makefile (test_uart)
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/test_uart
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do test_uart"; exit 1; }
+          echo "Build do test_uart concluído com sucesso."
