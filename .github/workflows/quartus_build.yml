@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - '/de0-nano-sdram-qsys/hw/**'
-      - '.github/workflows/**'
+      - '.github/workflows/quartus_build.yml'
   workflow_dispatch:
 
 jobs:
