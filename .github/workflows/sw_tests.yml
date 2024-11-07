@@ -1,0 +1,48 @@
+name: Build and Test Makefiles
+
+on:
+  push:
+    paths:
+      - 'de0-nano-sdram-qsys/sw/example/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Software Tests
+    runs-on: ubuntu-latest
+    container:
+      image: "eduardosmb/software-image:v2"
+    strategy:
+      matrix:
+        directory:
+          - adc_test
+          - basic_motor
+          - demo_pwm_tunado
+          - demo_read_blink_led
+          - foc_motor_v1
+          - foc_motor_v2
+          - foc_motor_v3
+          - foc_motor_v4
+          - foc_motor_v5
+          - golden_top
+          - six_step_closed_loop
+          - six_step_cl_no_rtos
+          - test_counter
+          - test_rtos
+          - test_uart
+    steps:
+      - name: Checkout do código com submódulos
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+
+      - name: Configurar Ambiente
+        run: |
+          echo "Ambiente configurado."
+
+      - name: Build com Makefile (${ { matrix.directory } })
+        run: |
+          cd de0-nano-sdram-qsys/sw/example/${{ matrix.directory }}
+          make USER_FLAGS+=-DRUN_CHECK clean_all exe || { echo "Erro no build do ${ { matrix.directory } }"; exit 1; }
+          echo "Build do ${ { matrix.directory } } concluído com sucesso."
