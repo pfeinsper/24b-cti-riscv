@@ -34,15 +34,20 @@
 volatile uint8_t update_motor = 0;
 volatile uint8_t update_constants = 0;
 volatile uint8_t step_index = 0;
+volatile uint8_t sector_index = 0;
 /**@}*/
+
+// define pi
+#define PI 3.14159265358979323846
 
 volatile float_conv_t current_angle = { .float_value = 0.0 };
 
 // things for the motor control
-uint8_t in_seq[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 1, 0},
-                        {0, 0, 1}, {0, 0, 1}, {1, 0, 0}};
-uint8_t en_seq[6][3] = {{1, 0, 1}, {0, 1, 1}, {1, 1, 0},
-                        {1, 0, 1}, {0, 1, 1}, {1, 1, 0}};
+const uint8_t in_seq[6][3] = {{0, 1, 0}, {0, 1, 0}, {0, 0, 1},
+                              {0, 0, 1}, {1, 0, 0}, {1, 0, 0}};
+
+const uint8_t en_seq[6][3] = {{0, 1, 1}, {1, 1, 0}, {1, 0, 1},
+                              {0, 1, 1}, {1, 1, 0}, {1, 0, 1}};
 /**@{*/
 
 const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // this is not the right way to calculate the conversion factor but works for now
@@ -65,7 +70,6 @@ static void vTimerMotorMove(TimerHandle_t xTimer);
 
 // config tasks
 static void prvMotorTask(void *pvParameters);
-static void vOpenLoopMotorTask(void *pvParameters);
 static void vListemUARTTask(void *pvParameters);
 
 // config queue
@@ -77,8 +81,7 @@ volatile uint32_t encoder_count = 0;
 volatile uint32_t update_constants_time = 1; // in ms
 volatile uint32_t motor_move_time = 5; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
-volatile uint8_t voltage_divider = 1;
-volatile uint8_t sector = 0;
+volatile uint8_t duty_cycle = 1;
 
 /**@}*/
 
@@ -86,13 +89,14 @@ volatile uint8_t sector = 0;
 // Prototypes
 void align_rotor();
 void move_clockwise();
-void move_clockwise_pwm();
-void createInitialTasks();
+void move_clockwise_pwm(uint8_t direction);
+void createTasks();
 void createprvMotorTask();
 void createTimers();
 int six_step();
 void update_angle();
 void PID_control();
+void get_sector();
 
 
 
@@ -115,7 +119,7 @@ int six_step() {
 
   // create the motor task
   //createprvMotorTask();
-  createInitialTasks();
+  createTasks();
 
   // create the timers
   createTimers();
@@ -175,31 +179,23 @@ void createTimers(void)
     }
 }
 
-void createInitialTasks(void)
+void createTasks(void)
 {
   // Create the task
-  xTaskCreate(vOpenLoopMotorTask, "OpenLoopMotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
+  xTaskCreate(prvMotorTask, "MotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
   // print an warning
-  neorv32_uart0_puts("Open loop motor task created.\n");
+  neorv32_uart0_puts("Motor task created.\n");
   // Create the task
   xTaskCreate(vListemUARTTask, "UARTTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
   // print an warning
   neorv32_uart0_puts("UART task created.\n");
 }
 
-void createprvMotorTask(void)
-{
-  // Create the task
-  xTaskCreate(prvMotorTask, "MotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
-  // print an warning
-  neorv32_uart0_puts("Motor task created.\n");
-}
-
 void align_rotor() {
   // align the motor
-    neorv32_gpio_pin_set(IN1, in_seq[5][0]);
-    neorv32_gpio_pin_set(IN2, in_seq[5][1]);
-    neorv32_gpio_pin_set(IN3, in_seq[5][2]);
+    neorv32_pwm_set(IN1, in_seq[5][0]*PWM_RES*duty_cycle);
+    neorv32_pwm_set(IN2, in_seq[5][0]*PWM_RES*duty_cycle);
+    neorv32_pwm_set(IN3, in_seq[5][0]*PWM_RES*duty_cycle);
     neorv32_gpio_pin_set(EN1, en_seq[5][0]);
     neorv32_gpio_pin_set(EN2, en_seq[5][1]);
     neorv32_gpio_pin_set(EN3, en_seq[5][2]);
@@ -232,28 +228,6 @@ void vTimerMotorMove(TimerHandle_t xTimer)
   update_motor = 1;
 }
 
-void vOpenLoopMotorTask(void *pvParameters)
-{
-    // print a warning
-    neorv32_uart0_puts("Open loop motor task started.\n");
-    // Loop indefinitely
-    while (1)
-    {
-      if (update_constants){
-        update_angle();
-        update_constants = 0;
-      }
-      if (!(riscv_intrinsic_flts(100, motor_speed.float_value))) { // if the speed is greater than 100 degrees per second
-        // create the motor move task
-        createprvMotorTask();
-        // delete the open loop motor task
-        vTaskDelete(NULL);
-      }
-      move_clockwise();
-      //move_clockwise_pwm();
-    }
-}
-
 void prvMotorTask(void *pvParameters)
 {
     // print a warning
@@ -263,11 +237,15 @@ void prvMotorTask(void *pvParameters)
     {
       if (update_constants){
         update_angle();
+        get_sector();
         PID_control();
         update_constants = 0;
       }
-      move_clockwise();
-      //move_clockwise_pwm();
+      if (update_motor) {
+        move_clockwise();
+        //move_clockwise_pwm(1);
+        update_motor = 0;
+      }
     }
 }
 
@@ -293,7 +271,6 @@ void vListemUARTTask(void *pvParameters)
 
 // Motor movement function based on the timer flag
 void move_clockwise() {
-  if (update_motor) {
     // Set motor pins based on the current step
     neorv32_gpio_pin_set(IN1, in_seq[step_index][0]);
     neorv32_gpio_pin_set(IN2, in_seq[step_index][1]);
@@ -304,29 +281,21 @@ void move_clockwise() {
 
     // Increment and wrap around the step index
     step_index = (step_index + 1) % 6;
-
-    // Reset the timer flag
-    update_motor = 0;
-  }
 }
 
 // move clockwise with pwm instead of gpio
-void move_clockwise_pwm() {
-  if (update_motor) {
+void move_clockwise_pwm(uint8_t direction) {
+    step_index = (sector_index + direction) % 6;
     // Set motor pins based on the current step
-    neorv32_pwm_set(IN1, in_seq[step_index][0]*PWM_RES/voltage_divider);
-    neorv32_pwm_set(IN2, in_seq[step_index][1]*PWM_RES/voltage_divider);
-    neorv32_pwm_set(IN3, in_seq[step_index][2]*PWM_RES/voltage_divider);
+    neorv32_pwm_set(IN1, in_seq[step_index][0]*PWM_RES*duty_cycle);
+    neorv32_pwm_set(IN2, in_seq[step_index][1]*PWM_RES*duty_cycle);
+    neorv32_pwm_set(IN3, in_seq[step_index][2]*PWM_RES*duty_cycle);
     neorv32_gpio_pin_set(EN1, en_seq[step_index][0]);
     neorv32_gpio_pin_set(EN2, en_seq[step_index][1]);
     neorv32_gpio_pin_set(EN3, en_seq[step_index][2]);
 
     // Increment and wrap around the step index
     step_index = (step_index + 1) % 6;
-
-    // Reset the timer flag
-    update_motor = 0;
-  }
 }
 
 
@@ -337,16 +306,14 @@ void update_angle() {
   uint32_t diff = encoder_count - last_count;
   current_angle.float_value = riscv_intrinsic_fadds(current_angle.float_value, riscv_intrinsic_fmuls(1.8, diff));
   last_count = encoder_count;
+  
   if (!(riscv_intrinsic_flts(360, current_angle.float_value))) { // if the angle is greater than 360 degrees
     current_angle.float_value = riscv_intrinsic_fsubs(current_angle.float_value, 360.0);
   }
-  // find out the sector (0-5) -> uint8_t sector = (uint8_t)floor(current_angle/60);
-  sector = (uint8_t)floorf(riscv_emulate_fdivs(current_angle.float_value, 60.0));
-  neorv32_uart0_printf("sector: %u\n", sector);
-  // calculate speed
-  // speed = diff * 1.8 / time_between_measurements
+
+  // speed = ((diff * 1.8/pi) / time_between_measurements)
   float_conv_t time_in_seconds = { .float_value = riscv_emulate_fdivs(update_constants_time, 1000) };
-  motor_speed.float_value = riscv_intrinsic_fmuls(1.8, riscv_emulate_fdivs(diff, time_in_seconds.float_value)); // in degrees per second
+  motor_speed.float_value = riscv_emulate_fdivs(riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, 1.8), PI), time_in_seconds.float_value);
   // print the speed  
   neorv32_uart0_printf("Speed: %u\n", motor_speed.binary_value);
 
@@ -358,4 +325,11 @@ void PID_control() {
     // print the error
     neorv32_uart0_printf("Error: %u\n", error.binary_value);
   }
+}
+
+
+void get_sector() {
+
+  sector_index = (uint8_t)floorf(riscv_emulate_fdivs(current_angle.float_value, 60.0));
+  neorv32_uart0_printf("sector: %u\n", sector_index);
 }
