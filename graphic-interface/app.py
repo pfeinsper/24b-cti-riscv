@@ -159,10 +159,12 @@ class MotorControlApp(QWidget):
         self.plot_widget_second.setLabel("left", "Y", units="unidade", color="#647881", size="10pt")
         self.plot_widget_second.setLabel("bottom", "X", units="unidade", color="#647881", size="10pt")
         self.plot_widget_second.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_widget_second.setYRange(0, 24000, padding=0)
+
         self.plot_widget_second.setXRange(0, 100, padding=0)
         self.plot_widget_second.setMouseEnabled(x=False, y=False)
         self.plot_widget_second.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.plot_widget_second.enableAutoRange(axis='y')
 
         pen_second = pg.mkPen(color="#ef8327", width=2)
 
@@ -287,6 +289,7 @@ class MotorControlApp(QWidget):
                         self.data_second = np.roll(self.data_second, -1)
                         self.data_second[-1] = value
                         self.curve_second.setData(self.data_second)
+                        self.plot_widget_second.autoRange()
                         self.terminal.append(f"Valor recebido: {value}")
                         self.terminal.ensureCursorVisible()
                     except ValueError:
