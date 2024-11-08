@@ -13,7 +13,7 @@ import re
 
 def connect_uart(port):
     try:
-        ser = serial.Serial(port, 19200, timeout=1)
+        ser = serial.Serial(port, 115200, timeout=0)
         print(f"Conectado ao dispositivo UART na porta {port}.")
         return ser
     except serial.SerialException as e:
@@ -37,7 +37,7 @@ class MotorControlApp(QWidget):
         uart_layout.setSpacing(10)
 
         self.port_input = QLineEdit(self)
-        self.port_input.setPlaceholderText("Ex: /dev/COMA")
+        self.port_input.setPlaceholderText("Ex: /dev/ttyACM0")
         self.port_input.setText('/dev/COMA')
         self.port_input.setFixedWidth(200)
         uart_layout.addWidget(self.port_input)
@@ -274,34 +274,39 @@ class MotorControlApp(QWidget):
         self.curve_current.setData(self.data_current)
 
     def read_uart_data(self):
-        if self.ser and self.ser.is_open:
-            try:
-                if self.ser.in_waiting > 0:
-                    line = self.ser.readline().decode('utf-8').strip()
-                    self.terminal.append(line)
+            if self.ser and self.ser.is_open:
+                try:
+                    data = self.ser.read(self.ser.in_waiting)
+                    if data:
+                        lines = data.decode('utf-8', errors='ignore').split('\n')
+                        for line in lines:
+                            line = line.strip()
+                            if line:
+                                self.terminal.append(line)
+                                self.terminal.ensureCursorVisible()
+                                print(f"Dados recebidos: {line}")
+
+                                try:
+                                    value = float(line)
+                                    self.data_second = np.roll(self.data_second, -1)
+                                    self.data_second[-1] = value
+                                    self.curve_second.setData(self.data_second)
+                                    self.plot_widget_second.autoRange()
+                                    self.terminal.append(f"Valor recebido: {value}")
+                                    self.terminal.ensureCursorVisible()
+                                except ValueError:
+                                    match = re.search(r'velocidade:\s*(\d+)', line)
+                                    if match:
+                                        self.current_speed = float(match.group(1))
+
+                except serial.SerialException as e:
+                    print(f"Erro de leitura UART: {e}")
+                    self.terminal.append(f"Erro de leitura UART: {e}")
                     self.terminal.ensureCursorVisible()
-                    print(f"Dados recebidos: {line}")
-
-                    try:
-                        value = float(line)
-                        self.data_second = np.roll(self.data_second, -1)
-                        self.data_second[-1] = value
-                        self.curve_second.setData(self.data_second)
-                        self.terminal.append(f"Valor recebido: {value}")
-                        self.terminal.ensureCursorVisible()
-                    except ValueError:
-                        match = re.search(r'velocidade:\s*(\d+)', line)
-                        if match:
-                            self.current_speed = float(match.group(1))
-
-            except serial.SerialException as e:
-                print(f"Erro de leitura UART: {e}")
-                self.terminal.append(f"Erro de leitura UART: {e}")
-                self.terminal.ensureCursorVisible()
-        else:
-            self.set_connection_status(active=False)
-            self.terminal.append("Conexão UART perdida.")
-            self.read_timer.stop()
+            else:
+                self.set_connection_status(active=False)
+                self.terminal.append("Conexão UART perdida.")
+                self.read_timer.stop()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
