@@ -73,13 +73,16 @@ class MotorControlApp(QWidget):
 
         main_layout.addLayout(top_layout)
 
+        # Grupo de Controle do Motor
         motor_group = QGroupBox("Controle do Motor")
         motor_layout = QVBoxLayout()
         motor_layout.setSpacing(15)
 
-        speed_input_layout = QHBoxLayout()
-        speed_input_layout.setSpacing(10)
+        # Novo layout horizontal para todos os controles
+        controls_layout = QHBoxLayout()
+        controls_layout.setSpacing(10)
 
+        # Sub-layout para o label e input
         label_input_layout = QHBoxLayout()
         label_input_layout.setSpacing(5)
 
@@ -93,34 +96,40 @@ class MotorControlApp(QWidget):
         self.speed_input.setValidator(QIntValidator(0, 21000))
         label_input_layout.addWidget(self.speed_input)
 
-        speed_input_layout.addLayout(label_input_layout)
+        controls_layout.addLayout(label_input_layout)
 
-        speed_input_layout.addStretch()
-
+        # Botão "Enviar" ao lado do input
         self.send_speed_button = QPushButton("Enviar")
         self.send_speed_button.setObjectName("send-speed-button")
         self.send_speed_button.setFixedSize(140, 50)
         self.send_speed_button.clicked.connect(self.set_target_speed)
-        speed_input_layout.addWidget(self.send_speed_button)
+        controls_layout.addWidget(self.send_speed_button)
 
-        motor_layout.addLayout(speed_input_layout)
+        # Espaçamento flexível para empurrar os próximos botões para a direita
+        controls_layout.addStretch()
 
-        stop_layout = QHBoxLayout()
-        stop_layout.addStretch()
+        # Botão "Parar"
         self.stop_button = QPushButton("Parar")
         self.stop_button.setObjectName("stop-button")
         self.stop_button.setFixedSize(140, 50)
         self.stop_button.clicked.connect(self.stop_motor)
-        stop_layout.addWidget(self.stop_button)
-        stop_layout.addStretch()
-        motor_layout.addLayout(stop_layout)
+        controls_layout.addWidget(self.stop_button)
 
+        # Botão "Limpar"
+        self.clear_button = QPushButton("Limpar")
+        self.clear_button.setObjectName("clear-button")
+        self.clear_button.setFixedSize(140, 50)
+        self.clear_button.clicked.connect(self.clear_terminal)
+        controls_layout.addWidget(self.clear_button)
+
+        motor_layout.addLayout(controls_layout)
         motor_group.setLayout(motor_layout)
         main_layout.addWidget(motor_group)
 
         graphs_layout = QHBoxLayout()
         graphs_layout.setSpacing(15)
 
+        # Gráfico de Velocidade do Motor
         self.plot_widget_current = pg.PlotWidget()
         self.plot_widget_current.setBackground('#ffffff')
         self.plot_widget_current.setTitle("Velocidade do Motor", color="#647881", size="12pt")
@@ -143,6 +152,7 @@ class MotorControlApp(QWidget):
 
         graphs_layout.addWidget(self.plot_widget_current)
 
+        # Segundo Gráfico
         self.plot_widget_second = pg.PlotWidget()
         self.plot_widget_second.setBackground('#ffffff')
         self.plot_widget_second.setTitle("Segundo Gráfico", color="#647881", size="12pt")
@@ -163,6 +173,7 @@ class MotorControlApp(QWidget):
 
         main_layout.addLayout(graphs_layout)
 
+        # Grupo do Terminal
         terminal_group = QGroupBox("Terminal")
         terminal_layout = QVBoxLayout()
 
@@ -187,6 +198,9 @@ class MotorControlApp(QWidget):
         self.target_speed = 0
 
         self.ser = None
+
+    def clear_terminal(self):
+        self.terminal.clear()
 
     def connect_to_uart(self):
         port = self.port_input.text()
@@ -222,7 +236,6 @@ class MotorControlApp(QWidget):
             self.terminal.append(f"Velocidade target definida para: {self.target_speed} RPM.")
             self.terminal.ensureCursorVisible()
             self.curve_target.setData(np.full(100, self.target_speed))
-            # Enviar comando via UART, se conectado
             if self.ser and self.ser.is_open:
                 command = f"SET_SPEED {self.target_speed}\n"
                 self.ser.write(command.encode('utf-8'))
@@ -236,7 +249,6 @@ class MotorControlApp(QWidget):
         self.terminal.append("Motor parado.")
         self.terminal.ensureCursorVisible()
         self.curve_target.setData(np.full(100, self.target_speed))
-        # Enviar comando para parar o motor via UART, se conectado
         if self.ser and self.ser.is_open:
             command = f"STOP_MOTOR\n"
             self.ser.write(command.encode('utf-8'))
@@ -286,6 +298,10 @@ class MotorControlApp(QWidget):
                 print(f"Erro de leitura UART: {e}")
                 self.terminal.append(f"Erro de leitura UART: {e}")
                 self.terminal.ensureCursorVisible()
+        else:
+            self.set_connection_status(active=False)
+            self.terminal.append("Conexão UART perdida.")
+            self.read_timer.stop()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

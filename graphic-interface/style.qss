@@ -150,3 +150,12 @@ QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: none;
 }
+
+/* Botão Limpar */
+QPushButton#clear-button {
+    background-color: #869caa;  /* Use a cor que preferir */
+}
+
+QPushButton#clear-button:hover {
+    background-color: #73889a;  /* Cor ao passar o mouse */
+}
