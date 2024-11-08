@@ -1,0 +1,152 @@
+/* style.qss */
+
+/* Cores Principais */
+@define-color primary-color #ef8327;     /* Laranja Vibrante */
+@define-color secondary-color1 #647881;  /* Azul Acinzentado */
+@define-color secondary-color2 #869caa;  /* Azul Claro */
+@define-color text-color #ffffff;        /* Branco */
+
+/* Estilos Gerais */
+QWidget {
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+    color: #647881;
+}
+
+QGroupBox {
+    border: 1px solid #647881;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 5px 0 5px;
+    color: #647881;
+}
+
+/* Botões Gerais */
+QPushButton {
+    cursor: pointer;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    color: #ffffff;
+    min-height: 40px;
+}
+
+/* Botão Conectar */
+QPushButton#connect-button {
+    background-color: #ef8327;
+}
+
+QPushButton#connect-button:hover {
+    background-color: #d07a1f;
+}
+
+/* Botão Enviar */
+QPushButton#send-speed-button {
+    background-color: #647881;
+}
+
+QPushButton#send-speed-button:hover {
+    background-color: #556c75;
+}
+
+/* Botão Parar */
+QPushButton#stop-button {
+    background-color: #869caa;
+}
+
+QPushButton#stop-button:hover {
+    background-color: #73889a;
+}
+
+/* QLineEdit */
+QLineEdit {
+    padding: 5px;
+    border: 1px solid #647881;
+    border-radius: 5px;
+    background-color: #ffffff;
+    color: #647881;
+    min-height: 30px;
+}
+
+QLineEdit:focus {
+    border: 1px solid #ef8327;
+}
+
+/* QTextEdit */
+QTextEdit {
+    background-color: #ffffff;
+    border: 1px solid #647881;
+    border-radius: 5px;
+    padding: 5px;
+    color: #647881;
+}
+
+QTextEdit:focus {
+    border: 1px solid #ef8327;
+}
+
+/* Status de Conexão */
+QLabel#connection-status-active {
+    background-color: green;
+    color: #ffffff;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+QLabel#connection-status-inactive {
+    background-color: red;
+    color: #ffffff;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+/* Estilos para o Logo */
+QLabel#logo-label {
+    margin: 5px;
+}
+
+/* Adicionais para Melhorar a Aparência */
+QPushButton:pressed {
+    background-color: #d07a1f;
+}
+
+QTextEdit:focus, QLineEdit:focus {
+    border: 1px solid #ef8327;
+}
+
+QGroupBox {
+    background-color: #ffffff;
+}
+
+/* Estilos para a Barra de Rolagem do Terminal */
+QScrollBar:vertical {
+    background: #ffffff;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #647881;
+    min-height: 20px;
+    border-radius: 5px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    background: none;
+    height: 0px;
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+    background: none;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
