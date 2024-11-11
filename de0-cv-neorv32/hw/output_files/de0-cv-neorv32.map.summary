@@ -1,0 +1,17 @@
+Analysis & Synthesis Status : Successful - Mon Nov 11 13:02:58 2024
+Quartus Prime Version : 23.1std.0 Build 991 11/28/2023 SC Lite Edition
+Revision Name : de0-cv-neorv32
+Top-level Entity Name : top
+Family : Cyclone V
+Logic utilization (in ALMs) : N/A
+Total registers : 2426
+Total pins : 50
+Total virtual pins : 0
+Total block memory bits : 821,248
+Total DSP Blocks : 1
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 1
+Total DLLs : 0

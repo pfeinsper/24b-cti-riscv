@@ -1710,8 +1710,6 @@ begin
 		
     end if;
   end process bus_access_counter;
-  
---  memory_counter <= to_stdlogicvector(iodev_rsp(IODEV_COUNTER).data);
 
 
 end neorv32_top_rtl;
