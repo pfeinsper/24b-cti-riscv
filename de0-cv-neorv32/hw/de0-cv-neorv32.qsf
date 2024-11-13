@@ -42,7 +42,7 @@ set_global_assignment -name DEVICE 5CEBA4F23C7
 set_global_assignment -name TOP_LEVEL_ENTITY top
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 23.1STD.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "19:44:57  NOVEMBER 10, 2024"
-set_global_assignment -name LAST_QUARTUS_VERSION "23.1std.0 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "20.1.0 Lite Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
@@ -56,7 +56,6 @@ set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 
 
 
@@ -136,9 +135,9 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to UART0_TXD
 #============================================================
 # PWM
 #============================================================
-set_location_assignment PIN_H18 -to PWM[0]
-set_location_assignment PIN_J18 -to PWM[1]
-set_location_assignment PIN_J19 -to PWM[2]
+set_location_assignment PIN_D13 -to PWM[0]
+set_location_assignment PIN_G17 -to PWM[1]
+set_location_assignment PIN_J18 -to PWM[2]
 set_location_assignment PIN_G11 -to PWM[3]
 
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[0]
@@ -156,9 +155,9 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[3]
 #============================================================
 # GPIO
 #============================================================
-set_location_assignment PIN_D17 -to GPIO_o[0]
-set_location_assignment PIN_K20 -to GPIO_o[1]
-set_location_assignment PIN_K21 -to GPIO_o[2]
+set_location_assignment PIN_A12 -to GPIO_o[0]
+set_location_assignment PIN_B12 -to GPIO_o[1]
+set_location_assignment PIN_B13 -to GPIO_o[2]
 
 set_location_assignment PIN_K22 -to GPIO_i[0]
 set_location_assignment PIN_M20 -to GPIO_i[1]
@@ -216,3 +215,11 @@ set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[1]
 set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[2]
 
 #============================================================
+# HALL_i
+#============================================================
+set_location_assignment PIN_J11 -to HALL_i
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to HALL_i
+
+#============================================================
+
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
