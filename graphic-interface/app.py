@@ -307,6 +307,11 @@ class MotorControlApp(QWidget):
         if self.ser and self.ser.is_open:
             command = f"STOP_MOTOR\n"
             self.ser.write(command.encode('utf-8'))
+        
+        self.terminal.append("Dados armazenados:")
+        for time, value in self.data_points_dict.items():
+            self.terminal.append(f"Tempo: {time} s, Valor: {value}")
+        self.terminal.ensureCursorVisible()
 
 
     def update_graphs(self):
