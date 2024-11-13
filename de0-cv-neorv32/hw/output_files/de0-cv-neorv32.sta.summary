@@ -3,19 +3,19 @@ Timing Analyzer Summary
 ------------------------------------------------------------
 
 Type  : Slow 1100mV 85C Model Setup 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.808
+Slack : 1.196
 TNS   : 0.000
 
 Type  : Slow 1100mV 85C Model Hold 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.244
+Slack : 0.248
 TNS   : 0.000
 
 Type  : Slow 1100mV 85C Model Recovery 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 5.066
+Slack : 4.645
 TNS   : 0.000
 
 Type  : Slow 1100mV 85C Model Removal 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.855
+Slack : 1.144
 TNS   : 0.000
 
 Type  : Slow 1100mV 85C Model Minimum Pulse Width 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]'
@@ -23,7 +23,7 @@ Slack : 1.666
 TNS   : 0.000
 
 Type  : Slow 1100mV 85C Model Minimum Pulse Width 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 3.591
+Slack : 3.592
 TNS   : 0.000
 
 Type  : Slow 1100mV 85C Model Minimum Pulse Width 'CLOCK_50'
@@ -31,19 +31,19 @@ Slack : 9.731
 TNS   : 0.000
 
 Type  : Slow 1100mV 0C Model Setup 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.892
+Slack : 1.145
 TNS   : 0.000
 
 Type  : Slow 1100mV 0C Model Hold 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.147
+Slack : 0.105
 TNS   : 0.000
 
 Type  : Slow 1100mV 0C Model Recovery 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 5.309
+Slack : 4.892
 TNS   : 0.000
 
 Type  : Slow 1100mV 0C Model Removal 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.719
+Slack : 1.077
 TNS   : 0.000
 
 Type  : Slow 1100mV 0C Model Minimum Pulse Width 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]'
@@ -51,7 +51,7 @@ Slack : 1.666
 TNS   : 0.000
 
 Type  : Slow 1100mV 0C Model Minimum Pulse Width 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 3.547
+Slack : 3.548
 TNS   : 0.000
 
 Type  : Slow 1100mV 0C Model Minimum Pulse Width 'CLOCK_50'
@@ -59,19 +59,19 @@ Slack : 9.741
 TNS   : 0.000
 
 Type  : Fast 1100mV 85C Model Setup 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 4.067
+Slack : 4.011
 TNS   : 0.000
 
 Type  : Fast 1100mV 85C Model Hold 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.130
+Slack : 0.144
 TNS   : 0.000
 
 Type  : Fast 1100mV 85C Model Recovery 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 6.911
+Slack : 6.655
 TNS   : 0.000
 
 Type  : Fast 1100mV 85C Model Removal 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.481
+Slack : 0.549
 TNS   : 0.000
 
 Type  : Fast 1100mV 85C Model Minimum Pulse Width 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]'
@@ -87,19 +87,19 @@ Slack : 9.336
 TNS   : 0.000
 
 Type  : Fast 1100mV 0C Model Setup 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 4.167
+Slack : 4.118
 TNS   : 0.000
 
 Type  : Fast 1100mV 0C Model Hold 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.065
+Slack : 0.079
 TNS   : 0.000
 
 Type  : Fast 1100mV 0C Model Recovery 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 7.307
+Slack : 7.049
 TNS   : 0.000
 
 Type  : Fast 1100mV 0C Model Removal 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 0.401
+Slack : 0.500
 TNS   : 0.000
 
 Type  : Fast 1100mV 0C Model Minimum Pulse Width 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]'
@@ -107,7 +107,7 @@ Slack : 1.666
 TNS   : 0.000
 
 Type  : Fast 1100mV 0C Model Minimum Pulse Width 'inst_pll_sys|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk'
-Slack : 3.887
+Slack : 3.888
 TNS   : 0.000
 
 Type  : Fast 1100mV 0C Model Minimum Pulse Width 'CLOCK_50'

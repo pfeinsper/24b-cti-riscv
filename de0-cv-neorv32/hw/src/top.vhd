@@ -121,7 +121,7 @@ architecture syn of top is
          rst         : in std_logic;
          clk         : in std_logic;
          signal_in   : in std_logic;
-         counter : out std_logic_vector(11 downto 0)
+         counter : out std_logic_vector(31 downto 0)
       );
    end component counter;
 
@@ -335,7 +335,7 @@ architecture syn of top is
 		 mtime_time_o   : out std_ulogic_vector(63 downto 0);                    -- current system time
 
 		 
-		 counter        : in std_logic_vector(11 downto 0)
+		 counter        : in std_logic_vector(31 downto 0)
      );
    end component neorv32_top;
 
@@ -362,7 +362,7 @@ architecture syn of top is
 	
 	signal PWM_u : std_ulogic_vector(3 downto 0);
 	
-	signal signal_couter : std_logic_vector(11 downto 0);
+	signal signal_couter : std_logic_vector(31 downto 0);
  
 
 begin

@@ -294,7 +294,7 @@ void move_clockwise() {
 void move_clockwise_pwm(uint8_t direction) {
     step_index = (sector_index + direction) % 6;
     // print the step index
-    neorv32_uart0_printf("Step index: %u\n", step_index);
+    //neorv32_uart0_printf("Step index: %u\n", step_index);
     // Set motor pins based on the current step
     PWM_VALUE.float_value = riscv_intrinsic_fmuls(PWM_RES, duty_cycle.float_value);
     neorv32_pwm_set(IN1, riscv_intrinsic_fmuls(in_seq[step_index][0], PWM_VALUE.float_value));
@@ -311,7 +311,7 @@ void update_angle() {
   encoder_count = neorv32_counter_get();
   //each tick is 1.8 degrees
   // print the encoder count
-  //neorv32_uart0_printf("Encoder count: %u\n", encoder_count);
+  neorv32_uart0_printf("Encoder count: %u\n", encoder_count);
   uint32_t diff = encoder_count - last_count;
   current_angle.float_value = riscv_intrinsic_fadds(current_angle.float_value, riscv_intrinsic_fmuls(1.8, diff));
   last_count = encoder_count;
@@ -359,5 +359,5 @@ void get_sector() {
     sector_index = 5;
   }
 
-  neorv32_uart0_printf("sector: %u\n", sector_index);
+  //neorv32_uart0_printf("sector: %u\n", sector_index);
 }

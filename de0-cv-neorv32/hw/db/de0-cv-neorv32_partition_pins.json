@@ -112,11 +112,11 @@
 					"strict" : false
 				},
 				{
-					"name" : "GPIO_i[1]",
+					"name" : "GPIO_i[0]",
 					"strict" : false
 				},
 				{
-					"name" : "GPIO_i[0]",
+					"name" : "GPIO_i[1]",
 					"strict" : false
 				},
 				{
