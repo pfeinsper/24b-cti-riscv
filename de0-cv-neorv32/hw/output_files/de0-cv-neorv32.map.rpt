@@ -1,5 +1,5 @@
 Analysis & Synthesis report for de0-cv-neorv32
-Wed Nov 13 10:22:39 2024
+Wed Nov 13 15:04:44 2024
 Quartus Prime Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
 
 
@@ -117,7 +117,7 @@ https://fpgasoftware.intel.com/eula.
 +-------------------------------------------------------------------------------+
 ; Analysis & Synthesis Summary                                                  ;
 +---------------------------------+---------------------------------------------+
-; Analysis & Synthesis Status     ; Successful - Wed Nov 13 10:22:39 2024       ;
+; Analysis & Synthesis Status     ; Successful - Wed Nov 13 15:04:44 2024       ;
 ; Quartus Prime Version           ; 20.1.0 Build 711 06/05/2020 SJ Lite Edition ;
 ; Revision Name                   ; de0-cv-neorv32                              ;
 ; Top-level Entity Name           ; top                                         ;
@@ -2974,7 +2974,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 +----------------+--------------+
 ; Partition Name ; Elapsed Time ;
 +----------------+--------------+
-; Top            ; 00:00:05     ;
+; Top            ; 00:00:06     ;
 +----------------+--------------+
 
 
@@ -2984,7 +2984,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 Info: *******************************************************************
 Info: Running Quartus Prime Analysis & Synthesis
     Info: Version 20.1.0 Build 711 06/05/2020 SJ Lite Edition
-    Info: Processing started: Wed Nov 13 10:22:24 2024
+    Info: Processing started: Wed Nov 13 15:04:21 2024
 Info: Command: quartus_map --read_settings_files=on --write_settings_files=off de0-cv-neorv32 -c de0-cv-neorv32
 Warning (18236): Number of processors has not been specified which may cause overloading on shared machines.  Set the global assignment NUM_PARALLEL_PROCESSORS in your QSF to an appropriate value for best performance.
 Info (20030): Parallel compilation is enabled and will use 10 of the 10 processors detected
@@ -3538,9 +3538,9 @@ Info (21057): Implemented 4610 device resources after synthesis - the final reso
     Info (21065): Implemented 1 PLLs
     Info (21062): Implemented 1 DSP elements
 Info: Quartus Prime Analysis & Synthesis was successful. 0 errors, 59 warnings
-    Info: Peak virtual memory: 4998 megabytes
-    Info: Processing ended: Wed Nov 13 10:22:39 2024
-    Info: Elapsed time: 00:00:15
-    Info: Total CPU time (on all processors): 00:00:10
+    Info: Peak virtual memory: 4994 megabytes
+    Info: Processing ended: Wed Nov 13 15:04:44 2024
+    Info: Elapsed time: 00:00:23
+    Info: Total CPU time (on all processors): 00:00:11
 
 

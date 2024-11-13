@@ -139,7 +139,7 @@ static void prvSetupHardware(void) {
   }
 
   // Configure and enable PWM
-  neorv32_pwm_setup(CLK_PRSC_2);
+  neorv32_pwm_setup(CLK_PRSC_8);
 
   // ----------------------------------------------------------
   // Configuration checks
