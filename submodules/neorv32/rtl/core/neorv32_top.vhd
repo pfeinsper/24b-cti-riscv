@@ -231,7 +231,7 @@ entity neorv32_top is
     msw_irq_i      : in  std_ulogic := 'L';                                 -- machine software interrupt
     mext_irq_i     : in  std_ulogic := 'L';                                 -- machine external interrupt
 	 
-	 counter        : in std_logic_vector(11 downto 0)
+	 counter        : in std_logic_vector(31 downto 0)
 	 );
 end neorv32_top;
 
@@ -1704,14 +1704,12 @@ begin
 		
       if (iodev_req(IODEV_COUNTER).stb = '1') then
         if (iodev_req(IODEV_COUNTER).rw = '0') then -- read access
-            iodev_rsp(IODEV_COUNTER).data <= to_stdulogicvector("00000000000000000000" & counter);
+            iodev_rsp(IODEV_COUNTER).data <= to_stdulogicvector(counter);
         end if;
       end if;
 		
     end if;
   end process bus_access_counter;
-  
---  memory_counter <= to_stdlogicvector(iodev_rsp(IODEV_COUNTER).data);
 
 
 end neorv32_top_rtl;
