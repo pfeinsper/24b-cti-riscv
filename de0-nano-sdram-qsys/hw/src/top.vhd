@@ -105,15 +105,16 @@ entity top is
 		GPIO_i	    : in std_logic_vector(12 downto 0);
 		GPIO_o		 :	out std_logic_vector(12 downto 0);
 
+      GPIO_2      : out std_logic_vector(12 downto 0);
+      GPIO_2_IN   : in  std_logic_vector(2 downto 0);
+
       HALL_i   : in std_logic;
 
 
       ADC_SADDR  : out std_logic;
       ADC_CS_N   : out std_logic;
       ADC_SCLK   : out std_logic;
-      ADC_SDAT   : in  std_logic;
-		
-		FPGA_RESET_N : in std_logic
+      ADC_SDAT   : in  std_logic
    );
 end entity top;
 
@@ -129,7 +130,7 @@ architecture syn of top is
    --------------------------------------------------------
 
    constant CLOCK_FREQUENCY   : natural := 100000000;    -- clock frequency of clk_i in Hz
-   constant MEM_INT_IMEM_SIZE : natural := 64*1024;      -- size of processor-internal instruction memory in bytes
+   constant MEM_INT_IMEM_SIZE : natural := 32*1024;      -- size of processor-internal instruction memory in bytes
    constant MEM_INT_DMEM_SIZE : natural := 16*1024;      -- size of processor-internal data memory in bytes
 
 
@@ -488,7 +489,7 @@ begin
    --
 
    -- Asynchronous assert
-   fpga_reset <= '1' when (FPGA_RESET_N = '0') else '0';
+   fpga_reset <= '1' when (KEY(0) = '0') else '0';
    reset      <= '1' when ((fpga_reset = '1') OR (pll_locked = '0')) else '0';
 
    -- Synchronize deassert
@@ -516,7 +517,7 @@ begin
    adc_ctrl_inst: ADC_CTRL
         port map (
          -- reset
-            iRST     => FPGA_RESET_N,
+            iRST     => KEY(0),
             iCLK     => wSPI_CLK,
             iCLK_n   => wSPI_CLK_n,
             iGO      => iGO_signal,
