@@ -335,4 +335,6 @@ void PID_control() {
 
 void get_sector() {
   sector_index = neorv32_counter_get();
+  // print the sector index
+  neorv32_uart0_printf("Sector index: %u\n", sector_index);
 }
