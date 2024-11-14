@@ -85,6 +85,7 @@ volatile uint32_t motor_move_time = 5; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
 volatile float_conv_t duty_cycle = {.float_value = 0.5};
 volatile float_conv_t PWM_VALUE = {.float_value = 0.0};
+volatile float_conv_t acummulated_time = {.float_value = 0.0};
 
 /**@}*/
 
@@ -340,7 +341,13 @@ void update_angle() {
 
   // speed = ((diff * 60/pi) / time_between_measurements)
   float_conv_t time_in_seconds = { .float_value = riscv_emulate_fdivs(update_constants_time, 1000) };
-  motor_speed.float_value = riscv_emulate_fdivs(riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, 60), PI), time_in_seconds.float_value);
+  if (diff == 0) {
+    acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_in_seconds.float_value);
+  } else{
+    acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_in_seconds.float_value);
+    motor_speed.float_value = riscv_emulate_fdivs(riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, 60), PI), acummulated_time.float_value);
+    acummulated_time.float_value = 0.0;
+  }
 
 }
 
