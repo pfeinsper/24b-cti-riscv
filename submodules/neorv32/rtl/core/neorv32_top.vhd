@@ -231,7 +231,8 @@ entity neorv32_top is
     msw_irq_i      : in  std_ulogic := 'L';                                 -- machine software interrupt
     mext_irq_i     : in  std_ulogic := 'L';                                 -- machine external interrupt
 	 
-	 counter        : in std_logic_vector(31 downto 0)
+	 counter        : in std_logic_vector(31 downto 0);
+   sector         : in std_logic_vector(2 downto 0)
 	 );
 end neorv32_top;
 
