@@ -88,7 +88,7 @@ entity top is
 		GPIO_i	    : in std_logic_vector(12 downto 0);
 		GPIO_o		 :	out std_logic_vector(12 downto 0);
 
-      HALL_i   : in std_logic;
+      HALL_i       : in std_logic_vector(2 downto 0);
 		
 		FPGA_RESET_N : in std_logic
    );
@@ -118,9 +118,7 @@ architecture syn of top is
    --
    component counter
       port (
-         rst         : in std_logic;
-         clk         : in std_logic;
-         signal_in   : in std_logic;
+         signal_in   : in std_logic_vector(2 downto 0);
          counter : out std_logic_vector(31 downto 0)
       );
    end component counter;
@@ -372,9 +370,7 @@ begin
    --
    inst_counter : counter
       port map (
-         rst => reset,
-         clk => sys_clk,
-         signal_in => HALL_i,
+         signal_in => HALL_i(2 downto 0),
          counter => signal_couter
       );
 
