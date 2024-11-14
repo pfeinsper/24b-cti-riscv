@@ -1,74 +1,84 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.STD_LOGIC_ARITH.ALL;
-use IEEE.STD_LOGIC_UNSIGNED.ALL;
+--use IEEE.STD_LOGIC_ARITH.ALL;
+--use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity counter is
     Port (
-        clk : in std_logic;         -- Clock do sistema
-        rst : in std_logic;         -- Sinal de reset
-        signal_in : in std_logic;   -- Sinal de entrada digital (com bouncing)
+       -- clk : in std_logic;         -- Clock do sistema
+       -- rst : in std_logic;         -- Sinal de reset
+       -- signal_in : in std_logic;   -- Sinal de entrada digital (com bouncing)
+        signal_in : in std_logic_vector(2 downto 0);
         counter : out std_logic_vector(31 downto 0)  -- Valor do contador
     );
 end counter;
 
 architecture Behavioral of counter is
-    signal prev_signal : std_logic := '0';   -- Sinal anterior para detectar borda
-    signal prev_stable_signal : std_logic := '0'; -- Sinal estabilizado (depois do debouncing) anterior
-    signal stable_signal : std_logic := '0'; -- Sinal estabilizado (depois do debouncing)
-    signal internal_counter : std_logic_vector(31 downto 0) := (others => '0');  -- Registrador do contador
-    signal debounce_counter : integer := 0;  -- Temporizador para debouncing
-    constant debounce_limit : integer := 12000;  -- Limite de ciclos de clock para estabilizar (ajustável)
+--    signal prev_signal : std_logic := '0';   -- Sinal anterior para detectar borda
+  --  signal prev_stable_signal : std_logic := '0'; -- Sinal estabilizado (depois do debouncing) anterior
+    --signal stable_signal : std_logic := '0'; -- Sinal estabilizado (depois do debouncing)
+--    signal internal_counter : std_logic_vector(31 downto 0) := (others => '0');  -- Registrador do contador
+  --  signal debounce_counter : integer := 0;  -- Temporizador para debouncing
+    --constant debounce_limit : integer := 12000;  -- Limite de ciclos de clock para estabilizar (ajustável)
 
 begin
 
-    -- Processo de debouncing
-    process(clk, rst)
-    begin
-        if rst = '1' then
-            -- Resetar temporizador e sinal estabilizado
-            debounce_counter <= 0;
-            stable_signal <= '0';
+    with signal_in select
+        counter <="00000000000000000000000000000100" when "001", -- 001 to 4
+                  "00000000000000000000000000000010" when "010", -- 010 to 2
+                  "00000000000000000000000000000011" when "011", -- 011 to 3
+                  "00000000000000000000000000000000" when "100", -- 100 to 0
+                  "00000000000000000000000000000101" when "101", -- 101 to 5
+                  "00000000000000000000000000000001" when "110", -- 110 to 1
+                  others => "00000000000000000000000000000000";  -- Default case
 
-        elsif falling_edge(clk) then
+    -- Processo de debouncing
+    --process(clk, rst)
+    --begin
+    --    if rst = '1' then
+            -- Resetar temporizador e sinal estabilizado
+    --        debounce_counter <= 0;
+      --      stable_signal <= '0';
+
+--        elsif falling_edge(clk) then
             -- Verificar se o sinal mudou de valor
-            if signal_in /= prev_signal then
+  --          if signal_in /= prev_signal then
                 -- Resetar o contador de debouncing quando o sinal oscilar
-                debounce_counter <= 0;
-            else
+    --            debounce_counter <= 0;
+      --      else
                 -- Incrementar o contador de debouncing
-                if debounce_counter < debounce_limit then
-                    debounce_counter <= debounce_counter + 1;
-                else
+        --        if debounce_counter < debounce_limit then
+             --       debounce_counter <= debounce_counter + 1;
+          --      else
                     -- Quando o temporizador atinge o limite, estabilizamos o sinal
-                    stable_signal <= signal_in;
-                end if;
-            end if;
+            --        stable_signal <= signal_in;
+              --  end if;
+--            end if;
 
             -- Atualizar o valor do sinal anterior
-            prev_signal <= signal_in;
-        end if;
+  --          prev_signal <= signal_in;
+    --    end if;
 
-    end process;
+ --  end process;
 
     -- Processo para contar bordas de descida do sinal estabilizado
-    process(clk, rst)
-    begin
-        if rst = '1' then
+--    process(clk, rst)
+  --  begin
+    --    if rst = '1' then
             -- Resetar o contador e o sinal anterior estabilizado
-            internal_counter <= (others => '0');
-        elsif falling_edge(clk) then
+      --      internal_counter <= (others => '0');
+        --elsif falling_edge(clk) then
             -- Detectar borda de descida no sinal estabilizado
-            if stable_signal = '0' and prev_stable_signal = '1' then
-                internal_counter <= internal_counter + 1;
-            end if;
+          --  if stable_signal = '0' and prev_stable_signal = '1' then
+            --    internal_counter <= internal_counter + 1;
+      --      end if;
 
             -- Atualizar o valor do sinal estabilizado anterior
-            prev_stable_signal <= stable_signal;
-        end if;
-    end process;
+        --    prev_stable_signal <= stable_signal;
+  --      end if;
+--    end process;
 
     -- Conectar o valor do contador à saída
-    counter <= internal_counter;
+  --  counter <= internal_counter;
 
 end Behavioral;
