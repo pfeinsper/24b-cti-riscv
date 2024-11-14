@@ -292,7 +292,8 @@ void vWriteUARTTask(void *pvParameters)
     while (1)
     {
       // print the speed
-      neorv32_uart0_printf("Speed: %u\n", motor_speed.binary_value);
+      uint32_t motor_speed_int = riscv_intrinsic_fcvt_wus(motor_speed.float_value);
+      neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(200));
     }
@@ -332,6 +333,9 @@ void update_angle() {
 
   get_sector();
   uint32_t diff = sector_index - last_sector;
+  if (diff < 0) {
+    diff = 6 + diff;
+  }
   last_sector = sector_index;
   current_angle.float_value = riscv_intrinsic_fadds(current_angle.float_value, riscv_intrinsic_fmuls(60, diff));
   
@@ -339,13 +343,14 @@ void update_angle() {
     current_angle.float_value = riscv_intrinsic_fsubs(current_angle.float_value, 360.0);
   }
 
-  // speed = ((diff * 60/pi) / time_between_measurements)
+  // speed = ((diff * pi/3) / time_between_measurements)
   float_conv_t time_in_seconds = { .float_value = riscv_emulate_fdivs(update_constants_time, 1000) };
   if (diff == 0) {
     acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_in_seconds.float_value);
   } else{
     acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_in_seconds.float_value);
-    motor_speed.float_value = riscv_emulate_fdivs(riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, 60), PI), acummulated_time.float_value);
+    float_conv_t ang_rad = { .float_value = riscv_emulate_fdivs(PI, 3) };
+    motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, ang_rad.float_value), acummulated_time.float_value);
     acummulated_time.float_value = 0.0;
   }
 

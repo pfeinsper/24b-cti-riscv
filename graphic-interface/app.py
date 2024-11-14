@@ -14,7 +14,7 @@ import re
 
 def connect_uart(port):
     try:
-        ser = serial.Serial(port, 115200, timeout=0)
+        ser = serial.Serial(port, 19200, timeout=0)
         print(f"Conectado ao dispositivo UART na porta {port}.")
         return ser
     except serial.SerialException as e:
