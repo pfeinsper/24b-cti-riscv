@@ -37,7 +37,7 @@ APP_SRC += $(wildcard  $(FREERTOS_HOME)/portable/MemMang/heap_4.c)
 # -----------------------------------------------------------------------------
 
 # Set maximum heap size
-override USER_FLAGS += "-Wl,--defsym,__neorv32_heap_size=3500"
+override USER_FLAGS += "-Wl,--defsym,__neorv32_heap_size=5000"
 
 # Chip-specific configuration
 APP_INC += -I chip_specific_extensions/neorv32

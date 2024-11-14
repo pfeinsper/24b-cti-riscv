@@ -53,7 +53,9 @@ const uint8_t en_seq[6][3] = {{0, 1, 1}, {1, 1, 0}, {1, 0, 1},
 const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // this is not the right way to calculate the conversion factor but works for now
 
 /* Priorities used by the tasks. */
-#define mainMotorTask_PRIORITY    ( tskIDLE_PRIORITY + 1 )
+#define mainMotorTask_PRIORITY    ( tskIDLE_PRIORITY + 3 ) 
+#define mainUARTTask_PRIORITY    ( tskIDLE_PRIORITY + 1 ) 
+#define mainUARTWriteTask_PRIORITY    ( tskIDLE_PRIORITY + 3 )
 
 /* The rate at which data is sent to the queue.  The 500ms value is converted
  * to ticks using the pdMS_TO_TICKS() macro. */
@@ -71,6 +73,7 @@ static void vTimerMotorMove(TimerHandle_t xTimer);
 // config tasks
 static void prvMotorTask(void *pvParameters);
 static void vListemUARTTask(void *pvParameters);
+static void vWriteUARTTask(void *pvParameters);
 
 // config queue
 static QueueHandle_t xQueue = NULL;
@@ -186,9 +189,13 @@ void createTasks(void)
   // print an warning
   neorv32_uart0_puts("Motor task created.\n");
   // Create the task
-  xTaskCreate(vListemUARTTask, "UARTTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
+  xTaskCreate(vListemUARTTask, "UARTTask", configMINIMAL_STACK_SIZE, NULL, mainUARTTask_PRIORITY, NULL);
   // print an warning
   neorv32_uart0_puts("UART task created.\n");
+  // Create the task
+  xTaskCreate(vWriteUARTTask, "UARTWriteTask", configMINIMAL_STACK_SIZE, NULL, mainUARTWriteTask_PRIORITY, NULL);
+  // print an warning
+  neorv32_uart0_puts("UART write task created.\n");
 }
 
 void align_rotor() {
@@ -258,7 +265,7 @@ void prvMotorTask(void *pvParameters)
 void vListemUARTTask(void *pvParameters)
 {
     // print a warning
-    neorv32_uart0_puts("UART task started.\n");
+    neorv32_uart0_puts("UART listem task started.\n");
     // Loop indefinitely
     while (1)
     {
@@ -269,7 +276,22 @@ void vListemUARTTask(void *pvParameters)
       float_conv_t target_speed = { .float_value = atof(buffer) };
       float_conv_t error = { .float_value = riscv_intrinsic_fsubs(target_speed.float_value, motor_speed.float_value) };
       // send the error to the queue
+      // print the speed
       xQueueSend(xQueue, &error.float_value, 0);
+      // make the task sleep for 1 second
+      vTaskDelay(pdMS_TO_TICKS(400));
+    }
+}
+
+void vWriteUARTTask(void *pvParameters)
+{
+    // print a warning
+    neorv32_uart0_puts("UART write task started.\n");
+    // Loop indefinitely
+    while (1)
+    {
+      // print the speed
+      neorv32_uart0_printf("Speed: %u\n", motor_speed.binary_value);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(200));
     }
@@ -319,8 +341,6 @@ void update_angle() {
   // speed = ((diff * 60/pi) / time_between_measurements)
   float_conv_t time_in_seconds = { .float_value = riscv_emulate_fdivs(update_constants_time, 1000) };
   motor_speed.float_value = riscv_emulate_fdivs(riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, 60), PI), time_in_seconds.float_value);
-  // print the speed  
-  //neorv32_uart0_printf("Speed: %u\n", motor_speed.binary_value);
 
 }
 
