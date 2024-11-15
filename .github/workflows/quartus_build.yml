@@ -3,7 +3,7 @@ name: Quartus CI/CD Pipeline
 on:
   push:
     paths:
-      - '/de0-nano-sdram-qsys/hw/**'
+      - '/de0-cv-neorv32/hw/**'
       - '.github/workflows/quartus_build.yml'
   workflow_dispatch:
 
@@ -27,11 +27,11 @@ jobs:
             -v ${{ github.workspace }}:/root/workspace \
             -e PYTHONPATH="/root/workspace/" \
             eduardosmb/quartus-image-ci:latest \
-            quartus_sh --flow compile /root/workspace/de0-nano-sdram-qsys/hw/de0-neorv32-sdram-qsys.qpf
+            quartus_sh --flow compile /root/workspace/de0-cv-neorv32/hw/de0-cv-neorv32.qpf
 
       - name: Verificar criação do arquivo .sof
         run: |
-          if [ -f "${{ github.workspace }}/de0-nano-sdram-qsys/hw/output_files/de0-neorv32-sdram-qsys.sof" ]; then
+          if [ -f "${{ github.workspace }}/de0-cv-neorv32/hw/output_files/de0-cv-neorv32.sof" ]; then
             echo "Compilação bem-sucedida."
           else
             echo "Erro na compilação."
