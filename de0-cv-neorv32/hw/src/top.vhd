@@ -127,12 +127,14 @@ architecture syn of top is
       );
    end component counter;
 
-   compenent get_sector
+   component hall_sector
       port (
+         rst : in std_logic;
+         clk : in std_logic;
          signal_in : in std_logic_vector(2 downto 0);
          sector : out std_logic_vector(2 downto 0)
       );
-   end component get_sector;
+   end component hall_sector;
 
    --
    -- PLL
@@ -390,11 +392,14 @@ begin
          counter => signal_couter
       );
 
+
    --
-   -- Get Sector
+   -- HALL Sector
    --
-   inst_get_sector : get_sector
+   inst_hall_sector : hall_sector
       port map (
+         rst => reset,
+         clk => sys_clk,
          signal_in => HALL_SENSOR,
          sector => signal_sector
       );
@@ -487,7 +492,7 @@ begin
          uart0_rxd_i   => UART0_RXD,                         -- UART0 receive data
 			pwm_o(3 downto 0)         => PWM_u,                   -- pwm channels
 			
-			counter => signal_couter
+			counter => signal_couter,
          sector => signal_sector
 		);
    --------------------------------------------------------

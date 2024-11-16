@@ -1,13 +1,13 @@
-Fitter Status : Successful - Wed Nov 13 16:10:05 2024
+Fitter Status : Successful - Sat Nov 16 20:45:42 2024
 Quartus Prime Version : 20.1.0 Build 711 06/05/2020 SJ Lite Edition
 Revision Name : de0-cv-neorv32
 Top-level Entity Name : top
 Family : Cyclone V
 Device : 5CEBA4F23C7
 Timing Models : Final
-Logic utilization (in ALMs) : 2,100 / 18,480 ( 11 % )
-Total registers : 2723
-Total pins : 50 / 224 ( 22 % )
+Logic utilization (in ALMs) : 2,151 / 18,480 ( 12 % )
+Total registers : 2709
+Total pins : 53 / 224 ( 24 % )
 Total virtual pins : 0
 Total block memory bits : 821,248 / 3,153,920 ( 26 % )
 Total RAM Blocks : 102 / 308 ( 33 % )
