@@ -78,6 +78,8 @@ extern "C" {
 #define NEORV32_DM_BASE      (0xFFFFFF00U) /**< On-Chip Debugger - Debug Module (OCD) */
 
 #define NEORV32_COUNTER_BASE (0xFFFFE000U) /**< Hal counter (COUNTER) */
+
+#define NEORV32_SECTOR_BASE (0xFFFFE100U) /**< Hal sector (SECTOR) */
 /**@}*/
 
 
