@@ -294,7 +294,7 @@ architecture neorv32_top_rtl of neorv32_top is
   type io_devices_enum_t is (
     IODEV_OCD, IODEV_SYSINFO, IODEV_NEOLED, IODEV_GPIO, IODEV_WDT, IODEV_TRNG, IODEV_TWI,
     IODEV_SPI, IODEV_SDI, IODEV_UART1, IODEV_UART0, IODEV_MTIME, IODEV_XIRQ, IODEV_ONEWIRE,
-    IODEV_GPTMR, IODEV_PWM, IODEV_XIP, IODEV_CRC, IODEV_DMA, IODEV_SLINK, IODEV_CFS, IODEV_COUNTER
+    IODEV_GPTMR, IODEV_PWM, IODEV_XIP, IODEV_CRC, IODEV_DMA, IODEV_SLINK, IODEV_CFS, IODEV_COUNTER, IODEV_SECTOR
   );
   type iodev_req_t is array (io_devices_enum_t) of bus_req_t;
   type iodev_rsp_t is array (io_devices_enum_t) of bus_rsp_t;
@@ -1026,7 +1026,8 @@ begin
 		
       DEV_21_EN => true,                DEV_21_BASE => base_io_counter_c,
 		
-      DEV_22_EN => false,               DEV_22_BASE => (others => '0'), -- reserved
+      DEV_22_EN => true,                DEV_22_BASE => base_io_sector_c,
+
       DEV_23_EN => false,               DEV_23_BASE => (others => '0'), -- reserved
       DEV_24_EN => false,               DEV_24_BASE => (others => '0'), -- reserved
       DEV_25_EN => false,               DEV_25_BASE => (others => '0'), -- reserved
@@ -1065,8 +1066,9 @@ begin
       dev_20_req_o => iodev_req(IODEV_CFS),     dev_20_rsp_i => iodev_rsp(IODEV_CFS),
 		
       dev_21_req_o => iodev_req(IODEV_COUNTER), dev_21_rsp_i => iodev_rsp(IODEV_COUNTER),
+
+      dev_22_req_o => iodev_req(IODEV_SECTOR),  dev_22_rsp_i => iodev_rsp(IODEV_SECTOR),
 		
-      dev_22_req_o => open,                     dev_22_rsp_i => rsp_terminate_c, -- reserved
       dev_23_req_o => open,                     dev_23_rsp_i => rsp_terminate_c, -- reserved
       dev_24_req_o => open,                     dev_24_rsp_i => rsp_terminate_c, -- reserved
       dev_25_req_o => open,                     dev_25_rsp_i => rsp_terminate_c, -- reserved
@@ -1712,5 +1714,24 @@ begin
     end if;
   end process bus_access_counter;
 
+  bus_hall_sector: process(rstn_sys, clk_i)
+  begin
+    if (rstn_sys = '0') then
+      iodev_rsp(IODEV_SECTOR) <= rsp_terminate_c;
+		
+    elsif rising_edge(clk_i) then
+      -- bus handshake --
+      iodev_rsp(IODEV_SECTOR).ack  <= iodev_req(IODEV_SECTOR).stb;
+      iodev_rsp(IODEV_SECTOR).err  <= '0';
+      iodev_rsp(IODEV_SECTOR).data <= (others => '0');
+		
+      if (iodev_req(IODEV_SECTOR).stb = '1') then
+        if (iodev_req(IODEV_SECTOR).rw = '0') then -- read access
+            iodev_rsp(IODEV_SECTOR).data <= to_stdulogicvector("00000000000000000000000000000" & sector);
+        end if;
+      end if;
+		
+    end if;
+  end process bus_hall_sector;
 
 end neorv32_top_rtl;
