@@ -89,6 +89,8 @@ entity top is
 		GPIO_o		 :	out std_logic_vector(12 downto 0);
 
       HALL_i   : in std_logic;
+
+      HALL_SENSOR : in std_logic_vector(2 downto 0);
 		
 		FPGA_RESET_N : in std_logic
    );
@@ -124,6 +126,15 @@ architecture syn of top is
          counter : out std_logic_vector(31 downto 0)
       );
    end component counter;
+
+   component hall_sector
+      port (
+         rst : in std_logic;
+         clk : in std_logic;
+         signal_in : in std_logic_vector(2 downto 0);
+         sector : out std_logic_vector(2 downto 0)
+      );
+   end component hall_sector;
 
    --
    -- PLL
@@ -335,7 +346,8 @@ architecture syn of top is
 		 mtime_time_o   : out std_ulogic_vector(63 downto 0);                    -- current system time
 
 		 
-		 counter        : in std_logic_vector(31 downto 0)
+		 counter        : in std_logic_vector(31 downto 0);
+       sector         : in std_logic_vector(2 downto 0)
      );
    end component neorv32_top;
 
@@ -363,6 +375,8 @@ architecture syn of top is
 	signal PWM_u : std_ulogic_vector(3 downto 0);
 	
 	signal signal_couter : std_logic_vector(31 downto 0);
+
+   signal signal_sector           : std_logic_vector(2 downto 0);
  
 
 begin
@@ -376,6 +390,18 @@ begin
          clk => sys_clk,
          signal_in => HALL_i,
          counter => signal_couter
+      );
+
+
+   --
+   -- HALL Sector
+   --
+   inst_hall_sector : hall_sector
+      port map (
+         rst => reset,
+         clk => sys_clk,
+         signal_in => HALL_SENSOR,
+         sector => signal_sector
       );
 
    --
@@ -466,7 +492,8 @@ begin
          uart0_rxd_i   => UART0_RXD,                         -- UART0 receive data
 			pwm_o(3 downto 0)         => PWM_u,                   -- pwm channels
 			
-			counter => signal_couter
+			counter => signal_couter,
+         sector => signal_sector
 		);
    --------------------------------------------------------
    -- Output/Input signals

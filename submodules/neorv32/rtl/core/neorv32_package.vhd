@@ -65,7 +65,8 @@ package neorv32_package is
 
   constant base_io_counter_c     : std_ulogic_vector(31 downto 0) := x"ffffe000";
 
---constant base_io_???_c     : std_ulogic_vector(31 downto 0) := x"ffffe100"; -- reserved
+  constant base_io_sector_c     : std_ulogic_vector(31 downto 0) := x"ffffe100";
+
 --constant base_io_???_c     : std_ulogic_vector(31 downto 0) := x"ffffe200"; -- reserved
 --constant base_io_???_c     : std_ulogic_vector(31 downto 0) := x"ffffe300"; -- reserved
 --constant base_io_???_c     : std_ulogic_vector(31 downto 0) := x"ffffe400"; -- reserved
