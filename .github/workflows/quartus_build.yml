@@ -58,6 +58,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ${{ github.workspace }}/de0-nano-sdram-qsys/hw/output_files/de0-neorv32-sdram-qsys.sof
-          asset_name: de0-neorv32-sdram-qsys.sof
+          asset_path: ${{ github.workspace }}/de0-cv-neorv32/hw/output_files/de0-cv-neorv32.sof
+          asset_name: de0-cv-neorv32.sof
           asset_content_type: application/octet-stream
