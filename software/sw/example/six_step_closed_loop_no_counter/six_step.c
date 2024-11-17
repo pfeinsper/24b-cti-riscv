@@ -69,6 +69,7 @@ const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // thi
 // create timers
 static void vTimerUpdateConstants(TimerHandle_t xTimer);
 static void vTimerMotorMove(TimerHandle_t xTimer);
+static void vTimerChangeMode(TimerHandle_t xTimer);
 
 // config tasks
 static void prvMotorTask(void *pvParameters);
@@ -82,8 +83,9 @@ volatile uint32_t last_sector = 0;
 
 volatile uint32_t update_constants_time = 1; // in ms
 volatile uint32_t motor_move_time = 1; // in ms
+volatile uint32_t change_mode_time = 10000; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
-volatile float_conv_t duty_cycle = {.float_value = 0.3};
+volatile float_conv_t duty_cycle = {.float_value = 0.2};
 volatile float_conv_t PWM_VALUE = {.float_value = 0.0};
 volatile float_conv_t acummulated_time = {.float_value = 0.0};
 
@@ -144,7 +146,7 @@ int six_step() {
 void createTimers(void)
 {
     // Create both timers
-    TimerHandle_t xCurTimer, xMotorMoveTimer;
+    TimerHandle_t xCurTimer, xMotorMoveTimer, xChangeModeTimer;
 
     // Create CurTimer
     neorv32_uart0_puts("Creating Cur timer.\n");
@@ -183,6 +185,24 @@ void createTimers(void)
             neorv32_uart0_puts("Failed to start MotorMove timer.\n");
         }
     }
+    // Create ChangeModeTimer (activates only once)
+    neorv32_uart0_puts("Creating change mode timer.\n");
+    const TickType_t xChangeModeTimerPeriod = pdMS_TO_TICKS(change_mode_time);
+    xChangeModeTimer = xTimerCreate(
+        "ChangeModeTimer",       // Timer name
+        xChangeModeTimerPeriod,  // Timer period (50ms)
+        pdFALSE,                 // Auto-reload timer
+        (void *)0,               // Timer ID
+        vTimerChangeMode         // Callback function for ChangeModeTimer
+    );
+
+    if (xChangeModeTimer != NULL)
+    {
+        if (xTimerStart(xChangeModeTimer, 0) != pdPASS)
+        {
+            neorv32_uart0_puts("Failed to start ChangeMode timer.\n");
+        }
+    }
 }
 
 void createTasks(void)
@@ -201,38 +221,6 @@ void createTasks(void)
   neorv32_uart0_puts("UART write task created.\n");
 }
 
-// void align_rotor() {
-//   // align the motor
-//     PWM_VALUE.float_value = riscv_intrinsic_fmuls(PWM_RES, duty_cycle.float_value);
-//     neorv32_pwm_set(IN1, riscv_intrinsic_fmuls(in_seq[0][0], PWM_VALUE.float_value));
-//     neorv32_pwm_set(IN2, riscv_intrinsic_fmuls(in_seq[0][1], PWM_VALUE.float_value));
-//     neorv32_pwm_set(IN3, riscv_intrinsic_fmuls(in_seq[0][2], PWM_VALUE.float_value));
-//     neorv32_gpio_pin_set(EN1, en_seq[0][0]);
-//     neorv32_gpio_pin_set(EN2, en_seq[0][1]);
-//     neorv32_gpio_pin_set(EN3, en_seq[0][2]);
-
-//     // delay for 0.5 second
-//     neorv32_cpu_delay_ms(500);
-
-//     // disable the motor
-//     neorv32_gpio_pin_set(EN1, 0);
-//     neorv32_gpio_pin_set(EN2, 0);
-//     neorv32_gpio_pin_set(EN3, 0);
-
-//     // set position to 30 degrees
-//     current_angle.float_value = 30.0;
-
-//     // print the angle
-//     neorv32_uart0_printf("Angle init: %u\n", current_angle.binary_value);
-
-//     get_sector();
-
-//     last_sector = sector_index;
-
-//     // print a warning
-//     neorv32_uart0_puts("Motor aligned.\n");
-// }
-
 // Function to be called when the timer expires
 void vTimerUpdateConstants(TimerHandle_t xTimer)
 {
@@ -242,6 +230,14 @@ void vTimerUpdateConstants(TimerHandle_t xTimer)
 void vTimerMotorMove(TimerHandle_t xTimer)
 {
   update_motor = 1;
+}
+
+void vTimerChangeMode(TimerHandle_t xTimer)
+{
+  // print a warning
+  neorv32_uart0_puts("Change mode timer expired.\n");
+  // change the duty cycle
+  duty_cycle.float_value = 0.4;
 }
 
 void prvMotorTask(void *pvParameters)
@@ -295,11 +291,14 @@ void vWriteUARTTask(void *pvParameters)
     {
       // print the speed
       uint32_t motor_speed_int = riscv_intrinsic_fcvt_wus(motor_speed.float_value);
+      if (motor_speed_int < 300) {
+        motor_speed_int = 0;
+      }
       neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
       // print the diff
       //neorv32_uart0_printf("Diff: %u\n", diff);
       // make the task sleep for 1 second
-      vTaskDelay(pdMS_TO_TICKS(200));
+      vTaskDelay(pdMS_TO_TICKS(2));
     }
 }
 
