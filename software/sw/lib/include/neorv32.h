@@ -310,6 +310,7 @@ typedef union {
 #include "adc.h"
 
 #include "neorv32_counter.h"
+#include "neorv32_sector.h"
 
 
 #ifdef __cplusplus
