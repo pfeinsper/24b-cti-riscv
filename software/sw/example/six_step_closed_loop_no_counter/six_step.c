@@ -81,17 +81,19 @@ static QueueHandle_t xQueue = NULL;
 volatile uint32_t last_sector = 0;
 
 volatile uint32_t update_constants_time = 1; // in ms
-volatile uint32_t motor_move_time = 5; // in ms
+volatile uint32_t motor_move_time = 1; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
-volatile float_conv_t duty_cycle = {.float_value = 0.5};
+volatile float_conv_t duty_cycle = {.float_value = 0.3};
 volatile float_conv_t PWM_VALUE = {.float_value = 0.0};
 volatile float_conv_t acummulated_time = {.float_value = 0.0};
+
+volatile int diff = 0;
 
 /**@}*/
 
 
 // Prototypes
-void align_rotor();
+//void align_rotor();
 void move_clockwise();
 void move_clockwise_pwm(uint8_t direction);
 void createTasks();
@@ -116,7 +118,7 @@ int six_step() {
   //adc_start();
 
   // align the motor
-  align_rotor();
+  //align_rotor();
 
   // create queue
   xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( float ) );
@@ -199,37 +201,37 @@ void createTasks(void)
   neorv32_uart0_puts("UART write task created.\n");
 }
 
-void align_rotor() {
-  // align the motor
-    PWM_VALUE.float_value = riscv_intrinsic_fmuls(PWM_RES, duty_cycle.float_value);
-    neorv32_pwm_set(IN1, riscv_intrinsic_fmuls(in_seq[0][0], PWM_VALUE.float_value));
-    neorv32_pwm_set(IN2, riscv_intrinsic_fmuls(in_seq[0][1], PWM_VALUE.float_value));
-    neorv32_pwm_set(IN3, riscv_intrinsic_fmuls(in_seq[0][2], PWM_VALUE.float_value));
-    neorv32_gpio_pin_set(EN1, en_seq[0][0]);
-    neorv32_gpio_pin_set(EN2, en_seq[0][1]);
-    neorv32_gpio_pin_set(EN3, en_seq[0][2]);
+// void align_rotor() {
+//   // align the motor
+//     PWM_VALUE.float_value = riscv_intrinsic_fmuls(PWM_RES, duty_cycle.float_value);
+//     neorv32_pwm_set(IN1, riscv_intrinsic_fmuls(in_seq[0][0], PWM_VALUE.float_value));
+//     neorv32_pwm_set(IN2, riscv_intrinsic_fmuls(in_seq[0][1], PWM_VALUE.float_value));
+//     neorv32_pwm_set(IN3, riscv_intrinsic_fmuls(in_seq[0][2], PWM_VALUE.float_value));
+//     neorv32_gpio_pin_set(EN1, en_seq[0][0]);
+//     neorv32_gpio_pin_set(EN2, en_seq[0][1]);
+//     neorv32_gpio_pin_set(EN3, en_seq[0][2]);
 
-    // delay for 0.5 second
-    neorv32_cpu_delay_ms(500);
+//     // delay for 0.5 second
+//     neorv32_cpu_delay_ms(500);
 
-    // disable the motor
-    neorv32_gpio_pin_set(EN1, 0);
-    neorv32_gpio_pin_set(EN2, 0);
-    neorv32_gpio_pin_set(EN3, 0);
+//     // disable the motor
+//     neorv32_gpio_pin_set(EN1, 0);
+//     neorv32_gpio_pin_set(EN2, 0);
+//     neorv32_gpio_pin_set(EN3, 0);
 
-    // set position to 30 degrees
-    current_angle.float_value = 30.0;
+//     // set position to 30 degrees
+//     current_angle.float_value = 30.0;
 
-    // print the angle
-    neorv32_uart0_printf("Angle init: %u\n", current_angle.binary_value);
+//     // print the angle
+//     neorv32_uart0_printf("Angle init: %u\n", current_angle.binary_value);
 
-    get_sector();
+//     get_sector();
 
-    last_sector = sector_index;
+//     last_sector = sector_index;
 
-    // print a warning
-    neorv32_uart0_puts("Motor aligned.\n");
-}
+//     // print a warning
+//     neorv32_uart0_puts("Motor aligned.\n");
+// }
 
 // Function to be called when the timer expires
 void vTimerUpdateConstants(TimerHandle_t xTimer)
@@ -294,6 +296,8 @@ void vWriteUARTTask(void *pvParameters)
       // print the speed
       uint32_t motor_speed_int = riscv_intrinsic_fcvt_wus(motor_speed.float_value);
       neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
+      // print the diff
+      //neorv32_uart0_printf("Diff: %u\n", diff);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(200));
     }
@@ -332,16 +336,12 @@ void move_clockwise_pwm(uint8_t direction) {
 void update_angle() {
 
   get_sector();
-  uint32_t diff = sector_index - last_sector;
+  //diff = 1;
+  diff = sector_index - last_sector;
   if (diff < 0) {
     diff = 6 + diff;
   }
   last_sector = sector_index;
-  current_angle.float_value = riscv_intrinsic_fadds(current_angle.float_value, riscv_intrinsic_fmuls(60, diff));
-  
-  if ((riscv_intrinsic_flts(360.0, current_angle.float_value))) { // if the angle is greater than 360 degrees
-    current_angle.float_value = riscv_intrinsic_fsubs(current_angle.float_value, 360.0);
-  }
 
   // speed = ((diff * pi/3) / time_between_measurements)
   float_conv_t time_in_seconds = { .float_value = riscv_emulate_fdivs(update_constants_time, 1000) };
@@ -349,8 +349,8 @@ void update_angle() {
     acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_in_seconds.float_value);
   } else{
     acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_in_seconds.float_value);
-    float_conv_t ang_rad = { .float_value = riscv_emulate_fdivs(PI, 3) };
-    motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, ang_rad.float_value), acummulated_time.float_value);
+    // float_conv_t ang_rad = { .float_value = riscv_emulate_fdivs(PI, 3) };
+    motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, 1.0471975511965976), acummulated_time.float_value);
     acummulated_time.float_value = 0.0;
   }
 
