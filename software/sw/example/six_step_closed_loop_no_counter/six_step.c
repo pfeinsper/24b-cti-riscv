@@ -85,7 +85,7 @@ volatile uint32_t update_constants_time = 1; // in ms
 volatile uint32_t motor_move_time = 1; // in ms
 volatile uint32_t change_mode_time = 10000; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
-volatile float_conv_t duty_cycle = {.float_value = 0.2};
+volatile float_conv_t duty_cycle = {.float_value = 0.4};
 volatile float_conv_t PWM_VALUE = {.float_value = 0.0};
 volatile float_conv_t acummulated_time = {.float_value = 0.0};
 
@@ -237,7 +237,7 @@ void vTimerChangeMode(TimerHandle_t xTimer)
   // print a warning
   neorv32_uart0_puts("Change mode timer expired.\n");
   // change the duty cycle
-  duty_cycle.float_value = 0.4;
+  duty_cycle.float_value = 0.8;
 }
 
 void prvMotorTask(void *pvParameters)
@@ -248,8 +248,8 @@ void prvMotorTask(void *pvParameters)
     while (1)
     {
       if (update_constants){
-        update_angle();
-        get_sector();
+        //update_angle();
+        //get_sector();
         //PID_control();
         update_constants = 0;
       }
@@ -381,5 +381,22 @@ void get_sector() {
     sector_index = 4;
   } else if (hall_0 && !hall_1 && hall_2) {
     sector_index = 5;
+  }
+}
+
+/******************************************************************************
+ * Handle NEORV32-/application-specific interrupts.
+ ******************************************************************************/
+void freertos_risc_v_application_interrupt_handler(void) {
+
+  // mcause identifies the cause of the interrupt
+  uint32_t mcause = neorv32_cpu_csr_read(CSR_MCAUSE);
+
+  if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
+    neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
+    update_angle();
+  }
+  else { // undefined interrupt cause
+    neorv32_uart0_printf("\n<NEORV32-IRQ> Unexpected IRQ! cause=0x%x </NEORV32-IRQ>\n", mcause); // debug output
   }
 }
