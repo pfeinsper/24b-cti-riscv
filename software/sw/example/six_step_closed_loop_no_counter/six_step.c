@@ -93,6 +93,7 @@ volatile float_conv_t time_between_measures_in_sec = { .float_value = 0.0 };
 volatile float_conv_t rad_60 = { .float_value = 0.0 };
 
 volatile float_conv_t last_time = {.float_value = 0.0};
+volatile float_conv_t last_update = {.float_value = 0.0};
 
 
 /* pi contoler constants */
@@ -126,7 +127,7 @@ void PID_control();
 void get_sector();
 void PI_Init(PI_Controller *pi, float_conv_t max_duty, float_conv_t min_duty);
 void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
-                float_conv_t actual_speed, float_conv_t dt);
+                float_conv_t actual_speed);
 
 
 
@@ -352,7 +353,6 @@ void update_angle() {
     float_conv_t time_diff = {.float_value = riscv_intrinsic_fsubs(current_time.float_value, last_time.float_value)};
     motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, rad_60.float_value), time_diff.float_value);
     last_time.float_value = current_time.float_value;
-    PI_Update(&pi, target_speed, motor_speed, time_diff);
   }
 
 }
@@ -398,6 +398,7 @@ void freertos_risc_v_application_interrupt_handler(void) {
   if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
     neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
     update_angle();
+    PI_Update(&pi, target_speed, motor_speed);
     move_clockwise_pwm(1);
   }
   else { // undefined interrupt cause
@@ -412,7 +413,11 @@ void PI_Init(PI_Controller *pi, float_conv_t max_duty, float_conv_t min_duty) {
 }
 
 void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
-                float_conv_t actual_speed, float_conv_t dt) {
+                float_conv_t actual_speed) {
+
+  float_conv_t current_time = {.float_value = riscv_emulate_fdivs(neorv32_mtime_get_time(), ((float)neorv32_sysinfo_get_clk()))};
+  float_conv_t dt = {.float_value = riscv_intrinsic_fsubs(current_time.float_value, last_update.float_value)};
+  last_update.float_value = current_time.float_value;
 
   float_conv_t error = {.float_value =
                             riscv_intrinsic_fsubs(desired_speed.float_value,
