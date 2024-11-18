@@ -95,6 +95,19 @@ volatile float_conv_t rad_60 = { .float_value = 0.0 };
 
 volatile float_conv_t last_time = {.float_value = 0.0};
 
+
+/* pi contoler constants */
+const float_conv_t Kp = {.float_value = 0.000837};
+const float_conv_t Ki = {.float_value = 0.334};
+
+// PI Controller structure
+typedef struct {
+  float_conv_t integral; // Integral accumulator
+  float_conv_t max_duty; // Maximum duty cycle (1.0 for 100%)
+  float_conv_t min_duty; // Minimum duty cycle (0.0 for 0%)
+} PI_Controller;
+
+
 /**@}*/
 
 
@@ -109,6 +122,10 @@ int six_step();
 void update_angle();
 void PID_control();
 void get_sector();
+void PI_Init(PI_Controller *pi, float_conv_t max_duty, float_conv_t min_duty);
+float PI_Update(PI_Controller *pi, float_conv_t desired_speed,
+                float_conv_t actual_speed, float_conv_t dt);
+
 
 
 
@@ -410,4 +427,35 @@ void freertos_risc_v_application_interrupt_handler(void) {
   else { // undefined interrupt cause
     neorv32_uart0_printf("\n<NEORV32-IRQ> Unexpected IRQ! cause=0x%x </NEORV32-IRQ>\n", mcause); // debug output
   }
+}
+
+void PI_Init(PI_Controller *pi, float_conv_t max_duty, float_conv_t min_duty) {
+  pi->integral.float_value = 0.0;
+  pi->max_duty.float_value = max_duty.float_value;
+  pi->min_duty.float_value = min_duty.float_value;
+}
+
+float PI_Update(PI_Controller *pi, float_conv_t desired_speed,
+                float_conv_t actual_speed, float_conv_t dt) {
+
+  float_conv_t error = {.float_value =
+                            riscv_intrinsic_fsubs(desired_speed.float_value,
+                                                  actual_speed.float_value)};
+  pi->integral.float_value = riscv_intrinsic_fadds(
+      pi->integral.float_value,
+      riscv_intrinsic_fmuls(error.float_value, dt.float_value));
+
+  // compute the duty_cycle, the output
+  float_conv_t new_duty_cycle = {.float_value = riscv_intrinsic_fadds(
+      riscv_intrinsic_fmuls(Kp.float_value, error.float_value),
+      riscv_intrinsic_fmuls(Ki.float_value, pi->integral.float_value))};
+
+  // limit the duty cycle
+  if (new_duty_cycle.float_value > pi->max_duty.float_value) {
+    new_duty_cycle.float_value = pi->max_duty.float_value;
+  } else if (new_duty_cycle.float_value < pi->min_duty.float_value) {
+    new_duty_cycle.float_value = pi->min_duty.float_value;
+  }
+
+  return new_duty_cycle.float_value;
 }
