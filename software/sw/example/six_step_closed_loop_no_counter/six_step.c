@@ -85,11 +85,14 @@ volatile uint32_t update_constants_time = 1; // in ms
 volatile uint32_t motor_move_time = 1; // in ms
 volatile uint32_t change_mode_time = 10000; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
-volatile float_conv_t duty_cycle = {.float_value = 0.4};
+volatile float_conv_t duty_cycle = {.float_value = 0.5};
 volatile float_conv_t PWM_VALUE = {.float_value = 0.0};
 volatile float_conv_t acummulated_time = {.float_value = 0.0};
 
 volatile int diff = 0;
+
+volatile float_conv_t time_between_measures_in_sec = { .float_value = 0.0 };
+volatile float_conv_t rad_60 = { .float_value = 0.0 };
 
 /**@}*/
 
@@ -121,6 +124,9 @@ int six_step() {
 
   // align the motor
   //align_rotor();
+
+  time_between_measures_in_sec.float_value = riscv_emulate_fdivs(1.0, 30000.0);
+  rad_60.float_value = riscv_emulate_fdivs(PI, 3.0);
 
   // create queue
   xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( float ) );
@@ -208,9 +214,9 @@ void createTimers(void)
 void createTasks(void)
 {
   // Create the task
-  xTaskCreate(prvMotorTask, "MotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
+  //xTaskCreate(prvMotorTask, "MotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
   // print an warning
-  neorv32_uart0_puts("Motor task created.\n");
+  //neorv32_uart0_puts("Motor task created.\n");
   // Create the task
   xTaskCreate(vListemUARTTask, "UARTTask", configMINIMAL_STACK_SIZE, NULL, mainUARTTask_PRIORITY, NULL);
   // print an warning
@@ -237,7 +243,7 @@ void vTimerChangeMode(TimerHandle_t xTimer)
   // print a warning
   neorv32_uart0_puts("Change mode timer expired.\n");
   // change the duty cycle
-  duty_cycle.float_value = 0.8;
+  duty_cycle.float_value = 1.0;
 }
 
 void prvMotorTask(void *pvParameters)
@@ -343,13 +349,11 @@ void update_angle() {
   last_sector = sector_index;
 
   // speed = ((diff * pi/3) / time_between_measurements)
-  float_conv_t time_in_seconds = { .float_value = riscv_emulate_fdivs(update_constants_time, 1000) };
   if (diff == 0) {
-    acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_in_seconds.float_value);
+    acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_between_measures_in_sec.float_value);
   } else{
-    acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_in_seconds.float_value);
-    // float_conv_t ang_rad = { .float_value = riscv_emulate_fdivs(PI, 3) };
-    motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, 1.0471975511965976), acummulated_time.float_value);
+    acummulated_time.float_value = riscv_intrinsic_fadds(acummulated_time.float_value, time_between_measures_in_sec.float_value);
+    motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, rad_60.float_value), acummulated_time.float_value);
     acummulated_time.float_value = 0.0;
   }
 
@@ -396,6 +400,7 @@ void freertos_risc_v_application_interrupt_handler(void) {
   if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
     neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
     update_angle();
+    move_clockwise_pwm(1);
   }
   else { // undefined interrupt cause
     neorv32_uart0_printf("\n<NEORV32-IRQ> Unexpected IRQ! cause=0x%x </NEORV32-IRQ>\n", mcause); // debug output
