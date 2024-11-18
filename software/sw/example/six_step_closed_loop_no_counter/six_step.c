@@ -72,7 +72,6 @@ static void vTimerMotorMove(TimerHandle_t xTimer);
 static void vTimerChangeMode(TimerHandle_t xTimer);
 
 // config tasks
-static void prvMotorTask(void *pvParameters);
 static void vListemUARTTask(void *pvParameters);
 static void vWriteUARTTask(void *pvParameters);
 
@@ -107,6 +106,10 @@ typedef struct {
   float_conv_t min_duty; // Minimum duty cycle (0.0 for 0%)
 } PI_Controller;
 
+float_conv_t target_speed = {.float_value = 0.0};
+PI_Controller pi;
+
+float_conv_t debug_var = {.float_value = 0.0};
 
 /**@}*/
 
@@ -116,14 +119,13 @@ typedef struct {
 void move_clockwise();
 void move_clockwise_pwm(uint8_t direction);
 void createTasks();
-void createprvMotorTask();
 void createTimers();
 int six_step();
 void update_angle();
 void PID_control();
 void get_sector();
 void PI_Init(PI_Controller *pi, float_conv_t max_duty, float_conv_t min_duty);
-float PI_Update(PI_Controller *pi, float_conv_t desired_speed,
+void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
                 float_conv_t actual_speed, float_conv_t dt);
 
 
@@ -146,11 +148,12 @@ int six_step() {
   time_between_measures_in_sec.float_value = riscv_emulate_fdivs(1.0, 30000.0);
   rad_60.float_value = riscv_emulate_fdivs(PI, 3.0);
 
+  PI_Init(&pi, (float_conv_t){.float_value = 1.0}, (float_conv_t){.float_value = 0.0});
+
   // create queue
   xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( float ) );
 
   // create the motor task
-  //createprvMotorTask();
   createTasks();
 
   // create the timers
@@ -234,10 +237,6 @@ void createTimers(void)
 void createTasks(void)
 {
   // Create the task
-  //xTaskCreate(prvMotorTask, "MotorTask", configMINIMAL_STACK_SIZE, NULL, mainMotorTask_PRIORITY, NULL);
-  // print an warning
-  //neorv32_uart0_puts("Motor task created.\n");
-  // Create the task
   xTaskCreate(vListemUARTTask, "UARTTask", configMINIMAL_STACK_SIZE, NULL, mainUARTTask_PRIORITY, NULL);
   // print an warning
   neorv32_uart0_puts("UART task created.\n");
@@ -266,27 +265,6 @@ void vTimerChangeMode(TimerHandle_t xTimer)
   duty_cycle.float_value = 1.0;
 }
 
-void prvMotorTask(void *pvParameters)
-{
-    // print a warning
-    neorv32_uart0_puts("Motor task started.\n");
-    // Loop indefinitely
-    while (1)
-    {
-      if (update_constants){
-        //update_angle();
-        //get_sector();
-        //PID_control();
-        update_constants = 0;
-      }
-      if (update_motor) {
-        //move_clockwise();
-        move_clockwise_pwm(1);
-        update_motor = 0;
-      }
-    }
-}
-
 void vListemUARTTask(void *pvParameters)
 {
     // print a warning
@@ -295,14 +273,10 @@ void vListemUARTTask(void *pvParameters)
     while (1)
     {
       // scan for the uart input
-      char buffer[32];
-      neorv32_uart_scan(NEORV32_UART0, buffer, 32, 0);
+      //char buffer[32];
+      //neorv32_uart_scan(NEORV32_UART0, buffer, 32, 0);
       // save the value of the new target speed to a variable
-      float_conv_t target_speed = { .float_value = atof(buffer) };
-      float_conv_t error = { .float_value = riscv_intrinsic_fsubs(target_speed.float_value, motor_speed.float_value) };
-      // send the error to the queue
-      // print the speed
-      xQueueSend(xQueue, &error.float_value, 0);
+      //target_speed.float_value = atof(buffer);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(400));
     }
@@ -320,10 +294,10 @@ void vWriteUARTTask(void *pvParameters)
       if (motor_speed_int < 300) {
         motor_speed_int = 0;
       }
-      neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
-      // print the sector
-      //neorv32_uart0_printf("Sector: %u\n", sector_index);
-      //neorv32_uart0_printf("Time: %u\n", last_time);
+      //neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
+      // print the debug variable
+      uint32_t debug_int = riscv_intrinsic_fcvt_wus((debug_var.float_value*1000));
+      neorv32_uart0_printf("Debug: %u\n", debug_int);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
     }
@@ -373,10 +347,12 @@ void update_angle() {
   if (diff == 0) {
     // do nothing
   } else{
+    target_speed.float_value = 6000.0;
     float_conv_t current_time = {.float_value = riscv_emulate_fdivs(neorv32_mtime_get_time(), ((float)neorv32_sysinfo_get_clk()))};
     float_conv_t time_diff = {.float_value = riscv_intrinsic_fsubs(current_time.float_value, last_time.float_value)};
     motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, rad_60.float_value), time_diff.float_value);
     last_time.float_value = current_time.float_value;
+    PI_Update(&pi, target_speed, motor_speed, time_diff);
   }
 
 }
@@ -435,7 +411,7 @@ void PI_Init(PI_Controller *pi, float_conv_t max_duty, float_conv_t min_duty) {
   pi->min_duty.float_value = min_duty.float_value;
 }
 
-float PI_Update(PI_Controller *pi, float_conv_t desired_speed,
+void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
                 float_conv_t actual_speed, float_conv_t dt) {
 
   float_conv_t error = {.float_value =
@@ -445,10 +421,14 @@ float PI_Update(PI_Controller *pi, float_conv_t desired_speed,
       pi->integral.float_value,
       riscv_intrinsic_fmuls(error.float_value, dt.float_value));
 
+  debug_var.float_value = dt.float_value;
+
   // compute the duty_cycle, the output
   float_conv_t new_duty_cycle = {.float_value = riscv_intrinsic_fadds(
       riscv_intrinsic_fmuls(Kp.float_value, error.float_value),
       riscv_intrinsic_fmuls(Ki.float_value, pi->integral.float_value))};
+
+  //debug_var.float_value = new_duty_cycle.float_value;
 
   // limit the duty cycle
   if (new_duty_cycle.float_value > pi->max_duty.float_value) {
@@ -457,5 +437,5 @@ float PI_Update(PI_Controller *pi, float_conv_t desired_speed,
     new_duty_cycle.float_value = pi->min_duty.float_value;
   }
 
-  return new_duty_cycle.float_value;
+  duty_cycle.float_value = new_duty_cycle.float_value;
 }
