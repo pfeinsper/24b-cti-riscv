@@ -295,8 +295,8 @@ void vWriteUARTTask(void *pvParameters)
         motor_speed_int = 0;
       }
       neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
-      // print the diff
-      //neorv32_uart0_printf("Diff: %u\n", diff);
+      // print the sector
+      //neorv32_uart0_printf("Sector: %u\n", sector_index);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
     }
@@ -382,6 +382,7 @@ void get_sector() {
   } else if (hall_0 && !hall_1 && hall_2) {
     sector_index = 5;
   }
+  //neorv32_uart0_printf("Sector: %u\n", sector_index);
 }
 
 /******************************************************************************

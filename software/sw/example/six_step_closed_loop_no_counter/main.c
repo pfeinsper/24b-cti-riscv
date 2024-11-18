@@ -192,7 +192,7 @@ static void prvSetupHardware(void) {
 
     // configure timer for in continuous mode with clock divider = 64
     // fire interrupt every 4 seconds (continuous mode)
-    neorv32_gptmr_setup(CLK_PRSC_64, ((uint32_t)configCPU_CLOCK_HZ / 64) * 4, 1);
+    neorv32_gptmr_setup(CLK_PRSC_64, ((uint32_t)configCPU_CLOCK_HZ / 64) / 5000, 1);
 
     // enable GPTMR interrupt
     neorv32_cpu_csr_set(CSR_MIE, 1 << GPTMR_FIRQ_ENABLE);
@@ -201,27 +201,6 @@ static void prvSetupHardware(void) {
 
 
 
-/******************************************************************************
- * Handle NEORV32-/application-specific interrupts.
- ******************************************************************************/
-void freertos_risc_v_application_interrupt_handler(void) {
-
-  // mcause identifies the cause of the interrupt
-  uint32_t mcause = neorv32_cpu_csr_read(CSR_MCAUSE);
-
-  if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
-    neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
-    //neorv32_uart_printf(UART_HW_HANDLE, "GPTMR IRQ Tick\n");
-  }
-  else if (mcause == XIRQ_TRAP_CODE) { // is XIRQ interrupt
-    //neorv32_xirq_irq_ack(); // clear XIRQ interrupt
-    //NEORV32_XIRQ->ESC = 0; // acknowledge the current XIRQ interrupt
-    neorv32_uart_printf(UART_HW_HANDLE, "XIRQ IRQ\n");
-  }
-  else { // undefined interrupt cause
-    neorv32_uart_printf(UART_HW_HANDLE, "\n<NEORV32-IRQ> Unexpected IRQ! cause=0x%x </NEORV32-IRQ>\n", mcause); // debug output
-  }
-}
 
 
 /******************************************************************************
