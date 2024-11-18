@@ -15,24 +15,27 @@ architecture Behavioral of hall_sector is
     signal prev_signal : std_logic_vector(2 downto 0) := "111";
     signal stable_signal : std_logic_vector(2 downto 0) := "111";
     signal debounce_counter : integer := 0;
-    constant debounce_limit : integer := 2500;
+    constant debounce_limit : integer := 2000;
 
 begin
 
     process(clk, rst)
     begin
-        if rst = '1' then
+			if rst = '1' then
             debounce_counter <= 0;
             stable_signal <= "111";
-            if signal_in /= prev_signal then
-                debounce_counter <= 0;
-            else
-                if debounce_counter < debounce_limit then
+			else
+			
+				if signal_in /= prev_signal then
+						 debounce_counter <= 0;
+				else
+					if debounce_counter < debounce_limit then
                     debounce_counter <= debounce_counter + 1;
-                else
+               else
                     stable_signal <= signal_in;
-                end if;
+               end if;
             end if;
+				
             prev_signal <= signal_in;
         end if;
     end process;
