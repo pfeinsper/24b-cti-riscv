@@ -53,7 +53,6 @@ const uint8_t en_seq[6][3] = {{0, 1, 1}, {1, 1, 0}, {1, 0, 1},
 const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // this is not the right way to calculate the conversion factor but works for now
 
 /* Priorities used by the tasks. */
-#define mainMotorTask_PRIORITY    ( tskIDLE_PRIORITY + 3 ) 
 #define mainUARTTask_PRIORITY    ( tskIDLE_PRIORITY + 1 ) 
 #define mainUARTWriteTask_PRIORITY    ( tskIDLE_PRIORITY + 3 )
 
@@ -87,9 +86,6 @@ volatile float_conv_t motor_speed = {.float_value = 0.0};
 volatile float_conv_t duty_cycle = {.float_value = 0.5};
 volatile float_conv_t PWM_VALUE = {.float_value = 0.0};
 
-volatile int diff = 0;
-
-volatile float_conv_t time_between_measures_in_sec = { .float_value = 0.0 };
 volatile float_conv_t rad_60 = { .float_value = 0.0 };
 
 volatile float_conv_t last_time = {.float_value = 0.0};
@@ -139,16 +135,11 @@ void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
  * @return Should not return;
  **************************************************************************/
 int six_step() {
-
-  // config ADC
-  //adc_start();
-
-  // align the motor
-  //align_rotor();
-
-  time_between_measures_in_sec.float_value = riscv_emulate_fdivs(1.0, 30000.0);
+  
+  // initialize constants
   rad_60.float_value = riscv_emulate_fdivs(PI, 3.0);
 
+  // initialize the PI controller
   PI_Init(&pi, (float_conv_t){.float_value = 1.0}, (float_conv_t){.float_value = 0.0});
 
   // create queue
@@ -337,17 +328,15 @@ void move_clockwise_pwm(uint8_t direction) {
 void update_angle() {
 
   get_sector();
-  //diff = 1;
-  diff = sector_index - last_sector;
+  int diff = sector_index - last_sector;
   if (diff < 0) {
     diff = 6 + diff;
   }
   last_sector = sector_index;
 
   // speed = ((diff * pi/3) / time_between_measurements)
-  if (diff == 0) {
-    // do nothing
-  } else{
+
+  if (diff > 0){
     target_speed.float_value = 6000.0;
     float_conv_t current_time = {.float_value = riscv_emulate_fdivs(neorv32_mtime_get_time(), ((float)neorv32_sysinfo_get_clk()))};
     float_conv_t time_diff = {.float_value = riscv_intrinsic_fsubs(current_time.float_value, last_time.float_value)};
