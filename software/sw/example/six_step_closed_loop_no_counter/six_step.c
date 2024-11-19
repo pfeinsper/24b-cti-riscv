@@ -54,7 +54,7 @@ const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // thi
 
 /* Priorities used by the tasks. */
 #define mainUpdatePIDTask_PRIORITY    ( tskIDLE_PRIORITY + 3 )
-#define mainUARTTask_PRIORITY    ( tskIDLE_PRIORITY + 2 ) 
+#define mainUARTTask_PRIORITY    ( tskIDLE_PRIORITY + 3 ) 
 #define mainUARTWriteTask_PRIORITY    ( tskIDLE_PRIORITY + 3 )
 
 /* The rate at which data is sent to the queue.  The 500ms value is converted
@@ -292,7 +292,7 @@ void vListemUARTTask(void *pvParameters)
       // save the value of the new target speed to a variable
       //target_speed.float_value = atof(buffer);
       // make the task sleep for 1 second
-      vTaskDelay(pdMS_TO_TICKS(400));
+      vTaskDelay(pdMS_TO_TICKS(800));
     }
 }
 
@@ -308,11 +308,11 @@ void vWriteUARTTask(void *pvParameters)
       if (motor_speed_int < 300) {
         motor_speed_int = 0;
       }
-      //neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
+      neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
       // print the debug variable
       //debug_var.float_value = sector_index;
-      int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1));
-      neorv32_uart0_printf("Debug: %i\n", debug_int);
+      //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1));
+      //neorv32_uart0_printf("Debug: %i\n", debug_int);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
     }
@@ -407,18 +407,26 @@ void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
   float_conv_t error = {.float_value =
                             riscv_intrinsic_fsubs(desired_speed.float_value,
                                                   actual_speed.float_value)};
+  float_conv_t aux = {.float_value = riscv_intrinsic_fmuls(error.float_value, dt.float_value)};
+
+  if (aux.float_value > 1000) {
+    // print the error
+    //neorv32_uart0_puts("Error too big\n");
+    aux.float_value = 1;
+  }
+
   pi->integral.float_value = riscv_intrinsic_fadds(
       pi->integral.float_value,
-      riscv_intrinsic_fmuls(error.float_value, dt.float_value));
+      aux.float_value);
 
-  //debug_var.float_value = riscv_intrinsic_fmuls(Kp.float_value, error.float_value);
+  //debug_var.float_value = riscv_intrinsic_fmuls(error.float_value, dt.float_value);
 
   // compute the duty_cycle, the output
   float_conv_t new_duty_cycle = {.float_value = riscv_intrinsic_fadds(
       riscv_intrinsic_fmuls(Kp.float_value, error.float_value),
       riscv_intrinsic_fmuls(Ki.float_value, pi->integral.float_value))};
 
-  debug_var.float_value = new_duty_cycle.float_value;
+  //debug_var.float_value = new_duty_cycle.float_value;
 
   // limit the duty cycle
   if (new_duty_cycle.float_value > pi->max_duty.float_value) {
