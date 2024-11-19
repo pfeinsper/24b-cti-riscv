@@ -96,8 +96,8 @@ volatile float_conv_t last_update = {.float_value = 0.0};
 
 
 /* pi contoler constants */
-const float_conv_t Kp = {.float_value = 0.000045};
-const float_conv_t Ki = {.float_value = 0.0018};
+const float_conv_t Kp = {.float_value = 0.0000362};
+const float_conv_t Ki = {.float_value = 0.0015};
 
 // PI Controller structure
 typedef struct {
