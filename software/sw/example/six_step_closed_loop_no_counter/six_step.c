@@ -286,10 +286,11 @@ void vWriteUARTTask(void *pvParameters)
       if (motor_speed_int < 300) {
         motor_speed_int = 0;
       }
-      //neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
+      neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
       // print the debug variable
-      uint32_t debug_int = riscv_intrinsic_fcvt_wus((debug_var.float_value*1000));
-      neorv32_uart0_printf("Debug: %u\n", debug_int);
+      //debug_var.float_value = sector_index;
+      //uint32_t debug_int = riscv_intrinsic_fcvt_wus((debug_var.float_value*1000));
+      //neorv32_uart0_printf("Debug: %u\n", debug_int);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
     }
@@ -333,14 +334,17 @@ void update_angle() {
     diff = 6 + diff;
   }
   last_sector = sector_index;
+  //debug_var.float_value = diff;
 
   // speed = ((diff * pi/3) / time_between_measurements)
 
   if (diff > 0){
     target_speed.float_value = 6000.0;
     float_conv_t current_time = {.float_value = riscv_emulate_fdivs(neorv32_mtime_get_time(), ((float)neorv32_sysinfo_get_clk()))};
-    float_conv_t time_diff = {.float_value = riscv_intrinsic_fsubs(current_time.float_value, last_time.float_value)};
-    motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(diff, rad_60.float_value), time_diff.float_value);
+    float_conv_t  time_diff = {.float_value = riscv_intrinsic_fsubs(current_time.float_value, last_time.float_value)};
+    motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(1, rad_60.float_value), time_diff.float_value);
+    // convert to rpm
+    motor_speed.float_value = riscv_emulate_fdivs(riscv_intrinsic_fmuls(motor_speed.float_value, 60), (2*PI));
     last_time.float_value = current_time.float_value;
   }
 
@@ -387,7 +391,7 @@ void freertos_risc_v_application_interrupt_handler(void) {
   if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
     neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
     update_angle();
-    PI_Update(&pi, target_speed, motor_speed);
+    //PI_Update(&pi, target_speed, motor_speed);
     move_clockwise_pwm(1);
   }
   else { // undefined interrupt cause
@@ -415,7 +419,7 @@ void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
       pi->integral.float_value,
       riscv_intrinsic_fmuls(error.float_value, dt.float_value));
 
-  debug_var.float_value = dt.float_value;
+  //debug_var.float_value = dt.float_value;
 
   // compute the duty_cycle, the output
   float_conv_t new_duty_cycle = {.float_value = riscv_intrinsic_fadds(
