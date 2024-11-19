@@ -409,7 +409,7 @@ void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
                                                   actual_speed.float_value)};
   float_conv_t aux = {.float_value = riscv_intrinsic_fmuls(error.float_value, dt.float_value)};
 
-  if (aux.float_value > 1000) {
+  if (aux.float_value > 100) {
     // print the error
     //neorv32_uart0_puts("Error too big\n");
     aux.float_value = 1;
