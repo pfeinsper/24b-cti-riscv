@@ -361,23 +361,7 @@ void PID_control() {
 
 void get_sector() {
 
-  uint8_t hall_0 = neorv32_gpio_pin_get(0);
-  uint8_t hall_1 = neorv32_gpio_pin_get(1);
-  uint8_t hall_2 = neorv32_gpio_pin_get(2);
-  if (hall_0 && !hall_1 && !hall_2) {
-    sector_index = 0;
-  } else if (hall_0 && hall_1 && !hall_2) {
-    sector_index = 1;
-  } else if (!hall_0 && hall_1 && !hall_2) {
-    sector_index = 2;
-  } else if (!hall_0 && hall_1 && hall_2) {
-    sector_index = 3;
-  } else if (!hall_0 && !hall_1 && hall_2) {
-    sector_index = 4;
-  } else if (hall_0 && !hall_1 && hall_2) {
-    sector_index = 5;
-  }
-  //neorv32_uart0_printf("Sector: %u\n", sector_index);
+  sector_index = neorv32_sector_get();
 }
 
 /******************************************************************************
