@@ -48,6 +48,7 @@
 /**@{*/
 /** UART BAUD rate */
 #define BAUD_RATE 19200
+#define UART1_HW_HANDLE (NEORV32_UART1) // use UART1 (secondary UART)
 
 void gptmr_firq_handler(void);
 
@@ -69,6 +70,7 @@ int main() {
 
   // setup UART at default baud rate, no interrupts
   neorv32_uart0_setup(BAUD_RATE, 0);
+  neorv32_uart_setup(UART1_HW_HANDLE, 9600, 0);
 
 
   // check if GPTMR unit is implemented at all
@@ -109,6 +111,8 @@ void gptmr_firq_handler(void) {
 
   neorv32_gptmr_irq_ack(); // clear/ack pending FIRQ
   // scan for UART input
+  // print an warning message
+  neorv32_uart0_printf("GPTMR FIRQ triggered!\n");
   //char c = neorv32_uart_getc(NEORV32_UART0);
   // receive an entire string with scanf
   char buffer[32];
