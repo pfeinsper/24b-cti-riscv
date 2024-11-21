@@ -86,7 +86,7 @@ volatile uint32_t update_constants_time = 1; // in ms
 volatile uint32_t motor_move_time = 1; // in ms
 volatile uint32_t change_mode_time = 5000; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
-volatile float_conv_t duty_cycle = {.float_value = 0.3};
+volatile float_conv_t duty_cycle = {.float_value = 0.5};
 volatile float_conv_t PWM_VALUE = {.float_value = 0.0};
 
 volatile float_conv_t rad_60 = { .float_value = 0.0 };
@@ -106,10 +106,12 @@ typedef struct {
   float_conv_t min_duty; // Minimum duty cycle (0.0 for 0%)
 } PI_Controller;
 
-float_conv_t target_speed = {.float_value = 0.0};
+volatile float_conv_t target_speed = {.float_value = 0.0};
 PI_Controller pi;
 
 float_conv_t debug_var = {.float_value = 0.0};
+
+volatile uint8_t noise_counter = 0;
 
 /**@}*/
 
@@ -262,7 +264,7 @@ void vTimerChangeMode(TimerHandle_t xTimer)
   // print a warning
   neorv32_uart0_puts("Change mode timer expired.\n");
   // change the duty cycle
-  duty_cycle.float_value = 1.0;
+  //duty_cycle.float_value = 1.0;
 }
 
 void vUpdatePIDTask(void *pvParameters)
@@ -311,7 +313,7 @@ void vWriteUARTTask(void *pvParameters)
       neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
       // print the debug variable
       //debug_var.float_value = sector_index;
-      //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1));
+      //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1000));
       //neorv32_uart0_printf("Debug: %i\n", debug_int);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
@@ -404,16 +406,15 @@ void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
   last_update.float_value = current_time.float_value;
   //debug_var.float_value = dt.float_value;
 
+  if (noise_counter < 5){
+    noise_counter++;
+    return;
+  }
+
   float_conv_t error = {.float_value =
                             riscv_intrinsic_fsubs(desired_speed.float_value,
                                                   actual_speed.float_value)};
   float_conv_t aux = {.float_value = riscv_intrinsic_fmuls(error.float_value, dt.float_value)};
-
-  if (aux.float_value > 100) {
-    // print the error
-    //neorv32_uart0_puts("Error too big\n");
-    aux.float_value = 1;
-  }
 
   pi->integral.float_value = riscv_intrinsic_fadds(
       pi->integral.float_value,
