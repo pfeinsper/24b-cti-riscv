@@ -130,8 +130,8 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to UART0_TXD
 #============================================================
 # UART1
 #============================================================
-set_location_assignment PIN_G12 -to UART1_TXD
-set_location_assignment PIN_G13 -to UART1_RXD
+set_location_assignment PIN_P18 -to UART1_TXD
+set_location_assignment PIN_R17 -to UART1_RXD
 
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART1_TXD
 
