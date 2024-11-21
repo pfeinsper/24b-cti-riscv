@@ -289,12 +289,19 @@ void vListemUARTTask(void *pvParameters)
     while (1)
     {
       // scan for the uart input
-      //char buffer[32];
-      //neorv32_uart_scan(NEORV32_UART0, buffer, 32, 0);
-      // save the value of the new target speed to a variable
-      //target_speed.float_value = atof(buffer);
+      char buffer[32];
+      neorv32_uart_scan(NEORV32_UART1, buffer, 32, 0);
+      // print the buffer
+      //neorv32_uart0_printf("Buffer: %s\n", buffer);
+      // save the value of the new target speed that comes as an int from the uart
+      uint32_t new_target_speed = atoi(buffer);
+      // convert to float
+      target_speed.float_value = new_target_speed;
+      // convert to ints
+      // print the target speed
+      //neorv32_uart0_printf("Target speed: %u\n", new_target_speed);
       // make the task sleep for 1 second
-      vTaskDelay(pdMS_TO_TICKS(800));
+      //vTaskDelay(pdMS_TO_TICKS(800));
     }
 }
 
@@ -310,8 +317,8 @@ void vWriteUARTTask(void *pvParameters)
       if (motor_speed_int < 300) {
         motor_speed_int = 0;
       }
-      neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
-      neorv32_uart1_printf("Speed: %u\n", motor_speed_int);
+      //neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
+      //neorv32_uart1_printf("Speed: %u\n", motor_speed_int);
       // print the debug variable
       //debug_var.float_value = sector_index;
       //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1000));
