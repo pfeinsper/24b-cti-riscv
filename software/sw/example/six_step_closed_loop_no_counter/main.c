@@ -39,6 +39,7 @@
 /* Platform UART configuration */
 #define UART_BAUD_RATE (19200)         // transmission speed
 #define UART_HW_HANDLE (NEORV32_UART0) // use UART0 (primary UART)
+#define UART1_HW_HANDLE (NEORV32_UART1) // use UART1 (secondary UART)
 
 /** Number of PWM channels to modulate simultaneously */
 #define NUM_PWM_CHANNELS 4
@@ -118,6 +119,7 @@ static void prvSetupHardware(void) {
 
   // setup UART0 at default baud rate, no interrupts
   neorv32_uart_setup(UART_HW_HANDLE, UART_BAUD_RATE, 0);
+  neorv32_uart_setup(UART1_HW_HANDLE, 9600, 0);
 
   // ----------------------------------------------------------
   // Configure PWM

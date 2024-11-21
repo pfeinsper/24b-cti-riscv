@@ -311,6 +311,7 @@ void vWriteUARTTask(void *pvParameters)
         motor_speed_int = 0;
       }
       neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
+      neorv32_uart1_printf("Speed: %u\n", motor_speed_int);
       // print the debug variable
       //debug_var.float_value = sector_index;
       //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1000));

@@ -477,6 +477,7 @@ begin
          IO_GPIO_NUM                  => 32,                 -- number of GPIO input/output pairs (0..64)
          IO_MTIME_EN                  => true,              -- implement machine system timer (MTIME)?
          IO_UART0_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART0)?
+			IO_UART1_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART1)?
 			IO_PWM_NUM_CH					  => 4,						-- number of PWM channels to implement (0..12); 0 = disabled
 			
 			IO_GPTMR_EN                  => true              -- implement general purpose timer (GPTMR)?
@@ -493,6 +494,9 @@ begin
          -- primary UART0 (available if IO_UART0_EN = true) --
          uart0_txd_o   => UART0_TXD,                        -- UART0 send data
          uart0_rxd_i   => UART0_RXD,                         -- UART0 receive data
+			uart1_txd_o   => UART1_TXD,                        -- UART1 send data
+         uart1_rxd_i   => UART1_RXD,                         -- UART1 receive data
+			
 			pwm_o(3 downto 0)         => PWM_u,                   -- pwm channels
 			
 			counter => signal_couter,
