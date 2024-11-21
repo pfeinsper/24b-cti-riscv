@@ -76,6 +76,9 @@ entity top is
       --
       UART0_TXD   : out std_logic;
       UART0_RXD   : in  std_logic;
+		UART1_TXD   : out std_logic;
+      UART1_RXD   : in  std_logic;
+		
 
 		--
 		-- PWM   
