@@ -6,22 +6,20 @@ from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QLineEdit, QGroupBox, QSizePolicy
 )
-from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QPixmap, QIntValidator
+from PyQt5.QtCore import QTimer, Qt, QSize
+from PyQt5.QtGui import QPixmap, QIntValidator, QIcon
 import pyqtgraph as pg
 import serial
 import re
 
-
 def connect_uart(port):
     try:
-        ser = serial.Serial(port, 19200, timeout=0)
+        ser = serial.Serial(port, 19200, timeout=0.5)
         print(f"Conectado ao dispositivo UART na porta {port}.")
         return ser
     except serial.SerialException as e:
         print(f"Erro ao conectar ao UART: {e}")
         return None
-
 
 class MotorControlApp(QWidget):
     def __init__(self):
@@ -35,7 +33,6 @@ class MotorControlApp(QWidget):
 
         # Top layout with UART connection and logo
         top_layout = QHBoxLayout()
-
         uart_group = QGroupBox("Conexão UART")
         uart_layout = QHBoxLayout()
         uart_layout.setSpacing(10)
@@ -60,9 +57,9 @@ class MotorControlApp(QWidget):
 
         uart_group.setLayout(uart_layout)
         top_layout.addWidget(uart_group, alignment=Qt.AlignLeft)
-
         top_layout.addStretch()
 
+        # Logo
         logo_label = QLabel()
         logo_label.setObjectName("logo-label")
         logo_path = os.path.join(os.path.dirname(__file__), "cti_renato_archer_logo.jpeg")
@@ -72,9 +69,7 @@ class MotorControlApp(QWidget):
             logo_label.setPixmap(logo_pixmap)
         else:
             logo_label.setText("Logo")
-
         top_layout.addWidget(logo_label, alignment=Qt.AlignRight)
-
         main_layout.addLayout(top_layout)
 
         # Motor Control Group
@@ -82,106 +77,140 @@ class MotorControlApp(QWidget):
         motor_layout = QVBoxLayout()
         motor_layout.setSpacing(15)
 
-        controls_layout = QHBoxLayout()
-        controls_layout.setSpacing(10)
+        # First row: Command input and buttons
+        first_row = QHBoxLayout()
+        first_row.setSpacing(10)
 
-        label_input_layout = QHBoxLayout()
-        label_input_layout.setSpacing(5)
+        command_layout = QHBoxLayout()
+        command_layout.setSpacing(5)
 
-        speed_label = QLabel("Velocidade desejada (RPM):")
-        speed_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        label_input_layout.addWidget(speed_label)
+        speed_label = QLabel("Comando para enviar:")
+        command_layout.addWidget(speed_label)
 
         self.speed_input = QLineEdit()
-        self.speed_input.setPlaceholderText("Insira a velocidade")
-        self.speed_input.setFixedWidth(100)
-        label_input_layout.addWidget(self.speed_input)
+        self.speed_input.setObjectName("command-input")
+        self.speed_input.setPlaceholderText("Insira o comando")
+        command_layout.addWidget(self.speed_input)
 
-        controls_layout.addLayout(label_input_layout)
+        first_row.addLayout(command_layout)
 
         self.send_speed_button = QPushButton("Enviar")
         self.send_speed_button.setObjectName("send-speed-button")
-        self.send_speed_button.setFixedSize(140, 50)
-        self.send_speed_button.clicked.connect(self.set_target_speed)
-        controls_layout.addWidget(self.send_speed_button)
-
-        controls_layout.addStretch()
-
-        self.stop_button = QPushButton("Parar")
-        self.stop_button.setObjectName("stop-button")
-        self.stop_button.setFixedSize(140, 50)
-        self.stop_button.clicked.connect(self.stop_motor)
-        controls_layout.addWidget(self.stop_button)
+        self.send_speed_button.clicked.connect(self.send_command)
+        first_row.addWidget(self.send_speed_button)
 
         self.clear_button = QPushButton("Limpar")
         self.clear_button.setObjectName("clear-button")
-        self.clear_button.setFixedSize(140, 50)
         self.clear_button.clicked.connect(self.clear_terminal)
-        controls_layout.addWidget(self.clear_button)
+        first_row.addWidget(self.clear_button)
 
-        motor_layout.addLayout(controls_layout)
+        first_row.addStretch()
+        motor_layout.addLayout(first_row)
+
+        # Second row: ts, up inputs, and direction buttons
+        second_row = QHBoxLayout()
+        second_row.setObjectName("parameters-row")
+
+        ts_layout = QHBoxLayout()
+        ts_label = QLabel("ts:")
+        self.ts_input = QLineEdit()
+        self.ts_input.setObjectName("ts-input")
+        self.ts_input.setPlaceholderText("Enter ts value")
+        self.send_ts_button = QPushButton("Set ts")
+        self.send_ts_button.setObjectName("send-speed-button")  # Using same style as other buttons
+        self.send_ts_button.clicked.connect(self.send_ts_value)
+        self.send_ts_button.setFixedSize(140, 50)  # Match other buttons size
+        ts_layout.addWidget(ts_label)
+        ts_layout.addWidget(self.ts_input)
+        ts_layout.addWidget(self.send_ts_button)
+        second_row.addLayout(ts_layout)
+
+        # Update the up section:
+        up_layout = QHBoxLayout()
+        up_label = QLabel("up (%):")
+        self.up_input = QLineEdit()
+        self.up_input.setObjectName("up-input")
+        self.up_input.setPlaceholderText("Enter up value")
+        self.send_up_button = QPushButton("Set up")
+        self.send_up_button.setObjectName("send-speed-button")
+        self.send_up_button.setFixedSize(140, 50)
+        self.send_up_button.clicked.connect(self.send_up_value)
+        up_layout.addWidget(up_label)
+        up_layout.addWidget(self.up_input)
+        up_layout.addWidget(self.send_up_button)
+        second_row.addLayout(up_layout)
+        second_row.addStretch()
+
+        direction_layout = QHBoxLayout()
+        direction_layout.setObjectName("direction-buttons")
+        
+        self.clockwise_button = QPushButton()
+        self.clockwise_button.setObjectName("clockwise-button")
+        self.clockwise_button.setFixedSize(50, 50)
+        clockwise_icon_path = os.path.join(os.path.dirname(__file__), "rotate-right.png")
+        if os.path.exists(clockwise_icon_path):
+            self.clockwise_button.setIcon(QIcon(clockwise_icon_path))
+            self.clockwise_button.setIconSize(QSize(50, 50))
+        else:
+            self.clockwise_button.setText("CW")
+        self.clockwise_button.clicked.connect(self.set_clockwise_direction)
+
+        # Counter-clockwise button
+        self.counterclockwise_button = QPushButton()
+        self.counterclockwise_button.setObjectName("counterclockwise-button")
+        self.counterclockwise_button.setFixedSize(50, 50)
+        counterclockwise_icon_path = os.path.join(os.path.dirname(__file__), "ccw.png")
+        if os.path.exists(counterclockwise_icon_path):
+            self.counterclockwise_button.setIcon(QIcon(counterclockwise_icon_path))
+            self.counterclockwise_button.setIconSize(QSize(50, 50))
+        else:
+            self.counterclockwise_button.setText("CCW")
+        self.counterclockwise_button.clicked.connect(self.set_counterclockwise_direction)
+
+        direction_layout.addWidget(self.clockwise_button)
+        direction_layout.addWidget(self.counterclockwise_button)
+        second_row.addLayout(direction_layout)
+
+        motor_layout.addLayout(second_row)
         motor_group.setLayout(motor_layout)
         main_layout.addWidget(motor_group)
 
-        # Graphs Layout
+        # Graph
         graphs_layout = QHBoxLayout()
         graphs_layout.setSpacing(15)
 
-        # First plot (Motor Speed)
-        self.plot_widget_current = pg.PlotWidget()
-        self.plot_widget_current.setBackground('#ffffff')
-        self.plot_widget_current.setTitle("Velocidade do Motor", color="#647881", size="12pt")
-        self.plot_widget_current.setLabel("left", "Velocidade", units="RPM", color="#647881", size="10pt")
-        self.plot_widget_current.setLabel("bottom", "Tempo", units="s", color="#647881", size="10pt")
-        self.plot_widget_current.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_widget_current.setYRange(0, 21000, padding=0)
-        self.plot_widget_current.setXRange(0, 100, padding=0)
-        self.plot_widget_current.setMouseEnabled(x=False, y=False)
-        self.plot_widget_current.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        pen_current = pg.mkPen(color="#ef8327", width=2)
-        pen_target = pg.mkPen(color="#647881", width=2, style=Qt.DashLine)
-
-        self.data_current = np.zeros(100)
-        self.curve_current = self.plot_widget_current.plot(self.data_current, pen=pen_current, name="Velocidade Atual")
-
-        self.data_target = np.full(100, 0)
-        self.curve_target = self.plot_widget_current.plot(self.data_target, pen=pen_target, name="Velocidade Target")
-
-        graphs_layout.addWidget(self.plot_widget_current)
-
-        # Second plot (Raw Data)
         self.plot_widget_second = pg.PlotWidget()
         self.plot_widget_second.setBackground('#ffffff')
         self.plot_widget_second.setTitle("Dados Recebidos", color="#647881", size="12pt")
-        self.plot_widget_second.setLabel("left", "Valor Recebido", units="unidade", color="#647881", size="10pt")
+        self.plot_widget_second.setLabel("left", "Velocidade", units="KPRM", color="#647881", size="10pt")
         self.plot_widget_second.setLabel("bottom", "Tempo", units="s", color="#647881", size="10pt")
         self.plot_widget_second.showGrid(x=True, y=True, alpha=0.3)
         self.plot_widget_second.setMouseEnabled(x=False, y=False)
         self.plot_widget_second.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        
-        # Configure fixed window of 8 seconds
-        self.window_size = 8  # 8 seconds window
-        self.plot_widget_second.setXRange(0, self.window_size)
-        self.plot_widget_second.enableAutoRange(axis='y')
+        self.plot_widget_second.enableAutoRange('xy', True)
 
         pen_second = pg.mkPen(color="#ef8327", width=2)
+        symbol_pen = pg.mkPen(color="#ef8327")
+        symbol_brush = pg.mkBrush(color="#ef8327")
+
         self.data_second = []
         self.time_second = []
         self.time_counter_second = 0
+        self.data_points_dict = {}
 
         self.curve_second = self.plot_widget_second.plot(
             self.time_second,
             self.data_second,
             pen=pen_second,
             symbol='o',
+            symbolPen=symbol_pen,
+            symbolBrush=symbol_brush
         )
 
         graphs_layout.addWidget(self.plot_widget_second)
-
         main_layout.addLayout(graphs_layout)
 
-        # Terminal Group
+        # Terminal
         terminal_group = QGroupBox("Terminal")
         terminal_layout = QVBoxLayout()
 
@@ -194,27 +223,13 @@ class MotorControlApp(QWidget):
 
         self.setLayout(main_layout)
 
-        # Initialize timers
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_graphs)
-        self.timer.start(50)
-
         self.read_timer = QTimer()
         self.read_timer.timeout.connect(self.read_uart_data)
 
-        # Initialize variables
-        self.motor_running = False
-        self.current_speed = 0
-        self.target_speed = 0
         self.ser = None
 
     def clear_terminal(self):
         self.terminal.clear()
-        self.data_second = []
-        self.time_second = []
-        self.time_counter_second = 0
-        self.curve_second.setData(self.time_second, self.data_second)
-        self.plot_widget_second.setXRange(0, self.window_size)
 
     def connect_to_uart(self):
         port = self.port_input.text()
@@ -222,7 +237,7 @@ class MotorControlApp(QWidget):
             self.ser = connect_uart(port)
             if self.ser and self.ser.is_open:
                 self.set_connection_status(active=True)
-                self.read_timer.start(2)
+                self.read_timer.start(100)
                 self.terminal.append(f"Conectado à porta {port}.")
             else:
                 self.set_connection_status(active=False)
@@ -242,50 +257,73 @@ class MotorControlApp(QWidget):
         self.connection_status.style().polish(self.connection_status)
         self.connection_status.update()
 
-    def set_target_speed(self):
-        text = self.speed_input.text().strip()  # Remove espaços extras
-        if text:
+    def send_command(self):
+        command = self.speed_input.text()
+        if command:
+            self.terminal.append(f"Comando enviado: {command}")
+            self.terminal.ensureCursorVisible()
             if self.ser and self.ser.is_open:
-                command = f"{text}\n"  # Adiciona nova linha no final
-                self.ser.write(command.encode('utf-8'))
-                self.terminal.append(f"Comando enviado: {text}")
-                self.speed_input.clear()  # Limpa o campo de input após enviar
-                self.terminal.ensureCursorVisible()
+                command_to_send = f"{command}\n\r"
+                self.ser.write(command_to_send.encode('utf-8'))
         else:
-            self.terminal.append("Por favor, insira um comando.")
+            self.terminal.append("Por favor, insira um comando para enviar.")
             self.terminal.ensureCursorVisible()
 
-
-    def stop_motor(self):
-        self.motor_running = False
-        self.target_speed = 0
-        self.terminal.append("Motor parado.")
-        self.terminal.ensureCursorVisible()
-        self.curve_target.setData(np.full(100, self.target_speed))
+    # Helper method to send UART commands
+    def send_uart_command(self, command):
         if self.ser and self.ser.is_open:
-            command = "STOP_MOTOR\n"
-            self.ser.write(command.encode('utf-8'))
+            command_to_send = f"{command}\n\r"
+            self.ser.write(command_to_send.encode('utf-8'))
+        else:
+            self.terminal.append("UART connection is not open.")
+            self.terminal.ensureCursorVisible()
 
-    def update_graphs(self):
-        pass
-        # if self.motor_running:
-        #     if self.current_speed < self.target_speed:
-        #         self.current_speed += 3500
-        #         if self.current_speed > self.target_speed:
-        #             self.current_speed = self.target_speed
-        #     elif self.current_speed > self.target_speed:
-        #         self.current_speed -= 3500
-        #         if self.current_speed < self.target_speed:
-        #             self.current_speed = self.target_speed
-        # else:
-        #     if self.current_speed > 0:
-        #         self.current_speed -= 1500
-        #         if self.current_speed < 0:
-        #             self.current_speed = 0
+    # New methods for the additional buttons
+    def set_clockwise_direction(self):
+        command = "SET_DIRECTION_CLOCKWISE"
+        self.send_uart_command(command)
+        self.terminal.append("Motor direction set to clockwise.")
+        self.terminal.ensureCursorVisible()
 
-        # self.data_current = np.roll(self.data_current, -1)
-        # self.data_current[-1] = self.current_speed
-        # self.curve_current.setData(self.data_current)
+    def set_counterclockwise_direction(self):
+        command = "SET_DIRECTION_COUNTERCLOCKWISE"
+        self.send_uart_command(command)
+        self.terminal.append("Motor direction set to counter-clockwise.")
+        self.terminal.ensureCursorVisible()
+
+    def send_ts_value(self):
+        ts_value = self.ts_input.text()
+        if ts_value:
+            try:
+                ts_float = float(ts_value)
+                command = f"SET_TS {ts_float}"
+                self.send_uart_command(command)
+                self.terminal.append(f"ts set to {ts_float}.")
+            except ValueError:
+                self.terminal.append("Invalid ts value.")
+        else:
+            self.terminal.append("Please enter a ts value.")
+        self.terminal.ensureCursorVisible()
+
+    def send_up_value(self):
+        up_value = self.up_input.text()
+        if up_value:
+            try:
+                up_percent = float(up_value)
+                command = f"SET_UP {up_percent}"
+                self.send_uart_command(command)
+                self.terminal.append(f"up set to {up_percent}%.")
+            except ValueError:
+                self.terminal.append("Invalid up value.")
+        else:
+            self.terminal.append("Please enter an up value.")
+        self.terminal.ensureCursorVisible()
+
+    def send_step_command(self):
+        command = "STEP"
+        self.send_uart_command(command)
+        self.terminal.append("Step command sent.")
+        self.terminal.ensureCursorVisible()
 
     def read_uart_data(self):
         if self.ser and self.ser.is_open:
@@ -298,36 +336,27 @@ class MotorControlApp(QWidget):
                         if line:
                             self.terminal.append(line)
                             self.terminal.ensureCursorVisible()
-                            
-                            # Try to parse "speed: value" format
-                            speed_match = re.search(r'speed:\s*(\d+)', line, re.IGNORECASE)
-                            if speed_match:
-                                try:
-                                    speed_value = float(speed_match.group(1))
-                                    self.current_speed = speed_value
-                                    
-                                    # Update second graph with sliding window
-                                    current_time = self.time_counter_second / 10.0  # Convert to seconds
-                                    self.data_second.append(speed_value)
-                                    self.time_second.append(current_time)
-                                    
-                                    # Remove data points outside the window
-                                    while len(self.time_second) > 0 and current_time - self.time_second[0] > self.window_size:
-                                        self.time_second.pop(0)
-                                        self.data_second.pop(0)
-                                    
-                                    # Update plot with sliding window
-                                    self.curve_second.setData(self.time_second, self.data_second)
-                                    self.plot_widget_second.setXRange(
-                                        max(0, current_time - self.window_size),
-                                        current_time
-                                    )
-                                    
-                                    self.time_counter_second += 1
-                                    self.terminal.append(f"Velocidade atualizada: {speed_value} RPM")
+                            print(f"Dados recebidos: {line}")
+
+                            try:
+                                value = float(line)
+                                # Atualiza dados e tempos
+                                self.data_second.append(value)
+                                self.time_second.append(self.time_counter_second)
+                                # Armazena no dicionário
+                                self.data_points_dict[self.time_counter_second] = value
+                                self.time_counter_second += 1
+                                # Atualiza o gráfico
+                                self.curve_second.setData(self.time_second, self.data_second)
+                                self.plot_widget_second.autoRange()
+                                self.terminal.append(f"Valor recebido: {value}")
+                                self.terminal.ensureCursorVisible()
+                            except ValueError:
+                                match = re.search(r'velocidade:\s*(\d+)', line)
+                                if match:
+                                    self.current_speed = float(match.group(1))
+                                    self.terminal.append(f"Velocidade atualizada: {self.current_speed} RPM")
                                     self.terminal.ensureCursorVisible()
-                                except ValueError:
-                                    pass
 
             except serial.SerialException as e:
                 print(f"Erro de leitura UART: {e}")
