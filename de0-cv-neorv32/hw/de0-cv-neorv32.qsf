@@ -120,7 +120,7 @@ set_instance_assignment -name SLEW_RATE 1 -to LED[9]
 # UART0
 #============================================================
 set_location_assignment PIN_F12 -to UART0_TXD
-set_location_assignment PIN_F13 -to UART0_RXD
+set_location_assignment PIN_G15 -to UART0_RXD
 
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART0_TXD
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART0_RXD

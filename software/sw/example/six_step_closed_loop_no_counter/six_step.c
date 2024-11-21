@@ -84,9 +84,9 @@ volatile uint32_t last_sector = 0;
 volatile uint32_t update_constants_time = 1; // in ms
 
 volatile uint32_t motor_move_time = 1; // in ms
-volatile uint32_t change_mode_time = 5000; // in ms
+volatile uint32_t change_mode_time = 1000; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
-volatile float_conv_t duty_cycle = {.float_value = 0.5};
+volatile float_conv_t duty_cycle = {.float_value = 0.0};
 volatile float_conv_t PWM_VALUE = {.float_value = 0.0};
 
 volatile float_conv_t rad_60 = { .float_value = 0.0 };
@@ -96,8 +96,8 @@ volatile float_conv_t last_update = {.float_value = 0.0};
 
 
 /* pi contoler constants */
-const float_conv_t Kp = {.float_value = 0.0000362};
-const float_conv_t Ki = {.float_value = 0.0015};
+const float_conv_t Kp = {.float_value = 0.0000400};
+const float_conv_t Ki = {.float_value = 0.0014311};
 
 // PI Controller structure
 typedef struct {
@@ -384,7 +384,6 @@ void freertos_risc_v_application_interrupt_handler(void) {
   if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
     neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
     update_angle();
-    //PI_Update(&pi, target_speed, motor_speed);
     move_clockwise_pwm(1);
   }
   else { // undefined interrupt cause
