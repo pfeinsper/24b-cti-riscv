@@ -477,7 +477,11 @@ begin
          IO_GPIO_NUM                  => 32,                 -- number of GPIO input/output pairs (0..64)
          IO_MTIME_EN                  => true,              -- implement machine system timer (MTIME)?
          IO_UART0_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART0)?
+         IO_UART0_RX_FIFO             => 32,                  -- RX fifo depth, has to be a power of two, min 1
+         IO_UART0_TX_FIFO             => 32,                  -- TX fifo depth, has to be a power of two, min 1
 			IO_UART1_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART1)?
+         IO_UART1_RX_FIFO            => 32,                  -- RX fifo depth, has to be a power of two, min 1
+         IO_UART1_TX_FIFO            => 32,                  -- TX fifo depth, has to be a power of two, min 1
 			IO_PWM_NUM_CH					  => 4,						-- number of PWM channels to implement (0..12); 0 = disabled
 			
 			IO_GPTMR_EN                  => true              -- implement general purpose timer (GPTMR)?
