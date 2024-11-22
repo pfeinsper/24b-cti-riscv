@@ -96,8 +96,8 @@ volatile float_conv_t last_update = {.float_value = 0.0};
 
 
 /* pi contoler constants */
-const float_conv_t Kp = {.float_value = 0.0000362};
-const float_conv_t Ki = {.float_value = 0.0015001};
+volatile float_conv_t Kp = {.float_value = 0.0000362};
+volatile float_conv_t Ki = {.float_value = 0.0015001};
 
 // PI Controller structure
 typedef struct {
@@ -293,13 +293,38 @@ void vListemUARTTask(void *pvParameters)
       neorv32_uart_scan(NEORV32_UART1, buffer, 32, 0);
       // print the buffer
       neorv32_uart0_printf("Buffer: %s\n", buffer);
-      // save the value of the new target speed that comes as an int from the uart
-      uint32_t new_target_speed = atoi(buffer);
-      // convert to float
-      target_speed.float_value = new_target_speed;
-      // convert to ints
-      // print the target speed
-      //neorv32_uart0_printf("Target speed: %u\n", new_target_speed);
+      // if buffer = "speed: {number}"
+      if (strncmp(buffer, "speed:", 6) == 0) {
+        // get the number
+        uint32_t new_speed = atoi(buffer + 6);
+        // set the target speed
+        target_speed.float_value = new_speed;
+        // print the target speed
+        neorv32_uart0_printf("Target speed: %u\n", target_speed.float_value);
+      }
+      // if buffer = "ki: {number}"
+      else if (strncmp(buffer, "ki:", 3) == 0) {
+        // get the number
+        uint32_t new_ki = atoi(buffer + 3);
+        // set the ki
+        //Ki.float_value = new_ki;
+        // print the ki
+        neorv32_uart0_printf("new_ki: %u\n", new_ki);
+      }
+      // if buffer = "kp: {number}"
+      else if (strncmp(buffer, "kp:", 3) == 0) {
+        // get the number
+        float new_kp = atoi(buffer + 3);
+        // set the kp
+        //Kp.float_value = new_kp;
+        // print the kp
+        neorv32_uart0_printf("new_kp: %u\n", new_kp);
+      }
+      else{
+        // print the buffer
+        neorv32_uart0_printf("Invalid command: %s\n", buffer);
+      }
+
     }
 }
 
