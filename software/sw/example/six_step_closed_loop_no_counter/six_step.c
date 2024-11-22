@@ -307,16 +307,16 @@ void vListemUARTTask(void *pvParameters)
         // get the number
         uint32_t new_ki = atoi(buffer + 3);
         // set the ki
-        //Ki.float_value = new_ki;
+        Ki.float_value = riscv_emulate_fdivs(new_ki, 1e8);
         // print the ki
         neorv32_uart0_printf("new_ki: %u\n", new_ki);
       }
       // if buffer = "kp: {number}"
       else if (strncmp(buffer, "kp:", 3) == 0) {
         // get the number
-        float new_kp = atoi(buffer + 3);
+        uint32_t new_kp = atoi(buffer + 3);
         // set the kp
-        //Kp.float_value = new_kp;
+        Kp.float_value = riscv_emulate_fdivs(new_kp, 1e8);
         // print the kp
         neorv32_uart0_printf("new_kp: %u\n", new_kp);
       }
@@ -341,10 +341,10 @@ void vWriteUARTTask(void *pvParameters)
         motor_speed_int = 0;
       }
       //neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
-      //neorv32_uart1_printf("Speed: %u\n", motor_speed_int);
+      neorv32_uart1_printf("%u?\n", motor_speed_int);
       // print the debug variable
-      //debug_var.float_value = sector_index;
-      //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1000));
+      //debug_var.float_value = Ki.float_value;
+      //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1e8));
       //neorv32_uart0_printf("Debug: %i\n", debug_int);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
