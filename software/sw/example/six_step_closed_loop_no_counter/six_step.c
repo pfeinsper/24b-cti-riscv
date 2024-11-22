@@ -291,23 +291,15 @@ void vListemUARTTask(void *pvParameters)
       // scan for the uart input
       char buffer[32];
       neorv32_uart_scan(NEORV32_UART1, buffer, 32, 0);
-      neorv32_uart1_printf("Confirmando: %s\n", buffer);
-      char tcp_confirm[32];
-      neorv32_uart_scan(NEORV32_UART1, tcp_confirm, 32, 0);
       // print the buffer
       neorv32_uart0_printf("Buffer: %s\n", buffer);
-      neorv32_uart0_printf("TCP Confirm: %s\n", tcp_confirm);
-      // convert tcp confirm to int
-      uint32_t tcp_confirm_int = atoi(tcp_confirm);
-      if (tcp_confirm_int == 1) {
-        // save the value of the new target speed that comes as an int from the uart
-        uint32_t new_target_speed = atoi(buffer);
-        // convert to float
-        target_speed.float_value = new_target_speed;
-        // convert to ints
-        // print the target speed
-        //neorv32_uart0_printf("Target speed: %u\n", new_target_speed);
-      }
+      // save the value of the new target speed that comes as an int from the uart
+      uint32_t new_target_speed = atoi(buffer);
+      // convert to float
+      target_speed.float_value = new_target_speed;
+      // convert to ints
+      // print the target speed
+      //neorv32_uart0_printf("Target speed: %u\n", new_target_speed);
     }
 }
 
