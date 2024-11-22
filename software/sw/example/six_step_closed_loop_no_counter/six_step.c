@@ -42,12 +42,15 @@ volatile uint8_t sector_index = 0;
 volatile float_conv_t current_angle = { .float_value = 0.0 };
 
 // things for the motor control
-const uint8_t in_seq[6][3] = {{0, 1, 0}, {0, 1, 0}, {0, 0, 1},
-                              {0, 0, 1}, {1, 0, 0}, {1, 0, 0}};
+//const uint8_t in_seq[6][3] = {{0, 1, 0}, {0, 1, 0}, {0, 0, 1},
+//                              {0, 0, 1}, {1, 0, 0}, {1, 0, 0}};
 
-const uint8_t en_seq[6][3] = {{0, 1, 1}, {1, 1, 0}, {1, 0, 1},
-                              {0, 1, 1}, {1, 1, 0}, {1, 0, 1}};
+//const uint8_t en_seq[6][3] = {{0, 1, 1}, {1, 1, 0}, {1, 0, 1},
+//                              {0, 1, 1}, {1, 1, 0}, {1, 0, 1}};
 /**@{*/
+
+const uint8_t in_seq[6][3] = {{1,0,0},{0,1,0},{0,1,0},{0,0,1},{0,0,1},{1,0,0}};
+const uint8_t en_seq[6][3] = {{1,0,1},{0,1,1},{1,1,0},{1,0,1},{0,1,1},{1,1,0}};
 
 const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // this is not the right way to calculate the conversion factor but works for now
 
@@ -341,7 +344,7 @@ void vListemUARTTask(void *pvParameters)
       else if (strncmp(buffer, "power", 5) == 0) {
         // stop the motor
         if (power == 1) {
-            last_speed_before_stop = motor_speed.float_value;
+            last_speed_before_stop = target_speed.float_value;
             target_speed.float_value = 0.0;
             power = 0;
           }
@@ -375,9 +378,10 @@ void vWriteUARTTask(void *pvParameters)
       //neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
       neorv32_uart1_printf("%u?\n", motor_speed_int);
       // print the debug variable
-      //debug_var.float_value =  step_index;
       //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1));
-      //neorv32_uart0_printf("Debug: %i\n", debug_int);
+      //neorv32_uart0_printf("step: %i\n", debug_int);
+      // print the sector index
+      //neorv32_uart0_printf("Sector index: %u\n", sector_index);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
     }
@@ -385,11 +389,13 @@ void vWriteUARTTask(void *pvParameters)
 
 // move clockwise with pwm instead of gpio
 void move_clockwise_pwm(int direction) {
-    int step_index = (sector_index + direction) % 6;
+    int step_index =  (((sector_index + direction) % 6) + 6) % 6;
+    debug_var.float_value = step_index;
     // print the step index
     //neorv32_uart0_printf("Step index: %u\n", step_index);
     // Set motor pins based on the current step
     PWM_VALUE.float_value = riscv_intrinsic_fmuls(PWM_RES, duty_cycle.float_value);
+    //debug_var.float_value = PWM_VALUE.float_value;
     neorv32_pwm_set(IN1, riscv_intrinsic_fmuls(in_seq[step_index][0], PWM_VALUE.float_value));
     neorv32_pwm_set(IN2, riscv_intrinsic_fmuls(in_seq[step_index][1], PWM_VALUE.float_value));
     neorv32_pwm_set(IN3, riscv_intrinsic_fmuls(in_seq[step_index][2], PWM_VALUE.float_value));
