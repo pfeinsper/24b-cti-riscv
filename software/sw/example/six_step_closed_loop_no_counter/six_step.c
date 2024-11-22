@@ -33,7 +33,6 @@
 // config pwm values
 volatile uint8_t update_motor = 0;
 volatile uint8_t update_constants = 0;
-volatile int step_index = 0;
 volatile uint8_t sector_index = 0;
 /**@}*/
 
@@ -376,9 +375,9 @@ void vWriteUARTTask(void *pvParameters)
       //neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
       neorv32_uart1_printf("%u?\n", motor_speed_int);
       // print the debug variable
-      debug_var.float_value =  step_index;
-      int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1));
-      neorv32_uart0_printf("Debug: %i\n", debug_int);
+      //debug_var.float_value =  step_index;
+      //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1));
+      //neorv32_uart0_printf("Debug: %i\n", debug_int);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
     }
@@ -386,10 +385,7 @@ void vWriteUARTTask(void *pvParameters)
 
 // move clockwise with pwm instead of gpio
 void move_clockwise_pwm(int direction) {
-    step_index = (sector_index + direction) % 6;
-    if (step_index < 0) {
-      step_index = 6 + step_index;
-    }
+    int step_index = (sector_index + direction) % 6;
     // print the step index
     //neorv32_uart0_printf("Step index: %u\n", step_index);
     // Set motor pins based on the current step
@@ -410,6 +406,7 @@ void update_angle() {
   if (diff < 0) {
     diff = 6 + diff;
   }
+  //debug_var.float_value = diff;
   last_sector = sector_index;
   //debug_var.float_value = diff;
 
@@ -451,7 +448,17 @@ void freertos_risc_v_application_interrupt_handler(void) {
   if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
     neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
     update_angle();
-    move_clockwise_pwm(motor_direction);
+    if (power == 1) {
+      move_clockwise_pwm(motor_direction);
+    }
+    else {
+      neorv32_pwm_set(IN1, 0);
+      neorv32_pwm_set(IN2, 0);
+      neorv32_pwm_set(IN3, 0);
+      neorv32_gpio_pin_set(EN1, 0);
+      neorv32_gpio_pin_set(EN2, 0);
+      neorv32_gpio_pin_set(EN3, 0);
+    }
   }
   else { // undefined interrupt cause
     neorv32_uart0_printf("\n<NEORV32-IRQ> Unexpected IRQ! cause=0x%x </NEORV32-IRQ>\n", mcause); // debug output
