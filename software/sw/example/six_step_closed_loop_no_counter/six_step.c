@@ -33,7 +33,7 @@
 // config pwm values
 volatile uint8_t update_motor = 0;
 volatile uint8_t update_constants = 0;
-volatile uint8_t step_index = 0;
+volatile int step_index = 0;
 volatile uint8_t sector_index = 0;
 /**@}*/
 
@@ -113,13 +113,19 @@ float_conv_t debug_var = {.float_value = 0.0};
 
 volatile uint8_t noise_counter = 0;
 
+volatile int motor_direction = 1;
+
+volatile uint8_t power = 1;
+
+volatile uint32_t last_speed_before_stop = 0;
+
 /**@}*/
 
 
 // Prototypes
 //void align_rotor();
 void move_clockwise();
-void move_clockwise_pwm(uint8_t direction);
+void move_clockwise_pwm(int direction);
 void createTasks();
 void createTimers();
 int six_step();
@@ -320,6 +326,33 @@ void vListemUARTTask(void *pvParameters)
         // print the kp
         neorv32_uart0_printf("new_kp: %u\n", new_kp);
       }
+      // if buffer = "dir: {number}"
+      else if (strncmp(buffer, "dir:", 4) == 0) {
+        // get the number
+        int new_dir = atoi(buffer + 4);
+        // move the motor
+        if (new_dir == 0){
+          new_dir = -1;
+        }
+        motor_direction = new_dir;
+        // print the direction
+        neorv32_uart0_printf("Direction: %i\n", motor_direction);
+      }
+      // if buffer = "power"
+      else if (strncmp(buffer, "power", 5) == 0) {
+        // stop the motor
+        if (power == 1) {
+            last_speed_before_stop = motor_speed.float_value;
+            target_speed.float_value = 0.0;
+            power = 0;
+          }
+        else if (power == 0) {
+            target_speed.float_value = last_speed_before_stop;
+            power = 1;
+          }
+        // print the power
+        neorv32_uart0_printf("Power: %u\n", power);
+      }
       else{
         // print the buffer
         neorv32_uart0_printf("Invalid command: %s\n", buffer);
@@ -343,17 +376,20 @@ void vWriteUARTTask(void *pvParameters)
       //neorv32_uart0_printf("Speed: %u\n", motor_speed_int);
       neorv32_uart1_printf("%u?\n", motor_speed_int);
       // print the debug variable
-      //debug_var.float_value = Ki.float_value;
-      //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1e8));
-      //neorv32_uart0_printf("Debug: %i\n", debug_int);
+      debug_var.float_value =  step_index;
+      int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1));
+      neorv32_uart0_printf("Debug: %i\n", debug_int);
       // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
     }
 }
 
 // move clockwise with pwm instead of gpio
-void move_clockwise_pwm(uint8_t direction) {
+void move_clockwise_pwm(int direction) {
     step_index = (sector_index + direction) % 6;
+    if (step_index < 0) {
+      step_index = 6 + step_index;
+    }
     // print the step index
     //neorv32_uart0_printf("Step index: %u\n", step_index);
     // Set motor pins based on the current step
@@ -415,7 +451,7 @@ void freertos_risc_v_application_interrupt_handler(void) {
   if (mcause == GPTMR_TRAP_CODE) { // is GPTMR interrupt
     neorv32_gptmr_irq_ack(); // clear GPTMR timer-match interrupt
     update_angle();
-    move_clockwise_pwm(1);
+    move_clockwise_pwm(motor_direction);
   }
   else { // undefined interrupt cause
     neorv32_uart0_printf("\n<NEORV32-IRQ> Unexpected IRQ! cause=0x%x </NEORV32-IRQ>\n", mcause); // debug output
