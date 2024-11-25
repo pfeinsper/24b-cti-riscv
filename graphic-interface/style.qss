@@ -1,212 +1,254 @@
 /* Cores Principais */
-@define-color primary-color #ef8327; 	/* Laranja Vibrante */
-@define-color secondary-color1 #647881;  /* Azul Acinzentado */
-@define-color secondary-color2 #869caa;  /* Azul Claro */
-@define-color text-color #ffffff;    	/* Branco */
+@define-color primary-color #ef8327;     /* Laranja Vibrante */
+@define-color secondary-color1 #647881; /* Azul Acinzentado */
+@define-color secondary-color2 #869caa; /* Azul Claro */
+@define-color text-color #ffffff;        /* Branco */
 
 /* Estilos Gerais */
 QWidget {
-	background-color: #f0f0f0;
-	font-family: Arial, sans-serif;
-	font-size: 10pt;
-	color: #647881;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+    color: #647881;
 }
 
 QGroupBox {
-	border: 1px solid #647881;
-	border-radius: 5px;
-	margin-top: 10px;
-	background-color: #ffffff;
-	padding: 20px;
+    border: 1px solid #647881;
+    border-radius: 5px;
+    margin-top: 5px;             /* Reduzido de 10px para 5px */
+    background-color: #ffffff;
+    padding: 15px;               /* Reduzido de 20px para 15px */
 }
 
 QGroupBox::title {
-	subcontrol-origin: margin;
-	left: 10px;
-	padding: 0 5px 0 5px;
-	color: #647881;
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 5px 0 5px;
+    color: #647881;
 }
 
 /* Motor Control Group Layout */
 QGroupBox[title="Controle do Motor"] {
-	padding: 20px;
+    padding: 15px;               /* Reduzido de 20px para 15px */
 }
 
 QGroupBox[title="Controle do Motor"] QHBoxLayout {
-	margin-top: 0;
+    margin-top: 0;
 }
 
 /* Command Input Row */
 QLineEdit#command-input {
-	min-width: 300px;
+    min-width: 300px;
 }
 
 /* Parameter Controls Row */
-QHBoxLayout#parameters-row {
-	margin-top: 10px;
+QGridLayout#parameters-row {
+    margin-top: 10px;
 }
 
 /* ts and up inputs */
 QLineEdit#ts-input,
 QLineEdit#up-input {
-	max-width: 100px;
+    max-width: 100px;
+    padding-left: 5px;            /* Reduz o padding interno */
+    padding-right: 5px;           /* Reduz o padding interno */
+}
+
+/* Reduz o padding das QLabel para aproximar do campo de entrada */
+QLabel {
+    padding-right: 5px;            /* Ajuste conforme necessário */
+    padding-left: 0px;             /* Remove padding à esquerda */
 }
 
 /* Direction buttons container */
 QHBoxLayout#direction-buttons {
-	margin-left: auto;
+    margin-left: auto;
 }
 
 /* Direction control buttons */
 QPushButton#clockwise-button,
 QPushButton#counterclockwise-button {
-	min-width: 50px;
-	min-height: 50px;
-	max-width: 50px;
-	max-height: 50px;
-	margin-left: 10px;
+    min-width: 60px;
+    min-height: 60px;
+    max-width: 60px;
+    max-height: 60px;
+    margin-left: 5px;               /* Reduzido de 10px para 5px */
+    border-radius: 5px;
+    background-color: #647881;     /* Cor padrão para inativo */
+    transition: background-color 0.3s, border 0.3s;
+}
+
+/* Botões de Direção Ativos */
+QPushButton#clockwise-button:checked,
+QPushButton#counterclockwise-button:checked {
+    background-color: #22c55e;     /* Verde para ativo */
+    border: 2px solid #1f9c59;
+}
+
+/* Botões de Direção Inativos */
+QPushButton#clockwise-button:!checked,
+QPushButton#counterclockwise-button:!checked {
+    background-color: #647881;     /* Cor padrão */
+    border: none;
 }
 
 /* Botões Gerais */
 QPushButton {
-	cursor: pointer;
-	border: none;
-	padding: 10px;
-	border-radius: 5px;
-	font-weight: bold;
-	color: #ffffff;
-	min-height: 40px;
+    cursor: pointer;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    color: #ffffff;
+    min-height: 40px;
+    transition: background-color 0.3s, border 0.3s;
 }
 
 /* Botão Conectar */
 QPushButton#connect-button {
-	background-color: #ef8327;
+    background-color: #ef8327;
 }
 
 QPushButton#connect-button:hover {
-	background-color: #d07a1f;
+    background-color: #d07a1f;
 }
 
 /* Botão Enviar */
 QPushButton#send-speed-button {
-	background-color: #647881;
-}
-
-QPushButton#power-button {
-	background-color: #d07a1f;
+    background-color: #647881;
 }
 
 QPushButton#send-speed-button:hover {
-	background-color: #556c75;
+    background-color: #556c75;
 }
 
-/* Botão Parar */
-QPushButton#stop-button {
-	background-color: #869caa;
+/* Botão Power */
+QPushButton#power-button {
+    background-color: #d07a1f;
 }
 
-QPushButton#stop-button:hover {
-	background-color: #73889a;
-}
-
-/* QLineEdit */
-QLineEdit {
-	padding: 5px;
-	border: 1px solid #647881;
-	border-radius: 5px;
-	background-color: #ffffff;
-	color: #647881;
-	min-height: 30px;
-}
-
-QLineEdit:focus {
-	border: 1px solid #ef8327;
-}
-
-/* QTextEdit */
-QTextEdit {
-	background-color: #ffffff;
-	border: 1px solid #647881;
-	border-radius: 5px;
-	padding: 5px;
-	color: #647881;
-}
-
-QTextEdit:focus {
-	border: 1px solid #ef8327;
-}
-
-/* Status de Conexão */
-QLabel#connection-status-active {
-	background-color: green;
-	color: #ffffff;
-	padding: 5px;
-	border-radius: 5px;
-}
-
-QLabel#connection-status-inactive {
-	background-color: red;
-	color: #ffffff;
-	padding: 5px;
-	border-radius: 5px;
-}
-
-/* Estilos para o Logo */
-QLabel#logo-label {
-	margin: 5px;
-}
-
-/* Adicionais para Melhorar a Aparência */
-QPushButton:pressed {
-	background-color: #d07a1f;
-}
-
-/* Estilos para a Barra de Rolagem do Terminal */
-QScrollBar:vertical {
-	background: #ffffff;
-	width: 12px;
-	margin: 0px 0px 0px 0px;
-}
-
-QScrollBar::handle:vertical {
-	background: #647881;
-	min-height: 20px;
-	border-radius: 5px;
-}
-
-QScrollBar::add-line:vertical,
-QScrollBar::sub-line:vertical {
-	background: none;
-	height: 0px;
-}
-
-QScrollBar::up-arrow:vertical,
-QScrollBar::down-arrow:vertical {
-	background: none;
-}
-
-QScrollBar::add-page:vertical,
-QScrollBar::sub-page:vertical {
-	background: none;
+QPushButton#power-button:hover {
+    background-color: #b0661b;
 }
 
 /* Botão Limpar */
 QPushButton#clear-button {
-	background-color: #869caa;
+    background-color: #869caa;
 }
 
 QPushButton#clear-button:hover {
-	background-color: #73889a;
+    background-color: #73889a;
 }
 
-/* Adjust spacing for all elements in control group */
-QHBoxLayout > * {
-	margin-right: 10px;
+/* Botão Calcular e Enviar PI */
+QPushButton#send-pi-button {
+    background-color: #647881;     /* Mesma cor do botão Enviar */
+    font-size: 10pt;
+    margin-left: 10px;             /* Adiciona uma margem à esquerda para separar do campo de entrada */
+}
+
+QPushButton#send-pi-button:hover {
+    background-color: #556c75;     /* Mesma cor de hover do botão Enviar */
+}
+
+QPushButton#send-pi-button:pressed {
+    background-color: #455a64;     /* Tom mais escuro para o estado pressionado */
+}
+
+/* QLineEdit */
+QLineEdit {
+    padding: 5px;
+    border: 1px solid #647881;
+    border-radius: 5px;
+    background-color: #ffffff;
+    color: #647881;
+    min-height: 30px;
+}
+
+QLineEdit:focus {
+    border: 1px solid #ef8327;
+}
+
+/* QTextEdit */
+QTextEdit {
+    background-color: #ffffff;
+    border: 1px solid #647881;
+    border-radius: 5px;
+    padding: 5px;
+    color: #647881;
+}
+
+QTextEdit:focus {
+    border: 1px solid #ef8327;
+}
+
+/* Status de Conexão */
+QLabel#connection-status-active {
+    background-color: green;
+    color: #ffffff;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+QLabel#connection-status-inactive {
+    background-color: red;
+    color: #ffffff;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+/* Estilos para o Logo */
+QLabel#logo-label {
+    margin: 5px;
+}
+
+/* Adicionais para Melhorar a Aparência */
+QPushButton:pressed {
+    background-color: #d07a1f;
+}
+
+/* Estilos para a Barra de Rolagem do Terminal */
+QScrollBar:vertical {
+    background: #ffffff;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #647881;
+    min-height: 20px;
+    border-radius: 5px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    background: none;
+    height: 0px;
+}
+
+QScrollBar::up-arrow:vertical,
+QScrollBar::down-arrow:vertical {
+    background: none;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: none;
 }
 
 /* Graph styling */
 QWidget[class="plot"] {
-	background-color: #ffffff;
-	border: 1px solid #647881;
-	border-radius: 5px;
+    background-color: #ffffff;
+    border: 1px solid #647881;
+    border-radius: 5px;
+}
+
+/* Tooltips */
+QToolTip {
+    background-color: #ffffff;
+    color: #647881;
+    border: 1px solid #647881;
+    border-radius: 5px;
+    padding: 5px;
+    font-size: 10pt;
 }
