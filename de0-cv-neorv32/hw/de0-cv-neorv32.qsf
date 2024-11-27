@@ -141,9 +141,9 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to UART1_TXD
 #============================================================
 # PWM
 #============================================================
-set_location_assignment PIN_J11 -to PWM[0]
-set_location_assignment PIN_A15 -to PWM[1]
-set_location_assignment PIN_L8 -to PWM[2]
+set_location_assignment PIN_J18 -to PWM[0]
+set_location_assignment PIN_G17 -to PWM[1]
+set_location_assignment PIN_A15 -to PWM[2]
 
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[0]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to PWM[1]
@@ -160,9 +160,9 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to PWM[3]
 #============================================================
 # GPIO
 #============================================================
-set_location_assignment PIN_G17 -to GPIO_o[0]
-set_location_assignment PIN_J18 -to GPIO_o[1]
-set_location_assignment PIN_G11 -to GPIO_o[2]
+set_location_assignment PIN_E14 -to GPIO_o[0]
+set_location_assignment PIN_B15 -to GPIO_o[1]
+set_location_assignment PIN_E16 -to GPIO_o[2]
 
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_o[0]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to GPIO_o[1]
@@ -180,9 +180,9 @@ set_instance_assignment -name SLEW_RATE 1 -to GPIO_o[2]
 #============================================================
 # HALL_SENSOR
 #============================================================
-set_location_assignment PIN_B15 -to HALL_SENSOR[2]
-set_location_assignment PIN_E14 -to HALL_SENSOR[1]
-set_location_assignment PIN_E16 -to HALL_SENSOR[0]
+set_location_assignment PIN_L8 -to HALL_SENSOR[2]
+set_location_assignment PIN_J11 -to HALL_SENSOR[1]
+set_location_assignment PIN_G11 -to HALL_SENSOR[0]
 
 # set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to HALL_SENSOR[0]
 # set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to HALL_SENSOR[1]
