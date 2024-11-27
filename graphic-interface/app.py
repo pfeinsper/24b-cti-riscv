@@ -3,7 +3,7 @@ import os
 import numpy as np
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QTextEdit, QLineEdit, QGroupBox, QSizePolicy, QButtonGroup, QGridLayout
+    QPushButton, QLabel, QTextEdit, QLineEdit, QGroupBox, QSizePolicy, QButtonGroup, QGridLayout, QSpacerItem
 )
 from PyQt5.QtCore import QTimer, Qt, QSize
 from PyQt5.QtGui import QPixmap, QIcon
@@ -68,22 +68,24 @@ def connect_uart(port):
 class MotorControlApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.uart_buffer = ''  # Buffer para armazenar dados UART incompletos
+        self.uart_buffer = ''
         self.setWindowTitle("Motor Control Interface")
         self.showMaximized()
 
+        # Layout principal vertical
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(20, 20, 20, 20)  # Margens externas
+        main_layout.setSpacing(15)  # Espaçamento entre widgets
 
-        # Top layout with UART connection and logo
+        # Top layout com conexão UART e logo
         top_layout = QHBoxLayout()
-        top_layout.setContentsMargins(0, 0, 0, 0)  # Remove margens internas
+        top_layout.setContentsMargins(0, 0, 0, 0)  # Remover margens internas
         uart_group = QGroupBox("Conexão UART")
         uart_layout = QHBoxLayout()
-        uart_layout.setContentsMargins(0, 0, 0, 0)  # Remove margens internas
-        uart_layout.setSpacing(5)  # Reduz o espaçamento
+        uart_layout.setContentsMargins(0, 0, 0, 0)  # Remover margens internas
+        uart_layout.setSpacing(5)  # Espaçamento entre elementos
 
+        # Campo de entrada para porta UART
         self.port_input = QLineEdit(self)
         self.port_input.setPlaceholderText("Ex: /dev/ttyACM0")
         self.port_input.setText('/dev/ttyACM0')
@@ -91,6 +93,7 @@ class MotorControlApp(QWidget):
         self.port_input.setToolTip("Insira o caminho da porta UART")
         uart_layout.addWidget(self.port_input)
 
+        # Botão de conectar UART
         self.connect_button = QPushButton("Conectar")
         self.connect_button.setObjectName("connect-button")
         self.connect_button.setFixedWidth(120)
@@ -102,6 +105,7 @@ class MotorControlApp(QWidget):
         self.connect_button.clicked.connect(self.connect_to_uart)
         uart_layout.addWidget(self.connect_button)
 
+        # Status da conexão UART
         self.connection_status = QLabel("Inativa")
         self.connection_status.setAlignment(Qt.AlignCenter)
         self.connection_status.setFixedWidth(120)
@@ -109,10 +113,9 @@ class MotorControlApp(QWidget):
         uart_layout.addWidget(self.connection_status)
 
         uart_group.setLayout(uart_layout)
-        top_layout.addWidget(uart_group, alignment=Qt.AlignLeft)
-        top_layout.addStretch()
+        top_layout.addWidget(uart_group, alignment=Qt.AlignLeft)  # Alinhar à esquerda
 
-        # Logo
+        # Adicionar logo à direita
         logo_label = QLabel()
         logo_label.setObjectName("logo-label")
         logo_path = os.path.join(os.path.dirname(__file__), "images/cti_renato_archer_logo.jpeg")
@@ -122,22 +125,25 @@ class MotorControlApp(QWidget):
             logo_label.setPixmap(logo_pixmap)
         else:
             logo_label.setText("Logo")
-        top_layout.addWidget(logo_label, alignment=Qt.AlignRight)
+        top_layout.addWidget(logo_label, alignment=Qt.AlignRight)  # Alinhar à direita
+
         main_layout.addLayout(top_layout)
 
-        # Motor Control Group
+        # Grupo de Controle do Motor
         motor_group = QGroupBox("Controle do Motor")
         motor_layout = QVBoxLayout()
-        motor_layout.setSpacing(10)  # Reduz o espaçamento entre as linhas
+        motor_layout.setSpacing(10)  # Espaçamento interno
 
         # Primeira linha: Comando e Botões
         first_row = QHBoxLayout()
-        first_row.setSpacing(10)  # Reduz o espaçamento
+        first_row.setSpacing(10)  # Espaçamento entre elementos
 
+        # Layout para "Comando para enviar:" e input
         command_layout = QHBoxLayout()
-        command_layout.setSpacing(5)  # Reduz o espaçamento
+        command_layout.setSpacing(2)  # Redução do espaçamento para aproximar elementos
 
         speed_label = QLabel("Comando para enviar:")
+        speed_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)  # Alinhar verticalmente ao centro e à esquerda
         command_layout.addWidget(speed_label)
 
         self.speed_input = QLineEdit()
@@ -149,9 +155,9 @@ class MotorControlApp(QWidget):
 
         first_row.addLayout(command_layout)
 
-        # Agrupar botões de comando
+        # Layout para botões "Enviar", "Limpar" e "ON/OFF"
         command_buttons_layout = QHBoxLayout()
-        command_buttons_layout.setSpacing(5)  # Reduz o espaçamento
+        command_buttons_layout.setSpacing(5)  # Espaçamento entre botões
 
         self.send_speed_button = QPushButton("Enviar")
         self.send_speed_button.setObjectName("send-speed-button")
@@ -185,39 +191,45 @@ class MotorControlApp(QWidget):
         self.power_button.setFixedWidth(100)
         self.power_button.clicked.connect(self.power_motor)
         self.motor_on = False
-        # A estilização do botão power é gerenciada pelo QSS
+        self.power_button.setStyleSheet("background-color: #ef4444;")  # Define vermelho inicial
         command_buttons_layout.addWidget(self.power_button)
 
         first_row.addLayout(command_buttons_layout)
 
+        # Adicionar um espaçador flexível para manter os elementos alinhados à esquerda
         first_row.addStretch()
         motor_layout.addLayout(first_row)
 
-        # Segunda linha: up, ts inputs e Botão PI
-        second_row = QGridLayout()
-        second_row.setSpacing(5)  # Reduz o espaçamento
+        # Segunda linha: up, ts, send pi e botões de direção
+        second_row = QHBoxLayout()
+        second_row.setSpacing(10)
+        second_row.setContentsMargins(0, 0, 0, 0)  # Remover margens internas
 
-        # up section
-        up_label = QLabel("up:")
+        # Sub-layout esquerdo para up, ts e send pi
+        left_layout = QGridLayout()
+        left_layout.setSpacing(5)
+        left_layout.setContentsMargins(0, 0, 0, 0)  # Remover margens internas
+
+        up_label = QLabel("up (%):")
+        up_label.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
         self.up_input = QLineEdit()
         self.up_input.setObjectName("up-input")
-        self.up_input.setPlaceholderText("Insira o valor de up")
+        self.up_input.setPlaceholderText("Ex: 5")
         self.up_input.setFixedWidth(100)
         self.up_input.setToolTip("Insira o valor de up para calcular ki e kp")
-        second_row.addWidget(up_label, 0, 0, Qt.AlignRight)
-        second_row.addWidget(self.up_input, 0, 1)
+        left_layout.addWidget(up_label, 0, 0)
+        left_layout.addWidget(self.up_input, 0, 1)
 
-        # ts section
         ts_label = QLabel("ts (s):")
+        ts_label.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
         self.ts_input = QLineEdit()
         self.ts_input.setObjectName("ts-input")
-        self.ts_input.setPlaceholderText("Insira o valor de ts")
+        self.ts_input.setPlaceholderText("Ex: 0.27")
         self.ts_input.setFixedWidth(100)
         self.ts_input.setToolTip("Insira o tempo de assentamento (ts) em segundos")
-        second_row.addWidget(ts_label, 1, 0, Qt.AlignRight)
-        second_row.addWidget(self.ts_input, 1, 1)
+        left_layout.addWidget(ts_label, 1, 0)
+        left_layout.addWidget(self.ts_input, 1, 1)
 
-        # Botão para calcular e enviar ki e kp
         self.send_pi_button = QPushButton("Calcular e Enviar PI")
         self.send_pi_button.setObjectName("send-pi-button")
         send_pi_icon_path = os.path.join(os.path.dirname(__file__), "calculate_icon.png")
@@ -227,18 +239,23 @@ class MotorControlApp(QWidget):
         self.send_pi_button.setToolTip("Clique para calcular e enviar os valores de ki e kp")
         self.send_pi_button.setFixedSize(200, 40)
         self.send_pi_button.clicked.connect(self.calculate_and_send_pi)
-        second_row.addWidget(self.send_pi_button, 0, 2, 2, 1, Qt.AlignVCenter)
+        left_layout.addWidget(self.send_pi_button, 0, 2, 2, 1, Qt.AlignVCenter)  # Span em duas linhas
 
-        # Agrupar botões de direção
+        second_row.addLayout(left_layout)
+
+        # Adicionar um espaçador flexível para empurrar os botões de direção para a direita
+        spacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        second_row.addItem(spacer)
+
+        # Sub-layout direito para botões de direção
         direction_buttons_layout = QHBoxLayout()
-        direction_buttons_layout.setSpacing(5)  # Reduz o espaçamento
+        direction_buttons_layout.setSpacing(5)
 
-        # Botão Horário
         self.clockwise_button = QPushButton()
         self.clockwise_button.setObjectName("clockwise-button")
         self.clockwise_button.setFixedSize(60, 60)
         self.clockwise_button.setCheckable(True)
-        self.clockwise_button.setChecked(True)  # Inicialmente Horário
+        self.clockwise_button.setChecked(True)
         clockwise_icon_path = os.path.join(os.path.dirname(__file__), "images/rotate-right.png")
         if os.path.exists(clockwise_icon_path):
             self.clockwise_button.setIcon(QIcon(clockwise_icon_path))
@@ -248,7 +265,6 @@ class MotorControlApp(QWidget):
         self.clockwise_button.setToolTip("Clique para definir a direção como Horário")
         direction_buttons_layout.addWidget(self.clockwise_button)
 
-        # Botão Anti-horário
         self.counterclockwise_button = QPushButton()
         self.counterclockwise_button.setObjectName("counterclockwise-button")
         self.counterclockwise_button.setFixedSize(60, 60)
@@ -263,13 +279,12 @@ class MotorControlApp(QWidget):
         self.counterclockwise_button.setToolTip("Clique para definir a direção como Anti-horário")
         direction_buttons_layout.addWidget(self.counterclockwise_button)
 
-        # Adicionar botões de direção à segunda linha
-        second_row.addLayout(direction_buttons_layout, 0, 3, 2, 1, Qt.AlignCenter)
+        second_row.addLayout(direction_buttons_layout)
 
         motor_layout.addLayout(second_row)
 
         motor_group.setLayout(motor_layout)
-        main_layout.addWidget(motor_group)
+        main_layout.addWidget(motor_group, alignment=Qt.AlignLeft)  # Alinhar à esquerda
 
         # Agrupar botões de direção em um grupo exclusivo
         self.direction_group = QButtonGroup()
@@ -277,7 +292,6 @@ class MotorControlApp(QWidget):
         self.direction_group.addButton(self.clockwise_button)
         self.direction_group.addButton(self.counterclockwise_button)
 
-        # Conectar sinal de clique dos botões de direção
         self.direction_group.buttonClicked.connect(self.handle_direction_change)
 
         # Graph
@@ -292,8 +306,7 @@ class MotorControlApp(QWidget):
         self.plot_widget_second.showGrid(x=True, y=True, alpha=0.3)
         self.plot_widget_second.setMouseEnabled(x=False, y=False)
         self.plot_widget_second.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.plot_widget_second.enableAutoRange('x', True)
-        self.plot_widget_second.setYRange(0, 18000)  
+        self.plot_widget_second.enableAutoRange('x', True) 
 
         symbol_pen = pg.mkPen(color="#ef8327")
         symbol_brush = pg.mkBrush(color="#ef8327")
@@ -327,6 +340,7 @@ class MotorControlApp(QWidget):
 
         self.setLayout(main_layout)
 
+        # Timer para leitura UART
         self.read_timer = QTimer()
         self.read_timer.timeout.connect(self.read_uart_data)
 
@@ -337,7 +351,7 @@ class MotorControlApp(QWidget):
 
     def power_motor(self):
         self.motor_on = not self.motor_on
-        color = "#22c55e" if self.motor_on else "#ef4444"  # Green when on, red when off
+        color = "#22c55e" if self.motor_on else "#ef4444"
         self.power_button.setStyleSheet(f"background-color: {color};")
         command = "power:"
         self.terminal.append(f"Power {'ON' if self.motor_on else 'OFF'} command sent.")
@@ -349,7 +363,7 @@ class MotorControlApp(QWidget):
             self.ser = connect_uart(port)
             if self.ser and self.ser.is_open:
                 self.set_connection_status(active=True)
-                self.read_timer.start(2)
+                self.read_timer.start(200)  # Intervalo ajustado para 200 ms
                 self.terminal.append(f"Conectado à porta {port}.")
             else:
                 self.set_connection_status(active=False)
@@ -397,7 +411,6 @@ class MotorControlApp(QWidget):
             self.terminal.append("Motor direction set to counter-clockwise.")
         self.terminal.ensureCursorVisible()
         self.send_uart_command(command)
-        # A estilização é gerenciada pelo QSS
 
     def calculate_and_send_pi(self):
         up_input = self.up_input.text()
@@ -405,11 +418,11 @@ class MotorControlApp(QWidget):
         if up_input and ts_input:
             try:
                 up = float(up_input)
+                up = up * 0.01
                 ts = float(ts_input)
                 ki, kp = get_pi(up, ts)
-                ki = ki * 1e8  # Ajuste conforme necessário
-                kp = kp * 1e8  # Ajuste conforme necessário
-                # Enviar os valores calculados via UART
+                ki = ki * 1e8
+                kp = kp * 1e8
                 command_ki = f"ki:{ki}"
                 command_kp = f"kp:{kp}"
                 self.send_uart_command(command_ki)
@@ -454,6 +467,17 @@ class MotorControlApp(QWidget):
                                 times_relative = [t - cutoff_time for t in self.time_second]
                                 self.curve_second.setData(times_relative, self.data_second)
                                 self.plot_widget_second.setXRange(0, 20)
+
+                                # Ajuste Dinâmico do Eixo Y
+                                if self.data_second:
+                                    current_max = max(self.data_second)
+                                    padding = current_max * 0.1  # 10% de margem
+                                    # Definir um teto mínimo para evitar que o gráfico fique muito pequeno
+                                    new_max = max(current_max + padding, 1)
+                                    self.plot_widget_second.setYRange(0, new_max)
+                                else:
+                                    self.plot_widget_second.setYRange(0, 1)
+
                             except ValueError:
                                 match = re.search(r'Speed:\s*(\d+)', line)
                                 if match:
