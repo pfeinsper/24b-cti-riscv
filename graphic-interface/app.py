@@ -190,8 +190,8 @@ class MotorControlApp(QWidget):
         self.power_button.setToolTip("Clique para ligar ou desligar o motor")
         self.power_button.setFixedWidth(100)
         self.power_button.clicked.connect(self.power_motor)
-        self.motor_on = False
-        self.power_button.setStyleSheet("background-color: #ef4444;")  # Define vermelho inicial
+        self.motor_on = True
+        self.power_button.setStyleSheet("background-color: #22c55e;")
         command_buttons_layout.addWidget(self.power_button)
 
         first_row.addLayout(command_buttons_layout)
@@ -421,15 +421,15 @@ class MotorControlApp(QWidget):
                 up = up * 0.01
                 ts = float(ts_input)
                 ki, kp = get_pi(up, ts)
+                self.terminal.append(f"ki calculado e enviado: {ki}")
+                self.terminal.append(f"kp calculado e enviado: {kp}")
+                self.terminal.ensureCursorVisible()
                 ki = ki * 1e8
                 kp = kp * 1e8
                 command_ki = f"ki:{ki}"
                 command_kp = f"kp:{kp}"
                 self.send_uart_command(command_ki)
                 self.send_uart_command(command_kp)
-                self.terminal.append(f"ki calculado e enviado: {ki}")
-                self.terminal.append(f"kp calculado e enviado: {kp}")
-                self.terminal.ensureCursorVisible()
             except ValueError as ve:
                 self.terminal.append(f"Erro nos valores de entrada: {ve}")
                 self.terminal.ensureCursorVisible()
@@ -452,8 +452,8 @@ class MotorControlApp(QWidget):
                         self.uart_buffer = self.uart_buffer[index+1:]
                         line = line.strip()
                         if line:
-                            self.terminal.append(line)
-                            self.terminal.ensureCursorVisible()
+                            #self.terminal.append(line)
+                            #self.terminal.ensureCursorVisible()
                             try:
                                 value = float(line)
                                 timestamp = time.time()
