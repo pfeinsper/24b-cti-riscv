@@ -151,7 +151,7 @@ int six_step() {
   
   // initialize constants
   rad_60.float_value = riscv_emulate_fdivs(PI, 3.0);
-  target_speed.float_value = 10000.0;
+  target_speed.float_value = 5000.0;
 
   // initialize the PI controller
   PI_Init(&pi, (float_conv_t){.float_value = 1.0}, (float_conv_t){.float_value = 0.0});
@@ -270,7 +270,7 @@ void vTimerMotorMove(TimerHandle_t xTimer)
 void vTimerChangeMode(TimerHandle_t xTimer)
 {
   // print a warning
-  neorv32_uart0_puts("Change mode timer expired.\n");
+  //neorv32_uart0_puts("Change mode timer expired.\n");
   // change the duty cycle
   //duty_cycle.float_value = 1.0;
 }
@@ -278,7 +278,7 @@ void vTimerChangeMode(TimerHandle_t xTimer)
 void vUpdatePIDTask(void *pvParameters)
 {
     // print a warning
-    neorv32_uart0_puts("Update PID task started.\n");
+    //neorv32_uart0_puts("Update PID task started.\n");
     // Loop indefinitely
     while (1)
     {
@@ -292,7 +292,7 @@ void vUpdatePIDTask(void *pvParameters)
 void vListemUARTTask(void *pvParameters)
 {
     // print a warning
-    neorv32_uart0_puts("UART listem task started.\n");
+    //neorv32_uart0_puts("UART listem task started.\n");
     // Loop indefinitely
     while (1)
     {
@@ -307,6 +307,7 @@ void vListemUARTTask(void *pvParameters)
         uint32_t new_speed = atoi(buffer + 6);
         // set the target speed
         target_speed.float_value = new_speed;
+        last_speed_before_stop = new_speed;
         // print the target speed
         neorv32_uart0_printf("Target speed: %u\n", target_speed.float_value);
       }
@@ -366,7 +367,7 @@ void vListemUARTTask(void *pvParameters)
 void vWriteUARTTask(void *pvParameters)
 {
     // print a warning
-    neorv32_uart0_puts("UART write task started.\n");
+    //neorv32_uart0_puts("UART write task started.\n");
     // Loop indefinitely
     while (1)
     {
