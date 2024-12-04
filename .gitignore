@@ -1,6 +1,9 @@
-de0-nano-sdram-qsys/hw/db
-de0-nano-sdram-qsys/hw/incremental_db
-de0-nano-sdram-qsys/hw/output_files
+de0-nano-neorv32/hw/db
+de0-nano-neorv32/hw/incremental_db
+de0-nano-neorv32/hw/output_files
+de0-cv-neorv32/hw/db
+de0-cv-neorv32/hw/incremental_db
+de0-cv-neorv32/hw/output_files
 /.venv
 *.o
 *.pyc

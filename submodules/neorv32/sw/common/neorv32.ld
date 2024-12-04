@@ -32,7 +32,7 @@ SEARCH_DIR("=/usr/lib")
 
 /* Default rom/ram (IMEM/DMEM) sizes */
 __neorv32_rom_size = DEFINED(__neorv32_rom_size) ? __neorv32_rom_size : 2048M;
-__neorv32_ram_size = DEFINED(__neorv32_ram_size) ? __neorv32_ram_size : 8K;
+__neorv32_ram_size = DEFINED(__neorv32_ram_size) ? __neorv32_ram_size : 16K;
 
 /* Default HEAP size (= 0; no heap at all) */
 __neorv32_heap_size = DEFINED(__neorv32_heap_size) ? __neorv32_heap_size : 0;
