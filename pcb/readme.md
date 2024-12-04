@@ -1,11 +1,14 @@
 # PCB File
 
-The file in this folder contains the **Proteus** project for the final PCB used in the project, compressed as a `.zip` file. This PCB connects the following hardware components:
+The folder contains the **Proteus** project for the final PCB used in this project, provided as a compressed `.zip` file. This PCB is designed to interface with the following hardware components:
 
 - **STMicroelectronics** X-NUCLEO-IHM07M1 brushless motor shield;
 - UART module;
 - Bluetooth module (via UART); and
 - FPGA.
 
-The schematic and pinout are available in the PDF within this folder. This project was created using Proteus version 8.17. To open and edit the file, you will need the same version or a newer one.
+The schematic and pinout details are shown in the image below:
 
+![Pinout](pinout.png)
+
+This project was developed using Proteus version 8.17. To open and modify the file, ensure you have the same version or a newer one installed.
