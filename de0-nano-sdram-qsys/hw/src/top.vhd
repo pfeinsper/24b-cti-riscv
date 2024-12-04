@@ -50,21 +50,11 @@ use neorv32.neorv32_package.all;
 
 entity top is
    port (
-	
-		counter : out std_logic_vector(11 downto 0);
 		sys_clk_port: out std_logic;
       --
       -- Input clock
       --
       CLOCK_50    : in  std_logic;
-
-      --
-      -- JTAG TAP
-      --
-      TCK_i       : in  std_logic;
-      TDI_i       : in  std_logic;
-      TDO_o       : out std_logic;
-      TMS_i       : in  std_logic;
 
       --
       -- User LEDs
@@ -86,18 +76,14 @@ entity top is
       --
       UART0_TXD   : out std_logic;
       UART0_RXD   : in  std_logic;
+		UART1_TXD   : out std_logic;
+      UART1_RXD   : in  std_logic;
 		
+
 		--
 		-- PWM   
       --
 		PWM          : out std_logic_vector(3 downto 0);
-
-      -- CPU Interrupts
-      -- MTIME_IRQ   : in  std_logic;
-      MSW_IRQ     : in  std_logic;
-      -- MEXT_IRQ    : in  std_logic;
-
-      XIRQ        : in  std_logic_vector(31 downto 0);
 
 		--
       -- GPIO
@@ -105,16 +91,11 @@ entity top is
 		GPIO_i	    : in std_logic_vector(12 downto 0);
 		GPIO_o		 :	out std_logic_vector(12 downto 0);
 
-      GPIO_2      : out std_logic_vector(12 downto 0);
-      GPIO_2_IN   : in  std_logic_vector(2 downto 0);
-
       HALL_i   : in std_logic;
 
-
-      ADC_SADDR  : out std_logic;
-      ADC_CS_N   : out std_logic;
-      ADC_SCLK   : out std_logic;
-      ADC_SDAT   : in  std_logic
+      HALL_SENSOR : in std_logic_vector(2 downto 0);
+		
+		FPGA_RESET_N : in std_logic
    );
 end entity top;
 
@@ -133,22 +114,30 @@ architecture syn of top is
    constant MEM_INT_IMEM_SIZE : natural := 32*1024;      -- size of processor-internal instruction memory in bytes
    constant MEM_INT_DMEM_SIZE : natural := 16*1024;      -- size of processor-internal data memory in bytes
 
-
    --------------------------------------------------------
    -- Define all components which are included here
    --------------------------------------------------------
 
    --
-   -- Edge Counter
+   -- Counter
    --
-   component edge_counter
+   component counter
       port (
          rst         : in std_logic;
          clk         : in std_logic;
          signal_in   : in std_logic;
-         counter : out std_logic_vector(11 downto 0)
+         counter : out std_logic_vector(31 downto 0)
       );
-   end component edge_counter;
+   end component counter;
+
+   component hall_sector
+      port (
+         rst : in std_logic;
+         clk : in std_logic;
+         signal_in : in std_logic_vector(2 downto 0);
+         sector : out std_logic_vector(2 downto 0)
+      );
+   end component hall_sector;
 
    --
    -- PLL
@@ -161,14 +150,6 @@ architecture syn of top is
          locked : out std_logic
       );
    end component pll_sys;
-	
-	component SPIPLL is
-        port (
-            inclk0 : in  std_logic;
-            c0     : out std_logic;
-            c1     : out std_logic
-        );
-    end component;
 
    --
    -- neorv32 top
@@ -245,11 +226,8 @@ architecture syn of top is
 		 XIP_CACHE_EN               	: boolean                        := false;       -- implement XIP cache?
 		 XIP_CACHE_NUM_BLOCKS       	: natural range 1 to 256         := 8;           -- number of blocks (min 1), has to be a power of 2
 		 XIP_CACHE_BLOCK_SIZE       	: natural range 1 to 2**16       := 256;         -- block size in bytes (min 4), has to be a power of 2
-
-       -- External Interrupts Controller (XIRQ) --
-       XIRQ_NUM_CH                  : natural range 0 to 32          := 0;           -- number of external IRQ channels (0..32)
-
-       -- Processor peripherals --
+       
+		 -- Processor peripherals --
 		 IO_DISABLE_SYSINFO         	: boolean                        := false;       -- disable the SYSINFO module (for advanced users only)
        IO_GPIO_NUM                  : natural range 0 to 64          := 0;           -- number of GPIO input/output pairs (0..64)
        IO_MTIME_EN                  : boolean := false;  -- implement machine system timer (MTIME)?
@@ -288,12 +266,6 @@ architecture syn of top is
        -- Global control --
        clk_i          : in  std_ulogic; -- global clock, rising edge
        rstn_i         : in  std_ulogic; -- global reset, low-active, async
-
-       -- JTAG on-chip debugger interface (available if ON_CHIP_DEBUGGER_EN = true) --
-       jtag_tck_i     : in  std_ulogic := 'L'; -- serial clock
-       jtag_tdi_i     : in  std_ulogic := 'L'; -- serial data input
-       jtag_tdo_o     : out std_ulogic;        -- serial data output
-       jtag_tms_i     : in  std_ulogic := 'L'; -- mode select
 
 		 -- External bus interface (available if XBUS_EN = true) --
 		 xbus_adr_o     : out std_ulogic_vector(31 downto 0);                    -- address
@@ -376,33 +348,11 @@ architecture syn of top is
 		 -- Machine timer system time (available if IO_MTIME_EN = true) --
 		 mtime_time_o   : out std_ulogic_vector(63 downto 0);                    -- current system time
 
-       -- External platform interrupts (available if XIRQ_NUM_CH > 0) --
-       xirq_i         : in  std_ulogic_vector(31 downto 0) := (others => 'L'); -- IRQ channels
-
-       -- CPU interrupts --
-       mtime_irq_i    : in  std_ulogic := 'L'; -- machine timer interrupt, available if IO_MTIME_EN = false
-       msw_irq_i      : in  std_ulogic := 'L'; -- machine software interrupt
-       mext_irq_i     : in  std_ulogic := 'L'; -- machine external interrupt
 		 
-		 counter        : in std_logic_vector(11 downto 0)
+		 counter        : in std_logic_vector(31 downto 0);
+       sector         : in std_logic_vector(2 downto 0)
      );
    end component neorv32_top;
-
-   
-   component ADC_CTRL is
-        port (
-            iRST    : in  std_logic;
-            iCLK    : in  std_logic;
-            iCLK_n  : in  std_logic;
-            iGO     : in  std_logic;
-            iCH     : in  std_logic_vector(2 downto 0);
-            oLED    : out std_logic_vector(11 downto 0);
-            oDIN    : out std_logic;
-            oCS_n   : out std_logic;
-            oSCLK   : out std_logic;
-            iDOUT   : in  std_logic
-        );
-   end component;
 
 
    --------------------------------------------------------
@@ -424,26 +374,12 @@ architecture syn of top is
 	-- signal gpio             : std_ulogic_vector(63 downto 0);
 	signal gpio_o_signal : std_ulogic_vector(31 downto 0);
 	signal gpio_i_signal : std_ulogic_vector(31 downto 0);
-
-   -- XIRQ
-   signal xirq_i_signal           : std_ulogic_vector(31 downto 0);
-
-   -- CPU interrupts
-   signal mtime_irq_i_signal     : std_ulogic;
-   signal msw_irq_i_signal       : std_ulogic;
-   signal mext_irq_i_signal      : std_ulogic;
-
-   signal iGO_signal : std_logic;
-   signal iCH_signal : std_logic_vector(2 downto 0);
-   signal ADC_OUT    : std_logic_vector(11 downto 0);
-
-   signal wSPI_CLK   : std_logic;
-   signal wSPI_CLK_n : std_logic;
 	
 	signal PWM_u : std_ulogic_vector(3 downto 0);
 	
-	
-	signal signal_couter : std_logic_vector(11 downto 0);
+	signal signal_couter : std_logic_vector(31 downto 0);
+
+   signal signal_sector           : std_logic_vector(2 downto 0);
  
 
 begin
@@ -451,15 +387,25 @@ begin
    --
    -- Edge Counter
    --
-   inst_edge_counter : edge_counter
+   inst_counter : counter
       port map (
          rst => reset,
          clk => sys_clk,
          signal_in => HALL_i,
          counter => signal_couter
       );
-		
-		counter <= signal_couter;
+
+
+   --
+   -- HALL Sector
+   --
+   inst_hall_sector : hall_sector
+      port map (
+         rst => reset,
+         clk => sys_clk,
+         signal_in => HALL_SENSOR,
+         sector => signal_sector
+      );
 
    --
    -- PLL
@@ -473,23 +419,13 @@ begin
       );
 
    --
-   -- SPIPLL module
-   --
-   inst_spipll: SPIPLL
-       port map (
-           inclk0 => CLOCK_50,
-           c0     => wSPI_CLK,
-           c1     => wSPI_CLK_n
-       );
-
-   --
    -- In general it is a bad idea to use an asynchhronous Reset signal.
    -- But it is only a bad idea in case of asynchhronous deasserting.
    -- Therefore the deasserting of the Reset signal must be synchronized.
    --
 
    -- Asynchronous assert
-   fpga_reset <= '1' when (KEY(0) = '0') else '0';
+   fpga_reset <= '1' when (FPGA_RESET_N = '0') else '0';
    reset      <= '1' when ((fpga_reset = '1') OR (pll_locked = '0')) else '0';
 
    -- Synchronize deassert
@@ -510,25 +446,6 @@ begin
    sys_rst <= reset_s3;
    clk_i  <= sys_clk;
    rstn_i <= not sys_rst;
-
-   --
-   -- ADC Controller
-   --
-   adc_ctrl_inst: ADC_CTRL
-        port map (
-         -- reset
-            iRST     => KEY(0),
-            iCLK     => wSPI_CLK,
-            iCLK_n   => wSPI_CLK_n,
-            iGO      => iGO_signal,
-            iCH      => iCH_signal,
-            oLED		=> ADC_OUT,
-            oDIN     => ADC_SADDR,
-            oCS_n    => ADC_CS_N,
-            oSCLK    => ADC_SCLK,
-            iDOUT    => ADC_SDAT
-        );
-
 
    --
    -- neorv32
@@ -560,24 +477,19 @@ begin
          IO_GPIO_NUM                  => 32,                 -- number of GPIO input/output pairs (0..64)
          IO_MTIME_EN                  => true,              -- implement machine system timer (MTIME)?
          IO_UART0_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART0)?
-			IO_TWI_EN                    => true,              -- implement two-wire interface (TWI)?
+         IO_UART0_RX_FIFO             => 32,                  -- RX fifo depth, has to be a power of two, min 1
+         IO_UART0_TX_FIFO             => 32,                  -- TX fifo depth, has to be a power of two, min 1
+			IO_UART1_EN                  => true,               -- implement primary universal asynchronous receiver/transmitter (UART1)?
+         IO_UART1_RX_FIFO            => 32,                  -- RX fifo depth, has to be a power of two, min 1
+         IO_UART1_TX_FIFO            => 32,                  -- TX fifo depth, has to be a power of two, min 1
 			IO_PWM_NUM_CH					  => 4,						-- number of PWM channels to implement (0..12); 0 = disabled
 			
-			IO_GPTMR_EN                  => true,              -- implement general purpose timer (GPTMR)?
-
-         -- External Interrupts Controller (XIRQ) --
-         XIRQ_NUM_CH                  => 8                 -- number of external IRQ channels (0..32)
+			IO_GPTMR_EN                  => true              -- implement general purpose timer (GPTMR)?
 		)
       port map (
          -- Global control --
          clk_i         => clk_i,                            -- global clock, rising edge
          rstn_i        => rstn_i,                           -- global reset, low-active, async
-
-         -- JTAG on-chip debugger interface (available if ON_CHIP_DEBUGGER_EN = true) --
-         jtag_tck_i    => TCK_i,                            -- serial clock
-         jtag_tdi_i    => TDI_i,                            -- serial data input
-         jtag_tdo_o    => TDO_o,                            -- serial data output
-         jtag_tms_i    => TMS_i,                            -- mode select
 
          -- GPIO (available if IO_GPIO_EN = true) --
          gpio_o(31 downto 0) => gpio_o_signal(31 downto 0),                     -- parallel output
@@ -586,45 +498,22 @@ begin
          -- primary UART0 (available if IO_UART0_EN = true) --
          uart0_txd_o   => UART0_TXD,                        -- UART0 send data
          uart0_rxd_i   => UART0_RXD,                         -- UART0 receive data
+			uart1_txd_o   => UART1_TXD,                        -- UART1 send data
+         uart1_rxd_i   => UART1_RXD,                         -- UART1 receive data
+			
 			pwm_o(3 downto 0)         => PWM_u,                   -- pwm channels
-
-         -- XIRQ (available if XIRQ_NUM_CH > 0) --
-         xirq_i     => xirq_i_signal,                            -- IRQ channels
-
-         -- CPU interrupts --
-         -- mtime_irq_i                  => mtime_irq_i_signal, -- machine timer interrupt, available if IO_MTIME_EN = false
-         msw_irq_i                    => msw_irq_i_signal,   -- machine software interrupt
-         mext_irq_i                   => mext_irq_i_signal,   -- machine external interrupt
 			
-			
-			counter => signal_couter
+			counter => signal_couter,
+         sector => signal_sector
 		);
    --------------------------------------------------------
    -- Output/Input signals
    --------------------------------------------------------
    -- LED <= ADC_OUT(7 downto 0);
    LED    <= To_StdLogicVector( gpio_o_signal(7 downto 0) ); -- The 
-
-   -- ADC
-   -- iGO_signal <= KEY(1);
-   -- iCH_signal <= SW(2 downto 0);
-   iGO_signal <= gpio_o_signal(31);
-   iCH_signal <= To_StdLogicVector(gpio_o_signal(30 downto 28));
-   gpio_i_signal(31 downto 20) <= to_stdulogicvector(ADC_OUT);
-
-
-   -- Testing configurations for XIRQ
-   xirq_i_signal <= To_StduLogicVector(XIRQ);
-   -- xirq_i_signal(4 downto 0) <= gpio_o_signal(4 downto 0);
-   -- xirq_i_signal(31 downto 5) <= (others => '0'); -- CPU interrupts set to zero
 	
 	gpio_i_signal(15 downto 0) <=  to_stdulogicvector( "000" & GPIO_i );  -- Atribuindo os bits de GPIO_i
 	GPIO_o <= To_StdLogicVector( gpio_o_signal(12 downto 0) );
-	
-	-- CPU interrupts set to zero
-   -- mtime_irq_i_signal <= MTIME_IRQ;
-   msw_irq_i_signal   <= MSW_IRQ;
-   mext_irq_i_signal  <= 'L';--MEXT_IRQ;
 	
 	PWM <= std_logic_vector(PWM_u);
 	sys_clk_port <= sys_clk;
