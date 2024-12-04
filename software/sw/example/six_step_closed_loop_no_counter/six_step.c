@@ -71,7 +71,6 @@ const float_conv_t conversion_factor = {.float_value = 3.3f / (1 << 12)}; // thi
 // create timers
 static void vTimerUpdateConstants(TimerHandle_t xTimer);
 static void vTimerMotorMove(TimerHandle_t xTimer);
-static void vTimerChangeMode(TimerHandle_t xTimer);
 
 // config tasks
 static void vUpdatePIDTask(void *pvParameters);
@@ -86,7 +85,6 @@ volatile uint32_t last_sector = 0;
 volatile uint32_t update_constants_time = 1; // in ms
 
 volatile uint32_t motor_move_time = 1; // in ms
-volatile uint32_t change_mode_time = 1000; // in ms
 volatile float_conv_t motor_speed = {.float_value = 0.0};
 volatile float_conv_t duty_cycle = {.float_value = 0.0};
 volatile float_conv_t PWM_VALUE = {.float_value = 0.0};
@@ -181,7 +179,7 @@ int six_step() {
 void createTimers(void)
 {
     // Create both timers
-    TimerHandle_t xConstUpdate, xMotorMoveTimer, xChangeModeTimer;
+    TimerHandle_t xConstUpdate, xMotorMoveTimer;
 
     // Create CurTimer
     neorv32_uart0_puts("Creating Cur timer.\n");
@@ -220,24 +218,6 @@ void createTimers(void)
             neorv32_uart0_puts("Failed to start MotorMove timer.\n");
         }
     }
-    // Create ChangeModeTimer (activates only once)
-    neorv32_uart0_puts("Creating change mode timer.\n");
-    const TickType_t xChangeModeTimerPeriod = pdMS_TO_TICKS(change_mode_time);
-    xChangeModeTimer = xTimerCreate(
-        "ChangeModeTimer",       // Timer name
-        xChangeModeTimerPeriod,  // Timer period (50ms)
-        pdFALSE,                 // Auto-reload timer
-        (void *)0,               // Timer ID
-        vTimerChangeMode         // Callback function for ChangeModeTimer
-    );
-
-    if (xChangeModeTimer != NULL)
-    {
-        if (xTimerStart(xChangeModeTimer, 0) != pdPASS)
-        {
-            neorv32_uart0_puts("Failed to start ChangeMode timer.\n");
-        }
-    }
 }
 
 void createTasks(void)
@@ -267,14 +247,6 @@ void vTimerMotorMove(TimerHandle_t xTimer)
   update_motor = 1;
 }
 
-void vTimerChangeMode(TimerHandle_t xTimer)
-{
-  // print a warning
-  //neorv32_uart0_puts("Change mode timer expired.\n");
-  // change the duty cycle
-  //duty_cycle.float_value = 1.0;
-}
-
 void vUpdatePIDTask(void *pvParameters)
 {
     // print a warning
@@ -291,8 +263,6 @@ void vUpdatePIDTask(void *pvParameters)
 
 void vListemUARTTask(void *pvParameters)
 {
-    // print a warning
-    //neorv32_uart0_puts("UART listem task started.\n");
     // Loop indefinitely
     while (1)
     {
@@ -366,8 +336,6 @@ void vListemUARTTask(void *pvParameters)
 
 void vWriteUARTTask(void *pvParameters)
 {
-    // print a warning
-    //neorv32_uart0_puts("UART write task started.\n");
     // Loop indefinitely
     while (1)
     {
@@ -381,9 +349,6 @@ void vWriteUARTTask(void *pvParameters)
       // print the debug variable
       //int debug_int = riscv_intrinsic_fcvt_ws((debug_var.float_value*1));
       //neorv32_uart0_printf("step: %i\n", debug_int);
-      // print the sector index
-      //neorv32_uart0_printf("Sector index: %u\n", sector_index);
-      // make the task sleep for 1 second
       vTaskDelay(pdMS_TO_TICKS(2));
     }
 }
@@ -391,12 +356,8 @@ void vWriteUARTTask(void *pvParameters)
 // move clockwise with pwm instead of gpio
 void move_clockwise_pwm(int direction) {
     int step_index =  (((sector_index + direction) % 6) + 6) % 6;
-    debug_var.float_value = step_index;
-    // print the step index
-    //neorv32_uart0_printf("Step index: %u\n", step_index);
     // Set motor pins based on the current step
     PWM_VALUE.float_value = riscv_intrinsic_fmuls(PWM_RES, duty_cycle.float_value);
-    //debug_var.float_value = PWM_VALUE.float_value;
     neorv32_pwm_set(IN1, riscv_intrinsic_fmuls(in_seq[step_index][0], PWM_VALUE.float_value));
     neorv32_pwm_set(IN2, riscv_intrinsic_fmuls(in_seq[step_index][1], PWM_VALUE.float_value));
     neorv32_pwm_set(IN3, riscv_intrinsic_fmuls(in_seq[step_index][2], PWM_VALUE.float_value));
@@ -413,11 +374,7 @@ void update_angle() {
   if (diff < 0) {
     diff = 6 + diff;
   }
-  //debug_var.float_value = diff;
   last_sector = sector_index;
-  //debug_var.float_value = diff;
-
-  // speed = ((diff * pi/3) / time_between_measurements)
 
   if (diff > 0){
     float_conv_t current_time = {.float_value = riscv_emulate_fdivs(neorv32_mtime_get_time(), ((float)neorv32_sysinfo_get_clk()))};
@@ -440,7 +397,6 @@ void PID_control() {
 
 
 void get_sector() {
-
   sector_index = neorv32_sector_get();
 }
 
@@ -484,7 +440,6 @@ void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
   float_conv_t current_time = {.float_value = riscv_emulate_fdivs(neorv32_mtime_get_time(), ((float)neorv32_sysinfo_get_clk()))};
   float_conv_t dt = {.float_value = riscv_intrinsic_fsubs(current_time.float_value, last_update.float_value)};
   last_update.float_value = current_time.float_value;
-  //debug_var.float_value = dt.float_value;
 
   if (noise_counter < 5){
     noise_counter++;
@@ -500,14 +455,10 @@ void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
       pi->integral.float_value,
       aux.float_value);
 
-  //debug_var.float_value = riscv_intrinsic_fmuls(error.float_value, dt.float_value);
-
   // compute the duty_cycle, the output
   float_conv_t new_duty_cycle = {.float_value = riscv_intrinsic_fadds(
       riscv_intrinsic_fmuls(Kp.float_value, error.float_value),
       riscv_intrinsic_fmuls(Ki.float_value, pi->integral.float_value))};
-
-  //debug_var.float_value = new_duty_cycle.float_value;
 
   // limit the duty cycle
   if (new_duty_cycle.float_value > pi->max_duty.float_value) {
@@ -515,6 +466,5 @@ void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
   } else if (new_duty_cycle.float_value < pi->min_duty.float_value) {
     new_duty_cycle.float_value = pi->min_duty.float_value;
   }
-  //debug_var.float_value = new_duty_cycle.float_value;
   duty_cycle.float_value = new_duty_cycle.float_value;
 }

@@ -56,7 +56,6 @@ void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName);
 void vApplicationTickHook(void);
 
 /* Platform-specific prototypes */
-void vToggleLED(void);
 void vSendString(const char * pcString);
 static void prvSetupHardware(void);
 
@@ -127,13 +126,8 @@ static void prvSetupHardware(void) {
   int num_pwm_channels = neorv32_pmw_get_num_channels();
 
   // Intro
-  neorv32_uart0_puts("The FOC code.\n"
+  neorv32_uart0_puts("The Six-Step code.\n"
                      "That is it.\n\n");
-
-  // Check number of PWM channels
-  if (neorv32_uart0_available()) {
-    neorv32_uart0_printf("Implemented PWM channels: %i\n\n", num_pwm_channels);
-  }
 
   // Deactivate all PWM channels initially
   for (int i = 0; i < num_pwm_channels; i++) {
@@ -193,7 +187,7 @@ static void prvSetupHardware(void) {
   if (neorv32_gptmr_available() != 0) { // GPTMR implemented at all?
 
     // configure timer for in continuous mode with clock divider = 64
-    // fire interrupt every 4 seconds (continuous mode)
+    // fire interrupt every 1/20000 seconds (continuous mode)
     neorv32_gptmr_setup(CLK_PRSC_64, ((uint32_t)configCPU_CLOCK_HZ / 64) / 20000, 1);
 
     // enable GPTMR interrupt
@@ -218,15 +212,6 @@ void freertos_risc_v_application_exception_handler(void) {
 
   // debug output
   neorv32_uart_printf(UART_HW_HANDLE, "\n<NEORV32-EXC> mcause = 0x%x @ mepc = 0x%x </NEORV32-EXC>\n", mcause,mepc); // debug output
-}
-
-
-/******************************************************************************
- * Toggle GPIO.out(0) pin.
- ******************************************************************************/
-void vToggleLED(void) {
-
-	neorv32_gpio_pin_toggle(0);
 }
 
 
