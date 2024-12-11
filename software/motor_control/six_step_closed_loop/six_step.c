@@ -119,6 +119,8 @@ volatile uint8_t power = 1;
 
 volatile uint32_t last_speed_before_stop = 0;
 
+volatile uint8_t reset = 0;
+
 /**@}*/
 
 
@@ -322,6 +324,7 @@ void vListemUARTTask(void *pvParameters)
         else if (power == 0) {
             target_speed.float_value = last_speed_before_stop;
             power = 1;
+            reset = 1;
           }
         // print the power
         neorv32_uart0_printf("Power: %u\n", power);
@@ -436,6 +439,11 @@ void PI_Init(PI_Controller *pi, float_conv_t max_duty, float_conv_t min_duty) {
 
 void PI_Update(PI_Controller *pi, float_conv_t desired_speed,
                 float_conv_t actual_speed) {
+
+  if (reset == 1) {
+    pi->integral.float_value = 0.0;
+    reset = 0;
+  }
 
   float_conv_t current_time = {.float_value = riscv_emulate_fdivs(neorv32_mtime_get_time(), ((float)neorv32_sysinfo_get_clk()))};
   float_conv_t dt = {.float_value = riscv_intrinsic_fsubs(current_time.float_value, last_update.float_value)};
